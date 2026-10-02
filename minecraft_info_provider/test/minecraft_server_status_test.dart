@@ -45,6 +45,8 @@ void main() {
       );
       await fixture.done;
 
+      expect(status.state, MtnMinecraftInfoServerState.online);
+      expect(status.isOnline, isTrue);
       expect(status.versionName, '1.21.1');
       expect(status.protocol, 767);
       expect(status.onlinePlayers, 5);
@@ -57,6 +59,143 @@ void main() {
       expect(status.latency, isNotNull);
       expect(status.advertisesModded, isFalse);
       expect(status.modMetadata, isNull);
+    });
+
+    test('returns unavailable instead of throwing when endpoint is unreachable',
+        () async {
+      final ServerSocket reserved = await ServerSocket.bind(
+        InternetAddress.loopbackIPv4,
+        0,
+      );
+      final int unavailablePort = reserved.port;
+      await reserved.close();
+
+      final MtnMinecraftInfoServerStatus status =
+          await const MtnMinecraftInfoServerStatusClient().query(
+        host: InternetAddress.loopbackIPv4.address,
+        port: unavailablePort,
+        timeout: const Duration(milliseconds: 500),
+      );
+
+      expect(status.state, MtnMinecraftInfoServerState.unavailable);
+      expect(
+        status.unavailableReason,
+        MtnMinecraftInfoServerUnavailableReason.connection,
+      );
+      expect(status.isOnline, isFalse);
+      expect(status.versionName, isNull);
+      expect(status.protocol, isNull);
+      expect(status.onlinePlayers, isNull);
+      expect(status.maxPlayers, isNull);
+      expect(status.motd, isNull);
+      expect(status.rawJson, isNull);
+      expect(status.latency, isNull);
+      expect(status.modMetadata, isNull);
+    });
+
+    test('onChange ignores bookkeeping-only refresh changes', () async {
+      final _StatusFixture fixture = await _StatusFixture.start(
+        <String, Object?>{
+          'version': <String, Object?>{
+            'name': '1.21.1',
+            'protocol': 767,
+          },
+          'players': <String, Object?>{
+            'max': 20,
+            'online': 3,
+          },
+          'description': 'Stable',
+        },
+      );
+      addTearDown(fixture.close);
+
+      var changes = 0;
+      final MtnMinecraftInfoServer server = MtnMinecraftInfoServer(
+        name: 'Stable',
+        address: '${InternetAddress.loopbackIPv4.address}:${fixture.port}',
+        onChange: (_) => changes++,
+      );
+
+      final MtnMinecraftInfoServerStatus first =
+          await server.queryStatus(measureLatency: false);
+      final DateTime firstSuccessfulAt = first.lastSuccessfulAt!;
+
+      await Future<void>.delayed(const Duration(milliseconds: 2));
+
+      final MtnMinecraftInfoServerStatus second =
+          await server.queryStatus(measureLatency: false);
+
+      expect(second.state, MtnMinecraftInfoServerState.online);
+      expect(second.isStale, isFalse);
+      expect(second.lastSuccessfulAt, isNot(firstSuccessfulAt));
+      expect(changes, 1);
+    });
+
+    test('server owns status lifecycle and onChange notifications', () async {
+      final _StatusFixture fixture = await _StatusFixture.start(
+        <String, Object?>{
+          'version': <String, Object?>{
+            'name': '1.21.1',
+            'protocol': 767,
+          },
+          'players': <String, Object?>{
+            'max': 20,
+            'online': 3,
+          },
+          'description': 'Grace test',
+        },
+        expectPing: true,
+      );
+      final int port = fixture.port;
+      var changes = 0;
+      final MtnMinecraftInfoServer server = MtnMinecraftInfoServer(
+        name: 'Local',
+        address: '${InternetAddress.loopbackIPv4.address}:$port',
+        onChange: (_) => changes++,
+      );
+
+      final MtnMinecraftInfoServerStatus fresh = await server.queryStatus();
+      await fixture.done;
+      await fixture.close();
+
+      expect(identical(server.status, fresh), isTrue);
+      expect(fresh.state, MtnMinecraftInfoServerState.online);
+      expect(fresh.isStale, isFalse);
+      expect(fresh.latency, isNotNull);
+      expect(fresh.lastSuccessfulAt, isNotNull);
+      expect(changes, 1);
+
+      final MtnMinecraftInfoServerStatus transient =
+          await server.queryStatus(
+        timeout: const Duration(milliseconds: 200),
+        offlineAfter: const Duration(milliseconds: 100),
+      );
+
+      expect(transient.state, MtnMinecraftInfoServerState.online);
+      expect(transient.isStale, isTrue);
+      expect(transient.versionName, fresh.versionName);
+      expect(transient.onlinePlayers, fresh.onlinePlayers);
+      expect(transient.latency, isNull);
+      expect(transient.failureSince, isNotNull);
+      expect(changes, 2);
+
+      await Future<void>.delayed(const Duration(milliseconds: 125));
+
+      final MtnMinecraftInfoServerStatus offline =
+          await server.queryStatus(
+        timeout: const Duration(milliseconds: 200),
+        offlineAfter: const Duration(milliseconds: 100),
+      );
+
+      expect(offline.state, MtnMinecraftInfoServerState.offline);
+      expect(offline.isOffline, isTrue);
+      expect(offline.isStale, isTrue);
+      expect(offline.versionName, fresh.versionName);
+      expect(offline.onlinePlayers, fresh.onlinePlayers);
+      expect(offline.latency, isNull);
+      expect(offline.lastSuccessfulAt, fresh.lastSuccessfulAt);
+      expect(offline.failureSince, transient.failureSince);
+      expect(changes, 3);
     });
 
     test('parses modern Forge advertised mods and required channels', () async {

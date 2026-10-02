@@ -6,8 +6,6 @@ import 'dart:typed_data';
 import 'info_server_status.dart';
 
 enum MtnMinecraftInfoServerStatusError {
-  connectFailed(8201),
-  timeout(8202),
   invalidPacket(8203),
   invalidResponse(8204);
 
@@ -57,6 +55,31 @@ final class MtnMinecraftInfoServerStatusClient {
         'Timeout must be greater than zero',
       );
     }
+    if (InternetAddress.tryParse(normalizedHost) == null) {
+      try {
+        final List<InternetAddress> resolved =
+            await InternetAddress.lookup(normalizedHost).timeout(timeout);
+        if (resolved.isEmpty) {
+          return MtnMinecraftInfoServerStatus.unavailable(
+            host: normalizedHost,
+            port: port,
+            reason: MtnMinecraftInfoServerUnavailableReason.dns,
+          );
+        }
+      } on TimeoutException {
+        return MtnMinecraftInfoServerStatus.unavailable(
+          host: normalizedHost,
+          port: port,
+          reason: MtnMinecraftInfoServerUnavailableReason.dns,
+        );
+      } on SocketException {
+        return MtnMinecraftInfoServerStatus.unavailable(
+          host: normalizedHost,
+          port: port,
+          reason: MtnMinecraftInfoServerUnavailableReason.dns,
+        );
+      }
+    }
 
     Socket? socket;
     try {
@@ -98,12 +121,16 @@ final class MtnMinecraftInfoServerStatusClient {
     } on MtnMinecraftInfoServerStatusException {
       rethrow;
     } on TimeoutException {
-      throw const MtnMinecraftInfoServerStatusException(
-        MtnMinecraftInfoServerStatusError.timeout,
+      return MtnMinecraftInfoServerStatus.unavailable(
+        host: normalizedHost,
+        port: port,
+        reason: MtnMinecraftInfoServerUnavailableReason.timeout,
       );
     } on SocketException {
-      throw const MtnMinecraftInfoServerStatusException(
-        MtnMinecraftInfoServerStatusError.connectFailed,
+      return MtnMinecraftInfoServerStatus.unavailable(
+        host: normalizedHost,
+        port: port,
+        reason: MtnMinecraftInfoServerUnavailableReason.connection,
       );
     } on _StatusProtocolException {
       throw const MtnMinecraftInfoServerStatusException(
@@ -187,6 +214,7 @@ final class MtnMinecraftInfoServerStatusClient {
   }
 }
 
+
 MtnMinecraftInfoServerStatus _parseStatus(
   String rawJson, {
   required String host,
@@ -235,6 +263,7 @@ MtnMinecraftInfoServerStatus _parseStatus(
       isModdedValue == null ? false : _expectBool(isModdedValue);
 
   return MtnMinecraftInfoServerStatus(
+    state: MtnMinecraftInfoServerState.online,
     host: host,
     port: port,
     versionName: versionName,
