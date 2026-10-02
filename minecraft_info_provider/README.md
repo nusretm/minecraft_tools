@@ -79,6 +79,18 @@ The validator copies the source to a temporary directory, reads it through the
 public provider, appends a validation server to the copy, re-reads it and
 verifies preservation of every pre-existing server compound.
 
+## Validation status
+
+Validated on Windows with Dart:
+
+- `dart analyze` -> no issues
+- `dart test` -> 10/10 PASS
+- real Java Edition `servers.dat` -> PASS
+  - 32780 bytes
+  - 2 existing servers parsed
+  - append produced 3 servers
+  - all pre-existing server compounds preserved
+
 ## Deferred
 
 - server status/ping
