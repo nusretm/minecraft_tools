@@ -32,7 +32,7 @@ final info = MtnMinecraftInfoProvider(
 final servers = await info.readServers();
 
 await info.addServer(
-  const MtnMinecraftInfoServer(
+  MtnMinecraftInfoServer(
     name: 'Example',
     address: 'play.example.net',
   ),
@@ -52,15 +52,20 @@ Minecraft info models.
 
 ## Java server status
 
-The package can query the modern Java Edition Server List Ping endpoint:
+The primary API is owned by `MtnMinecraftInfoServer`:
 
 ```dart
-final status =
-    await const MtnMinecraftInfoServerStatusClient().query(
-  host: 'mc.example.net',
-  port: 25565,
+final server = MtnMinecraftInfoServer(
+  name: 'Example',
+  address: 'mc.example.net',
+  onChange: (server) {
+    print(server.status?.state);
+  },
 );
 
+final status = await server.queryStatus();
+
+print(status.state);
 print(status.versionName);
 print(status.protocol);
 print(status.onlinePlayers);
@@ -69,9 +74,43 @@ print(status.motd);
 print(status.latency);
 ```
 
-The status client performs the standard TCP handshake with status state,
-requests the JSON response, and optionally measures ping/pong round-trip
-latency.
+`MtnMinecraftInfoServer.status` is read-only runtime state and is never
+persisted into `servers.dat`. `queryStatus()` invokes the raw Server List
+Ping client internally, compares the result with the current status, updates
+the effective state, and invokes `onChange` only when the effective public
+status changes.
+
+The raw `MtnMinecraftInfoServerStatusClient` remains a stateless transport
+primitive. It performs the standard TCP handshake, requests the JSON status
+response, optionally measures ping/pong latency, and reports transport
+unavailability reasons. It does not own server history.
+
+Network reachability is domain state, not an exception.
+
+- A target that has never produced a successful status response is
+  `unavailable` when it cannot be reached.
+- DNS resolution failure is always `unavailable`.
+- After one successful response, transient connect/status failures keep the
+  same server instance effectively `online` during a one-minute grace window.
+- The grace window starts with the first consecutive non-DNS failure, not from
+  the last successful query.
+- If consecutive non-DNS failures continue past the grace window, the server
+  instance becomes `offline`.
+- Any successful response resets the failure window immediately.
+- Grace/offline states retain the last successful snapshot with
+  `isStale=true`; latency is cleared to null.
+- `lastSuccessfulAt` and `failureSince` expose the relevant timestamps.
+
+The default grace is one minute and can be overridden per
+`server.queryStatus(offlineAfter: ...)`. History belongs to the
+`MtnMinecraftInfoServer` instance; different objects do not share runtime
+state.
+
+Malformed Minecraft protocol packets or malformed status JSON remain
+exceptions because an endpoint was reached but returned invalid data.
+
+A ping/pong failure after a valid status response does not change
+`state=online`; only `latency` becomes null.
 
 Recognized Forge metadata is exposed without turning advisory information into
 guaranteed client requirements:

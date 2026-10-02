@@ -8,20 +8,28 @@ Future<void> main(List<String> arguments) async {
   final int port = int.parse(_value(arguments, '--port') ?? '25565');
   final int timeoutMilliseconds =
       int.parse(_value(arguments, '--timeout-ms') ?? '5000');
+  final int offlineAfterMilliseconds =
+      int.parse(_value(arguments, '--offline-after-ms') ?? '60000');
   final bool measureLatency = !arguments.contains('--no-ping');
 
-  final MtnMinecraftInfoServerStatus status =
-      await const MtnMinecraftInfoServerStatusClient().query(
-    host: host,
-    port: port,
+  final String address = host.contains(':')
+      ? '[$host]:$port'
+      : '$host:$port';
+  final MtnMinecraftInfoServer server = MtnMinecraftInfoServer(
+    name: host,
+    address: address,
+  );
+  final MtnMinecraftInfoServerStatus status = await server.queryStatus(
     timeout: Duration(milliseconds: timeoutMilliseconds),
+    offlineAfter: Duration(milliseconds: offlineAfterMilliseconds),
     measureLatency: measureLatency,
   );
 
   const JsonEncoder encoder = JsonEncoder.withIndent('  ');
   stdout.writeln(encoder.convert(status.toMap()));
   stdout.writeln(
-    'STATUS_RESULT PASS '
+    'STATUS_RESULT state=${status.state.name} '
+    'stale=${status.isStale} '
     'version=${status.versionName} '
     'protocol=${status.protocol} '
     'players=${status.onlinePlayers}/${status.maxPlayers} '
