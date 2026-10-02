@@ -50,6 +50,62 @@ Information models use the locked `MtnMinecraftInfo<Subject>` convention:
 The NBT layer is format-oriented and intentionally separate from semantic
 Minecraft info models.
 
+## Java server status
+
+The package can query the modern Java Edition Server List Ping endpoint:
+
+```dart
+final status =
+    await const MtnMinecraftInfoServerStatusClient().query(
+  host: 'mc.example.net',
+  port: 25565,
+);
+
+print(status.versionName);
+print(status.protocol);
+print(status.onlinePlayers);
+print(status.maxPlayers);
+print(status.motd);
+print(status.latency);
+```
+
+The status client performs the standard TCP handshake with status state,
+requests the JSON response, and optionally measures ping/pong round-trip
+latency.
+
+Recognized Forge metadata is exposed without turning advisory information into
+guaranteed client requirements:
+
+- legacy `modinfo.modList`
+- modern `forgeData.mods`
+- modern `forgeData.channels`
+- `fmlNetworkVersion`
+- `truncated`
+
+A listed mod is therefore an **advertised mod**, not automatically a required
+client mod. Modern Forge channel entries carry an explicit
+`requiredForClient` flag and are modeled as such. List completeness is
+true/false only when the response provides enough information; otherwise it is
+null.
+
+The exact status JSON is retained in `rawJson` so loader/proxy-specific fields
+that are not modeled yet are not lost.
+
+Server List Ping is not a login handshake. A successful query does not prove
+that authentication, loader negotiation or final join compatibility will
+succeed.
+
+SRV discovery and legacy pre-1.7 ping fallback are outside this checkpoint;
+`host` and `port` are the concrete TCP target.
+
+A real server can be checked with:
+
+```powershell
+dart run tool/query_minecraft_server.dart `
+  --host mc.hypixel.net `
+  --port 25565
+```
+
 ## NBT boundary
 
 `MtnMinecraftNbtCodec` reads/writes raw Java Edition NBT payloads. Compression
@@ -93,7 +149,6 @@ Validated on Windows with Dart:
 
 ## Deferred
 
-- server status/ping
 - known-server matching
 - address normalization/deduplication policy
 - world discovery / `level.dat`
@@ -101,3 +156,22 @@ Validated on Windows with Dart:
 - statistics
 - installed-content information
 - client-mod activity discovery
+
+
+## Server status validation status
+
+Java Edition Server Status/Ping foundation is COMPLETE / VALIDATED / LOCKED.
+
+Validated on Windows with Dart:
+
+- `dart analyze` -> no issues
+- `dart test` -> 13/13 PASS
+- real `mc.hypixel.net:25565` query -> PASS
+- real response parsed version/protocol/player counts/MOTD/favicon
+- ping/pong latency measured successfully
+- missing/failed latency measurement remains non-fatal and returns `null`
+
+The real validation observed Hypixel advertising protocol 47 with a multi-version
+display string and no recognized mod metadata. This confirms that the provider
+must report server-advertised values as-is rather than infer a single playable
+client version from the display string.
