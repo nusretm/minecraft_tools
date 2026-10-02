@@ -6,12 +6,16 @@ import 'dart:typed_data';
 import 'package:path/path.dart' as p;
 
 import '../nbt/minecraft_nbt.dart';
+import 'info_player.dart';
 import 'info_server.dart';
 import 'info_world.dart';
 
 const String _serversFileName = 'servers.dat';
 const String _serversTagName = 'servers';
 const String _savesDirectoryName = 'saves';
+const String _legacyPlayerDataDirectoryName = 'playerdata';
+const String _modernPlayersDirectoryName = 'players';
+const String _modernPlayerDataDirectoryName = 'data';
 
 enum MtnMinecraftInfoProviderError {
   invalidPath(8101),
@@ -121,6 +125,58 @@ final class MtnMinecraftInfoProvider {
       worlds.add(await _readWorld(directory));
     }
     return List<MtnMinecraftInfoWorld>.unmodifiable(worlds);
+  }
+
+  /// Discovers Java Edition player-data files belonging to [world].
+  ///
+  /// Both the pre-26.1 `playerdata/<uuid>.dat` layout and the 26.1+
+  /// `players/data/<uuid>.dat` layout are supported. If the same UUID exists
+  /// in both locations, the modern file is authoritative.
+  ///
+  /// Missing player-data directories are equivalent to an empty list.
+  /// Invalid/corrupt player files are returned as player-local invalid
+  /// snapshots and do not fail discovery of sibling players.
+  Future<List<MtnMinecraftInfoPlayer>> readPlayers(
+    MtnMinecraftInfoWorld world,
+  ) async {
+    await _validateWorldDirectoryForRead(world);
+
+    final Map<String, _PlayerDataCandidate> candidates =
+        <String, _PlayerDataCandidate>{};
+
+    await _collectPlayerDataCandidates(
+      directory: Directory(
+        p.join(world.directory.path, _legacyPlayerDataDirectoryName),
+      ),
+      storageLayout: MtnMinecraftInfoPlayerStorageLayout.legacy,
+      candidates: candidates,
+      replaceExisting: false,
+    );
+
+    await _collectPlayerDataCandidates(
+      directory: Directory(
+        p.join(
+          world.directory.path,
+          _modernPlayersDirectoryName,
+          _modernPlayerDataDirectoryName,
+        ),
+      ),
+      storageLayout: MtnMinecraftInfoPlayerStorageLayout.modern,
+      candidates: candidates,
+      replaceExisting: true,
+    );
+
+    final List<_PlayerDataCandidate> ordered = candidates.values.toList()
+      ..sort(
+        (_PlayerDataCandidate left, _PlayerDataCandidate right) =>
+            left.uuid.compareTo(right.uuid),
+      );
+
+    final List<MtnMinecraftInfoPlayer> players = <MtnMinecraftInfoPlayer>[];
+    for (final _PlayerDataCandidate candidate in ordered) {
+      players.add(await _readPlayer(candidate));
+    }
+    return List<MtnMinecraftInfoPlayer>.unmodifiable(players);
   }
 
   /// Reads the current Java Edition saved-server list.
@@ -254,6 +310,116 @@ final class MtnMinecraftInfoProvider {
         directoryName: directoryName,
         error: MtnMinecraftInfoWorldError.invalidData,
       );
+    }
+  }
+
+  Future<void> _validateWorldDirectoryForRead(
+    MtnMinecraftInfoWorld world,
+  ) async {
+    final FileSystemEntityType gameDirectoryType =
+        await _entityType(gameDirectory.path, forWrite: false);
+    final FileSystemEntityType savesType =
+        await _entityType(savesDirectory.path, forWrite: false);
+    final String savesPath = p.normalize(p.absolute(savesDirectory.path));
+    final String worldPath = p.normalize(p.absolute(world.directory.path));
+
+    if (gameDirectoryType != FileSystemEntityType.directory ||
+        savesType != FileSystemEntityType.directory ||
+        !p.equals(p.dirname(worldPath), savesPath)) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidPath,
+      );
+    }
+
+    final FileSystemEntityType worldType =
+        await _entityType(worldPath, forWrite: false);
+    if (worldType != FileSystemEntityType.directory) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidPath,
+      );
+    }
+  }
+
+  Future<void> _collectPlayerDataCandidates({
+    required Directory directory,
+    required MtnMinecraftInfoPlayerStorageLayout storageLayout,
+    required Map<String, _PlayerDataCandidate> candidates,
+    required bool replaceExisting,
+  }) async {
+    final FileSystemEntityType directoryType =
+        await _entityType(directory.path, forWrite: false);
+    if (directoryType == FileSystemEntityType.notFound) return;
+    if (directoryType != FileSystemEntityType.directory) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidPath,
+      );
+    }
+
+    late final List<FileSystemEntity> entries;
+    try {
+      entries = await directory.list(followLinks: false).toList()
+        ..sort(
+          (FileSystemEntity left, FileSystemEntity right) =>
+              p.basename(left.path).compareTo(p.basename(right.path)),
+        );
+    } on FileSystemException {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.readFailed,
+      );
+    }
+
+    for (final FileSystemEntity entry in entries) {
+      if (entry is! File) continue;
+
+      final RegExpMatch? match =
+          _playerDataFilePattern.firstMatch(p.basename(entry.path));
+      if (match == null) continue;
+
+      final String uuid = match.group(1)!.toLowerCase();
+      final _PlayerDataCandidate candidate = _PlayerDataCandidate(
+        uuid: uuid,
+        file: entry,
+        storageLayout: storageLayout,
+      );
+
+      if (replaceExisting) {
+        candidates[uuid] = candidate;
+      } else {
+        candidates.putIfAbsent(uuid, () => candidate);
+      }
+    }
+  }
+
+  Future<MtnMinecraftInfoPlayer> _readPlayer(
+    _PlayerDataCandidate candidate,
+  ) async {
+    late final List<int> compressed;
+    try {
+      compressed = await candidate.file.readAsBytes();
+    } on FileSystemException {
+      return candidate.invalid(MtnMinecraftInfoPlayerError.readFailed);
+    }
+
+    late final List<int> decoded;
+    try {
+      decoded = gzip.decode(compressed);
+    } on FormatException {
+      return candidate.invalid(
+        MtnMinecraftInfoPlayerError.invalidCompression,
+      );
+    }
+
+    late final MtnMinecraftNbtDocument document;
+    try {
+      document = const MtnMinecraftNbtCodec().decode(decoded);
+    } on MtnMinecraftNbtException {
+      return candidate.invalid(MtnMinecraftInfoPlayerError.invalidNbt);
+    }
+
+    try {
+      return _playerFromNbt(candidate: candidate, document: document);
+    } on _InvalidPlayerData {
+      return candidate.invalid(MtnMinecraftInfoPlayerError.invalidData);
     }
   }
 
@@ -419,6 +585,100 @@ final class MtnMinecraftInfoProvider {
       }
     }
   }
+}
+
+final RegExp _playerDataFilePattern = RegExp(
+  r'^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.dat$',
+  caseSensitive: false,
+);
+
+final class _PlayerDataCandidate {
+  const _PlayerDataCandidate({
+    required this.uuid,
+    required this.file,
+    required this.storageLayout,
+  });
+
+  final String uuid;
+  final File file;
+  final MtnMinecraftInfoPlayerStorageLayout storageLayout;
+
+  MtnMinecraftInfoPlayer invalid(MtnMinecraftInfoPlayerError error) =>
+      MtnMinecraftInfoPlayer.invalid(
+        uuid: uuid,
+        dataFile: file,
+        storageLayout: storageLayout,
+        error: error,
+      );
+}
+
+final class _InvalidPlayerData implements Exception {
+  const _InvalidPlayerData();
+}
+
+MtnMinecraftInfoPlayer _playerFromNbt({
+  required _PlayerDataCandidate candidate,
+  required MtnMinecraftNbtDocument document,
+}) {
+  if (document.root.type != MtnMinecraftNbtType.compound) {
+    throw const _InvalidPlayerData();
+  }
+
+  final Map<String, MtnMinecraftNbtValue> data = document.root.asCompound;
+  return MtnMinecraftInfoPlayer.available(
+    uuid: candidate.uuid,
+    dataFile: candidate.file,
+    storageLayout: candidate.storageLayout,
+    dataVersion: _optionalPlayerInt(data, 'DataVersion'),
+    dimension: _optionalPlayerString(data, 'Dimension'),
+    position: _optionalPlayerPosition(data),
+  );
+}
+
+String? _optionalPlayerString(
+  Map<String, MtnMinecraftNbtValue> data,
+  String name,
+) {
+  final MtnMinecraftNbtValue? value = data[name];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.string) {
+    throw const _InvalidPlayerData();
+  }
+  return value.asString;
+}
+
+int? _optionalPlayerInt(
+  Map<String, MtnMinecraftNbtValue> data,
+  String name,
+) {
+  final MtnMinecraftNbtValue? value = data[name];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.intValue) {
+    throw const _InvalidPlayerData();
+  }
+  return value.asInt;
+}
+
+MtnMinecraftInfoPlayerPosition? _optionalPlayerPosition(
+  Map<String, MtnMinecraftNbtValue> data,
+) {
+  final MtnMinecraftNbtValue? value = data['Pos'];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.list) {
+    throw const _InvalidPlayerData();
+  }
+
+  final MtnMinecraftNbtList list = value.asList;
+  if (list.elementType != MtnMinecraftNbtType.doubleValue ||
+      list.values.length != 3) {
+    throw const _InvalidPlayerData();
+  }
+
+  return MtnMinecraftInfoPlayerPosition(
+    x: list.values[0].asDouble,
+    y: list.values[1].asDouble,
+    z: list.values[2].asDouble,
+  );
 }
 
 final class _InvalidWorldData implements Exception {

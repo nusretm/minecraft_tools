@@ -1,6 +1,6 @@
 # Minecraft Tools — Current Target
 
-Last updated: 2026-10-02
+Last updated: 2026-10-03
 
 ## Repository
 
@@ -17,10 +17,10 @@ Merged `main` baseline before the active checkpoint:
 
 ```text
 main
-9aaa72a528a64497e2729652725063acfef205ad
+35de8cf2b84bcd72a6e0b2e79c9a0d5eb66966aa
 ```
 
-This baseline includes the COMPLETE / VALIDATED / MERGED server foundation:
+This baseline includes the COMPLETE / VALIDATED / MERGED foundations for:
 
 - Java NBT codec
 - `servers.dat` read/append with unknown-tag preservation
@@ -30,89 +30,115 @@ This baseline includes the COMPLETE / VALIDATED / MERGED server foundation:
 - Minecraft SRV discovery
 - server address normalization and known-server matching
 - legacy pre-1.7 server-list ping fallback
+- Java Edition world discovery / `level.dat`
+
+The world foundation merged as:
+
+```text
+35de8cf2b84bcd72a6e0b2e79c9a0d5eb66966aa
+Add Minecraft world discovery foundation
+```
 
 ## Active checkpoint
 
-Java Edition world discovery / `level.dat` foundation.
+Java Edition player discovery foundation.
 
 Current branch:
 
 ```text
-feature/minecraft-world-discovery-foundation
+feature/minecraft-player-discovery-foundation
+```
+
+Remote implementation HEAD before this continuity pass:
+
+```text
+b3cbde5b290a7fcc91bf9e90f7f21d65a6880aa7
 ```
 
 Package version for this checkpoint:
 
 ```text
-1.0.0-dev.7
+1.0.0-dev.8
 ```
 
-### Implemented behavior
+## Public API
 
-Public provider additions:
+Provider addition:
 
 ```dart
-Directory get savesDirectory;
-
-Future<List<MtnMinecraftInfoWorld>> readWorlds();
+Future<List<MtnMinecraftInfoPlayer>> readPlayers(
+  MtnMinecraftInfoWorld world,
+);
 ```
 
-Public world types:
+Public player types:
 
 ```text
-MtnMinecraftInfoWorld
-MtnMinecraftInfoWorldVersion
-MtnMinecraftInfoWorldState
-MtnMinecraftInfoWorldError
+MtnMinecraftInfoPlayer
+MtnMinecraftInfoPlayerPosition
+MtnMinecraftInfoPlayerStorageLayout
+MtnMinecraftInfoPlayerState
+MtnMinecraftInfoPlayerError
 ```
 
-Discovery scope:
+Public naming remains:
 
 ```text
-<gameDirectory>/saves/*/level.dat
+MtnMinecraftInfo<Subject>
+```
+
+## Player discovery semantics
+
+Supported layouts:
+
+```text
+pre-26.1:
+<world>/playerdata/<uuid>.dat
+
+26.1+:
+<world>/players/data/<uuid>.dat
 ```
 
 Rules:
 
-- only direct child directories are considered
-- `level.dat` must be a regular file
-- symlink entries are not followed
-- missing `saves` -> immutable empty list
-- output ordering is deterministic by directory name
-- one invalid/corrupt world does not fail sibling discovery
-- `directoryName` is filesystem identity
-- `LevelName` is Minecraft display metadata and does not rewrite the path
-- `level.dat_old` is not an implicit fallback
+- the supplied world must be a direct child of this provider's `saves`
+  directory
+- the world directory must still exist and be a directory
+- missing player-data directories -> immutable empty list
+- only UUID-shaped `<uuid>.dat` filenames are candidates
+- public UUID identity is canonical lowercase
+- the exact discovered filename/path remains available through `dataFile`
+- results are deterministically ordered by canonical UUID
+- non-file entries and symlink entries are not treated as player-data files
+- one invalid/corrupt player does not fail sibling discovery
+- if the same UUID exists in both layouts, modern `players/data` wins
+- a corrupt modern duplicate does not silently fall back to legacy
 
-### level.dat / NBT boundary
+## Player .dat / NBT boundary
 
-`level.dat` is decoded as:
+Each candidate is decoded as:
 
 ```text
 file bytes
   -> gzip decode
   -> MtnMinecraftNbtCodec.decode()
   -> Compound root
-  -> Data Compound
-  -> MtnMinecraftInfoWorld
+  -> MtnMinecraftInfoPlayer
 ```
 
-The raw NBT codec remains compression-agnostic. No NBT API changes were needed.
+The raw NBT codec remains compression-agnostic. No new runtime dependency was
+introduced.
 
 Core metadata:
 
-- `LevelName`
-- `DataVersion`
-- `Version.Id`
-- `Version.Name`
-- `Version.Snapshot`
-- `Version.Series`
-- `LastPlayed`
+- root `DataVersion`
+- root `Dimension`
+- root `Pos` as exactly three doubles
 
-Optional metadata may be absent. A present field with an incompatible NBT type
-is treated as invalid world data.
+All core metadata is nullable when absent. A present field with an incompatible
+NBT type is treated as invalid player data.
 
-World-local invalid reasons:
+Player-local invalid reasons:
 
 ```text
 readFailed
@@ -121,49 +147,72 @@ invalidNbt
 invalidData
 ```
 
-### Deferred world fields
+Storage layout:
 
-The first checkpoint deliberately does not model/normalize:
+```text
+legacy
+modern
+```
 
+## Explicitly deferred player fields
+
+The foundation deliberately does not model/normalize:
+
+- inventory / selected item
+- ender chest
+- health
+- food / hunger
+- XP
 - game mode
-- hardcore
-- difficulty
-- spawn
-- world border
-- world generation
-- player data
+- abilities
+- effects
+- spawn state
 - stats
 - advancements
+- `singleplayer_uuid` relationship
 
-These remain separate checkpoints because their storage and version semantics
-are broader than the core world-discovery foundation.
+These remain separate checkpoints because their storage and cross-version
+semantics are broader than player discovery identity and core location data.
 
 ## Validation status
 
-Validated on Windows on 2026-10-02:
+Validated locally on Windows on 2026-10-03:
 
 ```text
 dart analyze
 No issues found!
 
 dart test
-00:02 +47: All tests passed!
+00:02 +62: All tests passed!
+
+git diff --check
+PASS
 ```
 
-The checkpoint is therefore:
+The local validation sequence ran `dart format` before analyzer/tests. It left
+only a formatter diff in `test/minecraft_player_discovery_test.dart`; no
+behavior changed. That local formatter diff is intentionally not overwritten by
+this remote metadata pass.
+
+Current checkpoint state:
 
 ```text
-IMPLEMENTED / VALIDATED
+IMPLEMENTED / LOCALLY VALIDATED
 ```
 
-It is not yet committed, pushed or merged.
+The remote feature branch currently contains implementation commits and this
+metadata/continuity pass. Branch history may be squashed before merging to
+`main`.
 
-## Locked server architecture
+## Locked foundations
 
-The server foundation merged at
-`9aaa72a528a64497e2729652725063acfef205ad` remains locked. World discovery
-does not redesign server lifecycle, status, SRV, address normalization, known
-server matching or legacy ping behavior.
+The merged server and world foundations remain locked. Player discovery does
+not redesign:
+
+- server lifecycle/status/SRV/address matching/legacy ping
+- raw NBT codec
+- world discovery semantics
+- `level.dat` schema handling
 
 ## Development rules
 
@@ -177,13 +226,18 @@ server matching or legacy ping behavior.
 
 ## Next action
 
-Finalize the world-discovery checkpoint metadata/continuity changes, inspect the
-working-tree diff, then commit only when the user approves.
+1. Pull this metadata/continuity pass into the local feature branch.
+2. Preserve/apply the local formatter-only player-test change.
+3. Run final `git diff --check`, `dart analyze` and `dart test`.
+4. Inspect the final checkpoint diff.
+5. Squash the feature branch to one clean commit if desired.
+6. Merge only after explicit approval.
 
 Likely later domains include:
 
-- richer world metadata with explicit cross-version normalization
-- player data
-- statistics / advancements
+- player stats
+- player advancements
+- richer player gameplay state
+- `singleplayer_uuid` relation
+- richer world metadata / version history
 - installed content discovery
-- address deduplication/write policy

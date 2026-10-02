@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.0.0-dev.8
+
+Java Edition player discovery foundation.
+
+- Added `MtnMinecraftInfoPlayer`, `MtnMinecraftInfoPlayerPosition` and
+  `MtnMinecraftInfoPlayerStorageLayout`.
+- Added `MtnMinecraftInfoProvider.readPlayers(world)`.
+- Added support for pre-26.1 `playerdata/<uuid>.dat` and 26.1+
+  `players/data/<uuid>.dat` layouts.
+- Added deterministic modern-over-legacy precedence for duplicate UUIDs without
+  silently falling back when the modern entry is corrupt.
+- Added filename-based canonical lowercase UUID identity while preserving the
+  exact discovered `dataFile`.
+- Added gzip decoding around the existing raw NBT codec without changing the
+  NBT API.
+- Added nullable core player metadata for `DataVersion`, `Dimension` and a
+  three-double `Pos`.
+- Added player-local `available` / `invalid` state and
+  read/compression/NBT/data error classification so one corrupt player does not
+  fail sibling discovery.
+- Added deterministic UUID ordering, provider/world path validation and
+  non-following filesystem discovery behavior.
+- Kept inventory, health, hunger, XP, game mode, abilities, effects, spawn,
+  stats, advancements and singleplayer UUID association out of this foundation.
+- Added deterministic player-discovery coverage; full package validation passes
+  with `dart analyze` and 62/62 tests on Windows.
+
 ## 1.0.0-dev.7
 
 Java Edition world discovery / `level.dat` foundation.

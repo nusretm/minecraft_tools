@@ -23,6 +23,8 @@ launcher runtime, package-management or UI code.
 - Java Edition `saves/*/level.dat` world discovery
 - Gzip-wrapped `level.dat` decoding through the existing raw NBT codec
 - Immutable core world metadata and per-world invalid/corrupt status
+- Java Edition player-data discovery for legacy `playerdata/` and 26.1+ `players/data/`
+- Immutable core player metadata with modern-over-legacy UUID precedence
 
 ## Usage
 
@@ -37,6 +39,9 @@ final info = MtnMinecraftInfoProvider(
 
 final servers = await info.readServers();
 final worlds = await info.readWorlds();
+final players = worlds.isEmpty
+    ? const <MtnMinecraftInfoPlayer>[]
+    : await info.readPlayers(worlds.first);
 
 await info.addServer(
   MtnMinecraftInfoServer(
@@ -52,7 +57,7 @@ Information models use the locked `MtnMinecraftInfo<Subject>` convention:
 
 - `MtnMinecraftInfoServer`
 - `MtnMinecraftInfoWorld`
-- future `MtnMinecraftInfoPlayer`
+- `MtnMinecraftInfoPlayer`
 
 The NBT layer is format-oriented and intentionally separate from semantic
 Minecraft info models.
@@ -87,6 +92,63 @@ One corrupt world does not fail discovery of sibling worlds.
 This checkpoint intentionally does not normalize version-specific fields such
 as difficulty, game mode, spawn, world border, player data or world generation.
 `level.dat_old` is not used as an implicit recovery source.
+
+## Java player discovery
+
+`MtnMinecraftInfoProvider.readPlayers(world)` discovers Java Edition
+player-data snapshots belonging to a discovered world.
+
+Two on-disk layouts are supported:
+
+```text
+pre-26.1:
+<world>/playerdata/<uuid>.dat
+
+26.1+:
+<world>/players/data/<uuid>.dat
+```
+
+When the same canonical UUID exists in both layouts, the modern
+`players/data` entry wins deterministically. A corrupt modern entry does not
+silently fall back to the legacy copy.
+
+Player identity is derived from the UUID filename. Candidate filenames must use
+the standard dashed UUID shape; the public `uuid` value is normalized to
+lowercase while `dataFile` preserves the exact discovered filesystem path.
+
+Each player `.dat` file is treated as a gzip container around raw Java NBT:
+
+```text
+player .dat bytes
+  -> gzip decode
+  -> MtnMinecraftNbtCodec.decode()
+  -> Compound root
+  -> MtnMinecraftInfoPlayer
+```
+
+The foundation exposes:
+
+- canonical `uuid`
+- exact `dataFile`
+- `legacy` / `modern` storage layout
+- nullable root `DataVersion`
+- nullable root `Dimension`
+- nullable three-double `Pos` as `MtnMinecraftInfoPlayerPosition`
+- `available` / `invalid` player state
+- player-local errors for read, gzip, NBT and schema failures
+
+Missing player-data directories produce an immutable empty list. Results are
+deterministically ordered by canonical UUID. Invalid filenames, directories
+masquerading as `.dat` files and symlink entries are not treated as players.
+One corrupt player does not fail discovery of sibling players.
+
+The supplied world must be a direct child of this provider's `saves`
+directory and must still exist as a directory. Invalid storage-directory shapes
+remain provider-level path errors.
+
+This foundation intentionally does not expose inventory, ender chest, health,
+food, XP, game mode, abilities, effects, spawn state, stats, advancements or
+the singleplayer-player relationship yet.
 
 ## Java server status
 
@@ -403,9 +465,11 @@ Validated on Windows with Dart:
 ## Deferred
 
 - address deduplication/write policy
-- world discovery / `level.dat`
-- playerdata
+- richer world metadata and cross-version normalization
+- richer player gameplay state
+- singleplayer UUID relationship
 - statistics
+- advancements
 - installed-content information
 - client-mod activity discovery
 
