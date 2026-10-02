@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.0.0-dev.7
+
+Java Edition world discovery / `level.dat` foundation.
+
+- Added `MtnMinecraftInfoWorld` and `MtnMinecraftInfoWorldVersion`.
+- Added `MtnMinecraftInfoProvider.savesDirectory` and `readWorlds()`.
+- Added direct `<gameDirectory>/saves/*/level.dat` discovery.
+- Added gzip decoding as a file-format wrapper around the existing raw NBT
+  codec without changing the NBT API.
+- Added core immutable metadata for `LevelName`, `DataVersion`, `Version` and
+  `LastPlayed`.
+- Kept filesystem directory identity separate from Minecraft `LevelName`.
+- Added world-local `available` / `invalid` state and read/compression/NBT/data
+  error classification so one corrupt world does not fail sibling discovery.
+- Added deterministic directory ordering and non-following symlink behavior.
+- Kept `level.dat_old`, player data, difficulty, spawn, world border and
+  world-generation normalization out of this foundation checkpoint.
+- Added deterministic world-discovery coverage; full package validation passes
+  with `dart analyze` and 47/47 tests on Windows.
+
 ## 1.0.0-dev.6
 
 Legacy pre-1.7 Java server-list ping fallback.

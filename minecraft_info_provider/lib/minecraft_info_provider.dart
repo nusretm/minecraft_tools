@@ -7,4 +7,5 @@ export 'src/info/info_server_address.dart';
 export 'src/info/info_server_srv.dart';
 export 'src/info/info_server_status.dart';
 export 'src/info/info_server_status_client.dart';
+export 'src/info/info_world.dart';
 export 'src/nbt/minecraft_nbt.dart';

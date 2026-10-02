@@ -20,6 +20,9 @@ launcher runtime, package-management or UI code.
 - Java Edition `_minecraft._tcp` SRV discovery for bare hostnames
 - Server address normalization and known-server matching
 - Legacy pre-1.7 Java server-list ping fallback
+- Java Edition `saves/*/level.dat` world discovery
+- Gzip-wrapped `level.dat` decoding through the existing raw NBT codec
+- Immutable core world metadata and per-world invalid/corrupt status
 
 ## Usage
 
@@ -33,6 +36,7 @@ final info = MtnMinecraftInfoProvider(
 );
 
 final servers = await info.readServers();
+final worlds = await info.readWorlds();
 
 await info.addServer(
   MtnMinecraftInfoServer(
@@ -47,11 +51,42 @@ await info.addServer(
 Information models use the locked `MtnMinecraftInfo<Subject>` convention:
 
 - `MtnMinecraftInfoServer`
-- future `MtnMinecraftInfoWorld`
+- `MtnMinecraftInfoWorld`
 - future `MtnMinecraftInfoPlayer`
 
 The NBT layer is format-oriented and intentionally separate from semantic
 Minecraft info models.
+
+## Java world discovery
+
+`MtnMinecraftInfoProvider.readWorlds()` discovers direct child directories
+under `<gameDirectory>/saves` that contain a regular `level.dat` file.
+
+`level.dat` is treated as an outer gzip container. The decompressed bytes are
+decoded by the existing `MtnMinecraftNbtCodec`; compression is not added to the
+raw NBT API.
+
+The first world foundation exposes:
+
+- filesystem `directory` and `directoryName`
+- Minecraft `LevelName` as nullable `name`
+- nullable `DataVersion`
+- nullable `Version` metadata (`Id`, `Name`, `Snapshot`, `Series`)
+- nullable `LastPlayed` as UTC `DateTime`
+- `levelFile` and `iconFile` path accessors
+- `available` / `invalid` world state
+- world-local errors for read, gzip, NBT and schema failures
+
+Filesystem identity and Minecraft display identity remain separate:
+`directoryName` is never replaced by `LevelName`.
+
+A missing `saves` directory produces an immutable empty list. Discovery is
+deterministically ordered by directory name. Symlink entries are not followed.
+One corrupt world does not fail discovery of sibling worlds.
+
+This checkpoint intentionally does not normalize version-specific fields such
+as difficulty, game mode, spawn, world border, player data or world generation.
+`level.dat_old` is not used as an implicit recovery source.
 
 ## Java server status
 

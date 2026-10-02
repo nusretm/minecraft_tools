@@ -7,9 +7,11 @@ import 'package:path/path.dart' as p;
 
 import '../nbt/minecraft_nbt.dart';
 import 'info_server.dart';
+import 'info_world.dart';
 
 const String _serversFileName = 'servers.dat';
 const String _serversTagName = 'servers';
+const String _savesDirectoryName = 'saves';
 
 enum MtnMinecraftInfoProviderError {
   invalidPath(8101),
@@ -51,6 +53,75 @@ final class MtnMinecraftInfoProvider {
   File get serversFile => File(
         p.join(gameDirectory.path, _serversFileName),
       );
+
+  Directory get savesDirectory => Directory(
+        p.join(gameDirectory.path, _savesDirectoryName),
+      );
+
+  /// Discovers direct Java Edition world directories under `saves`.
+  ///
+  /// A missing `saves` directory is equivalent to an empty world list.
+  /// Invalid/corrupt `level.dat` files are represented as world-local invalid
+  /// snapshots and do not fail discovery of sibling worlds.
+  Future<List<MtnMinecraftInfoWorld>> readWorlds() async {
+    final FileSystemEntityType gameDirectoryType =
+        await _entityType(gameDirectory.path, forWrite: false);
+    if (gameDirectoryType != FileSystemEntityType.directory) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidPath,
+      );
+    }
+
+    final FileSystemEntityType savesType =
+        await _entityType(savesDirectory.path, forWrite: false);
+    if (savesType == FileSystemEntityType.notFound) {
+      return const <MtnMinecraftInfoWorld>[];
+    }
+    if (savesType != FileSystemEntityType.directory) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidPath,
+      );
+    }
+
+    late final List<FileSystemEntity> children;
+    try {
+      children = await savesDirectory.list(followLinks: false).toList();
+    } on FileSystemException {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.readFailed,
+      );
+    }
+
+    final List<Directory> directories = children.whereType<Directory>().toList()
+      ..sort(
+        (Directory left, Directory right) =>
+            p.basename(left.path).compareTo(p.basename(right.path)),
+      );
+    final List<MtnMinecraftInfoWorld> worlds = <MtnMinecraftInfoWorld>[];
+    for (final Directory directory in directories) {
+      final String directoryName = p.basename(directory.path);
+      final File levelFile = File(p.join(directory.path, 'level.dat'));
+      late final FileSystemEntityType levelType;
+      try {
+        levelType = await FileSystemEntity.type(
+          levelFile.path,
+          followLinks: false,
+        );
+      } on FileSystemException {
+        worlds.add(
+          MtnMinecraftInfoWorld.invalid(
+            directory: directory,
+            directoryName: directoryName,
+            error: MtnMinecraftInfoWorldError.readFailed,
+          ),
+        );
+        continue;
+      }
+      if (levelType != FileSystemEntityType.file) continue;
+      worlds.add(await _readWorld(directory));
+    }
+    return List<MtnMinecraftInfoWorld>.unmodifiable(worlds);
+  }
 
   /// Reads the current Java Edition saved-server list.
   ///
@@ -101,8 +172,7 @@ final class MtnMinecraftInfoProvider {
           name: document.name,
           root: MtnMinecraftNbtValue.compound(root),
         );
-        final Uint8List encoded =
-            const MtnMinecraftNbtCodec().encode(updated);
+        final Uint8List encoded = const MtnMinecraftNbtCodec().encode(updated);
         await _writeUnlocked(encoded);
       });
 
@@ -134,6 +204,57 @@ final class MtnMinecraftInfoProvider {
       result.add(_serverFromNbt(value));
     }
     return List<MtnMinecraftInfoServer>.unmodifiable(result);
+  }
+
+  Future<MtnMinecraftInfoWorld> _readWorld(Directory directory) async {
+    final String directoryName = p.basename(directory.path);
+    final File levelFile = File(p.join(directory.path, 'level.dat'));
+    late final List<int> compressed;
+    try {
+      compressed = await levelFile.readAsBytes();
+    } on FileSystemException {
+      return MtnMinecraftInfoWorld.invalid(
+        directory: directory,
+        directoryName: directoryName,
+        error: MtnMinecraftInfoWorldError.readFailed,
+      );
+    }
+
+    late final List<int> decoded;
+    try {
+      decoded = gzip.decode(compressed);
+    } on FormatException {
+      return MtnMinecraftInfoWorld.invalid(
+        directory: directory,
+        directoryName: directoryName,
+        error: MtnMinecraftInfoWorldError.invalidCompression,
+      );
+    }
+
+    late final MtnMinecraftNbtDocument document;
+    try {
+      document = const MtnMinecraftNbtCodec().decode(decoded);
+    } on MtnMinecraftNbtException {
+      return MtnMinecraftInfoWorld.invalid(
+        directory: directory,
+        directoryName: directoryName,
+        error: MtnMinecraftInfoWorldError.invalidNbt,
+      );
+    }
+
+    try {
+      return _worldFromNbt(
+        directory: directory,
+        directoryName: directoryName,
+        document: document,
+      );
+    } on _InvalidWorldData {
+      return MtnMinecraftInfoWorld.invalid(
+        directory: directory,
+        directoryName: directoryName,
+        error: MtnMinecraftInfoWorldError.invalidData,
+      );
+    }
   }
 
   Future<MtnMinecraftNbtDocument> _loadDocumentForWrite() async {
@@ -298,6 +419,114 @@ final class MtnMinecraftInfoProvider {
       }
     }
   }
+}
+
+final class _InvalidWorldData implements Exception {
+  const _InvalidWorldData();
+}
+
+MtnMinecraftInfoWorld _worldFromNbt({
+  required Directory directory,
+  required String directoryName,
+  required MtnMinecraftNbtDocument document,
+}) {
+  if (document.root.type != MtnMinecraftNbtType.compound) {
+    throw const _InvalidWorldData();
+  }
+  final MtnMinecraftNbtValue? dataValue = document.root.asCompound['Data'];
+  if (dataValue?.type != MtnMinecraftNbtType.compound) {
+    throw const _InvalidWorldData();
+  }
+  final Map<String, MtnMinecraftNbtValue> data = dataValue!.asCompound;
+
+  final String? name = _optionalWorldString(data, 'LevelName');
+  final int? dataVersion = _optionalWorldInt(data, 'DataVersion');
+  final int? lastPlayedMilliseconds = _optionalWorldLong(data, 'LastPlayed');
+  final MtnMinecraftInfoWorldVersion? version = _optionalWorldVersion(data);
+
+  DateTime? lastPlayed;
+  if (lastPlayedMilliseconds != null) {
+    const int maximumDateTimeMilliseconds = 8640000000000000;
+    if (lastPlayedMilliseconds < -maximumDateTimeMilliseconds ||
+        lastPlayedMilliseconds > maximumDateTimeMilliseconds) {
+      throw const _InvalidWorldData();
+    }
+    lastPlayed = DateTime.fromMillisecondsSinceEpoch(
+      lastPlayedMilliseconds,
+      isUtc: true,
+    );
+  }
+
+  return MtnMinecraftInfoWorld.available(
+    directory: directory,
+    directoryName: directoryName,
+    name: name,
+    dataVersion: dataVersion,
+    version: version,
+    lastPlayed: lastPlayed,
+  );
+}
+
+String? _optionalWorldString(
+  Map<String, MtnMinecraftNbtValue> data,
+  String name,
+) {
+  final MtnMinecraftNbtValue? value = data[name];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.string) {
+    throw const _InvalidWorldData();
+  }
+  return value.asString;
+}
+
+int? _optionalWorldInt(
+  Map<String, MtnMinecraftNbtValue> data,
+  String name,
+) {
+  final MtnMinecraftNbtValue? value = data[name];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.intValue) {
+    throw const _InvalidWorldData();
+  }
+  return value.asInt;
+}
+
+int? _optionalWorldLong(
+  Map<String, MtnMinecraftNbtValue> data,
+  String name,
+) {
+  final MtnMinecraftNbtValue? value = data[name];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.long) {
+    throw const _InvalidWorldData();
+  }
+  return value.asLong;
+}
+
+MtnMinecraftInfoWorldVersion? _optionalWorldVersion(
+  Map<String, MtnMinecraftNbtValue> data,
+) {
+  final MtnMinecraftNbtValue? value = data['Version'];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.compound) {
+    throw const _InvalidWorldData();
+  }
+  final Map<String, MtnMinecraftNbtValue> version = value.asCompound;
+  final MtnMinecraftNbtValue? snapshotValue = version['Snapshot'];
+  bool? snapshot;
+  if (snapshotValue != null) {
+    if (snapshotValue.type != MtnMinecraftNbtType.byte ||
+        (snapshotValue.asByte != 0 && snapshotValue.asByte != 1)) {
+      throw const _InvalidWorldData();
+    }
+    snapshot = snapshotValue.asByte == 1;
+  }
+  return MtnMinecraftInfoWorldVersion(
+    id: _optionalWorldInt(version, 'Id'),
+    name: _optionalWorldString(version, 'Name'),
+    snapshot: snapshot,
+    series: _optionalWorldString(version, 'Series'),
+  );
 }
 
 MtnMinecraftInfoServer _serverFromNbt(MtnMinecraftNbtValue value) {
