@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'info_server_srv.dart';
 import 'info_server_status.dart';
 import 'info_server_status_client.dart';
 
@@ -65,6 +67,7 @@ final class MtnMinecraftInfoServer {
     Duration offlineAfter = const Duration(minutes: 1),
     int protocolVersion = -1,
     bool measureLatency = true,
+    MtnMinecraftInfoSrvResolver? srvResolver,
   }) async {
     if (offlineAfter <= Duration.zero) {
       throw ArgumentError.value(
@@ -75,13 +78,59 @@ final class MtnMinecraftInfoServer {
     }
 
     final _ServerAddress target = _ServerAddress.parse(address);
-    final MtnMinecraftInfoServerStatus queried =
-        await const MtnMinecraftInfoServerStatusClient().query(
+    final List<_ServerAddress> candidates = <_ServerAddress>[target];
+    var srvUnavailable = false;
+
+    if (!target.hasExplicitPort &&
+        InternetAddress.tryParse(target.host) == null) {
+      final MtnMinecraftInfoSrvResolver resolver =
+          srvResolver ?? MtnMinecraftInfoDnsSrvResolver();
+      final List<MtnMinecraftInfoSrvRecord> records =
+          await resolver.lookupMinecraft(
+        host: target.host,
+        timeout: timeout,
+      );
+      if (records.length == 1 && records.single.target == '.') {
+        candidates.clear();
+        srvUnavailable = true;
+      } else if (records.isNotEmpty) {
+        candidates
+          ..clear()
+          ..addAll(
+            records.map(
+              (MtnMinecraftInfoSrvRecord record) => _ServerAddress(
+                host: record.target,
+                port: record.port,
+                hasExplicitPort: true,
+              ),
+            ),
+          );
+      }
+    }
+
+    MtnMinecraftInfoServerStatus? queried;
+    for (final _ServerAddress candidate in candidates) {
+      final MtnMinecraftInfoServerStatus result =
+          await const MtnMinecraftInfoServerStatusClient().query(
+        host: candidate.host,
+        port: candidate.port,
+        timeout: timeout,
+        protocolVersion: protocolVersion,
+        measureLatency: measureLatency,
+        handshakeHost: target.host,
+        handshakePort: target.port,
+      );
+      queried = result;
+      if (result.state == MtnMinecraftInfoServerState.online) {
+        break;
+      }
+    }
+    queried ??= MtnMinecraftInfoServerStatus.unavailable(
       host: target.host,
       port: target.port,
-      timeout: timeout,
-      protocolVersion: protocolVersion,
-      measureLatency: measureLatency,
+      reason: srvUnavailable
+          ? MtnMinecraftInfoServerUnavailableReason.srvUnavailable
+          : MtnMinecraftInfoServerUnavailableReason.connection,
     );
 
     final MtnMinecraftInfoServerStatus next;
@@ -97,7 +146,9 @@ final class MtnMinecraftInfoServer {
         lastSuccessfulAt: now,
       );
     } else if (queried.unavailableReason ==
-        MtnMinecraftInfoServerUnavailableReason.dns) {
+            MtnMinecraftInfoServerUnavailableReason.dns ||
+        queried.unavailableReason ==
+            MtnMinecraftInfoServerUnavailableReason.srvUnavailable) {
       _failureSince = null;
       next = previous == null
           ? queried
@@ -154,6 +205,7 @@ final class _ServerAddress {
   const _ServerAddress({
     required this.host,
     required this.port,
+    required this.hasExplicitPort,
   });
 
   factory _ServerAddress.parse(String address) {
@@ -177,7 +229,11 @@ final class _ServerAddress {
       }
       final String host = value.substring(1, closing);
       if (closing == value.length - 1) {
-        return _ServerAddress(host: host, port: 25565);
+        return _ServerAddress(
+          host: host,
+          port: 25565,
+          hasExplicitPort: false,
+        );
       }
       if (value[closing + 1] != ':') {
         throw ArgumentError.value(
@@ -189,6 +245,7 @@ final class _ServerAddress {
       return _ServerAddress(
         host: host,
         port: _parsePort(value.substring(closing + 2), address),
+        hasExplicitPort: true,
       );
     }
 
@@ -198,14 +255,20 @@ final class _ServerAddress {
       return _ServerAddress(
         host: value.substring(0, firstColon),
         port: _parsePort(value.substring(firstColon + 1), address),
+        hasExplicitPort: true,
       );
     }
 
-    return _ServerAddress(host: value, port: 25565);
+    return _ServerAddress(
+      host: value,
+      port: 25565,
+      hasExplicitPort: false,
+    );
   }
 
   final String host;
   final int port;
+  final bool hasExplicitPort;
 }
 
 int _parsePort(String raw, String address) {

@@ -198,6 +198,174 @@ void main() {
       expect(changes, 3);
     });
 
+    test('server resolves bare hostname through Minecraft SRV', () async {
+      final _StatusFixture fixture = await _StatusFixture.start(
+        <String, Object?>{
+          'version': <String, Object?>{
+            'name': '1.21.1',
+            'protocol': 767,
+          },
+          'players': <String, Object?>{
+            'max': 20,
+            'online': 4,
+          },
+          'description': 'SRV target',
+        },
+        expectedHandshakeHost: 'play.example.test',
+        expectedHandshakePort: 25565,
+      );
+      addTearDown(fixture.close);
+
+      final _FakeSrvResolver resolver = _FakeSrvResolver(
+        <MtnMinecraftInfoSrvRecord>[
+          MtnMinecraftInfoSrvRecord(
+            priority: 0,
+            weight: 0,
+            port: fixture.port,
+            target: InternetAddress.loopbackIPv4.address,
+          ),
+        ],
+      );
+      final MtnMinecraftInfoServer server = MtnMinecraftInfoServer(
+        name: 'SRV',
+        address: 'play.example.test',
+      );
+
+      final MtnMinecraftInfoServerStatus status = await server.queryStatus(
+        measureLatency: false,
+        srvResolver: resolver,
+      );
+
+      expect(resolver.calls, 1);
+      expect(resolver.lastHost, 'play.example.test');
+      expect(status.state, MtnMinecraftInfoServerState.online);
+      expect(status.host, InternetAddress.loopbackIPv4.address);
+      expect(status.port, fixture.port);
+      expect(status.motd, 'SRV target');
+    });
+
+    test('explicit port skips Minecraft SRV lookup', () async {
+      final _StatusFixture fixture = await _StatusFixture.start(
+        <String, Object?>{
+          'version': <String, Object?>{
+            'name': '1.21.1',
+            'protocol': 767,
+          },
+          'players': <String, Object?>{
+            'max': 20,
+            'online': 5,
+          },
+          'description': 'Direct target',
+        },
+      );
+      addTearDown(fixture.close);
+
+      final _FakeSrvResolver resolver = _FakeSrvResolver(
+        const <MtnMinecraftInfoSrvRecord>[],
+      );
+      final MtnMinecraftInfoServer server = MtnMinecraftInfoServer(
+        name: 'Direct',
+        address: '${InternetAddress.loopbackIPv4.address}:${fixture.port}',
+      );
+
+      final MtnMinecraftInfoServerStatus status = await server.queryStatus(
+        measureLatency: false,
+        srvResolver: resolver,
+      );
+
+      expect(resolver.calls, 0);
+      expect(status.state, MtnMinecraftInfoServerState.online);
+      expect(status.port, fixture.port);
+    });
+
+    test('tries the next SRV candidate when the first is unreachable', () async {
+      final ServerSocket reserved = await ServerSocket.bind(
+        InternetAddress.loopbackIPv4,
+        0,
+      );
+      final int unavailablePort = reserved.port;
+      await reserved.close();
+
+      final _StatusFixture fixture = await _StatusFixture.start(
+        <String, Object?>{
+          'version': <String, Object?>{
+            'name': '1.21.1',
+            'protocol': 767,
+          },
+          'players': <String, Object?>{
+            'max': 20,
+            'online': 6,
+          },
+          'description': 'Second SRV target',
+        },
+        expectedHandshakeHost: 'fallback.example.test',
+        expectedHandshakePort: 25565,
+      );
+      addTearDown(fixture.close);
+
+      final _FakeSrvResolver resolver = _FakeSrvResolver(
+        <MtnMinecraftInfoSrvRecord>[
+          MtnMinecraftInfoSrvRecord(
+            priority: 0,
+            weight: 0,
+            port: unavailablePort,
+            target: InternetAddress.loopbackIPv4.address,
+          ),
+          MtnMinecraftInfoSrvRecord(
+            priority: 1,
+            weight: 0,
+            port: fixture.port,
+            target: InternetAddress.loopbackIPv4.address,
+          ),
+        ],
+      );
+      final MtnMinecraftInfoServer server = MtnMinecraftInfoServer(
+        name: 'Fallback',
+        address: 'fallback.example.test',
+      );
+
+      final MtnMinecraftInfoServerStatus status = await server.queryStatus(
+        timeout: const Duration(milliseconds: 500),
+        measureLatency: false,
+        srvResolver: resolver,
+      );
+
+      expect(status.state, MtnMinecraftInfoServerState.online);
+      expect(status.port, fixture.port);
+      expect(status.motd, 'Second SRV target');
+    });
+
+    test('SRV target dot marks the service unavailable', () async {
+      final _FakeSrvResolver resolver = _FakeSrvResolver(
+        const <MtnMinecraftInfoSrvRecord>[
+          MtnMinecraftInfoSrvRecord(
+            priority: 0,
+            weight: 0,
+            port: 0,
+            target: '.',
+          ),
+        ],
+      );
+      final MtnMinecraftInfoServer server = MtnMinecraftInfoServer(
+        name: 'Disabled',
+        address: 'disabled.example.test',
+      );
+
+      final MtnMinecraftInfoServerStatus status = await server.queryStatus(
+        timeout: const Duration(milliseconds: 100),
+        measureLatency: false,
+        srvResolver: resolver,
+      );
+
+      expect(status.state, MtnMinecraftInfoServerState.unavailable);
+      expect(
+        status.unavailableReason,
+        MtnMinecraftInfoServerUnavailableReason.srvUnavailable,
+      );
+      expect(status.isStale, isFalse);
+      expect(status.versionName, isNull);
+    });
+
     test('parses modern Forge advertised mods and required channels', () async {
       final _StatusFixture fixture = await _StatusFixture.start(
         <String, Object?>{
@@ -323,6 +491,8 @@ final class _StatusFixture {
   static Future<_StatusFixture> start(
     Map<String, Object?> response, {
     bool expectPing = false,
+    String? expectedHandshakeHost,
+    int? expectedHandshakePort,
   }) async {
     final ServerSocket server = await ServerSocket.bind(
       InternetAddress.loopbackIPv4,
@@ -337,6 +507,8 @@ final class _StatusFixture {
           port: server.port,
           response: response,
           expectPing: expectPing,
+          expectedHandshakeHost: expectedHandshakeHost,
+          expectedHandshakePort: expectedHandshakePort,
         ).then<void>(
           (_) {
             if (!done.isCompleted) done.complete();
@@ -363,6 +535,8 @@ final class _StatusFixture {
     required int port,
     required Map<String, Object?> response,
     required bool expectPing,
+    required String? expectedHandshakeHost,
+    required int? expectedHandshakePort,
   }) async {
     final _TestSocketReader socketReader = _TestSocketReader(socket);
     try {
@@ -370,8 +544,11 @@ final class _StatusFixture {
           await _readPacket(socketReader);
       expect(handshake.readVarInt(), 0);
       expect(handshake.readVarInt(), -1);
-      expect(handshake.readString(), InternetAddress.loopbackIPv4.address);
-      expect(handshake.readUint16(), port);
+      expect(
+        handshake.readString(),
+        expectedHandshakeHost ?? InternetAddress.loopbackIPv4.address,
+      );
+      expect(handshake.readUint16(), expectedHandshakePort ?? port);
       expect(handshake.readVarInt(), 1);
       expect(handshake.isAtEnd, isTrue);
 
@@ -545,4 +722,23 @@ final class _TestPacketReader {
   }
 
   int _readByte() => bytes[_offset++];
+}
+
+
+final class _FakeSrvResolver implements MtnMinecraftInfoSrvResolver {
+  _FakeSrvResolver(this.records);
+
+  final List<MtnMinecraftInfoSrvRecord> records;
+  int calls = 0;
+  String? lastHost;
+
+  @override
+  Future<List<MtnMinecraftInfoSrvRecord>> lookupMinecraft({
+    required String host,
+    Duration timeout = const Duration(seconds: 3),
+  }) async {
+    calls++;
+    lastHost = host;
+    return records;
+  }
 }

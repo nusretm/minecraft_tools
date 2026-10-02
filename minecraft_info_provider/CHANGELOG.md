@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.0.0-dev.4
+
+Java Edition SRV discovery foundation.
+
+- Added Pure Dart DNS SRV lookup for `_minecraft._tcp.<host>`.
+- Bare hostnames now resolve SRV before Server List Ping.
+- Explicit ports bypass SRV resolution.
+- Added RFC 2782 priority and weighted ordering.
+- Added sequential fallback across multiple SRV candidates.
+- Kept the original user-facing hostname in the Server List Ping handshake
+  while connecting TCP to the resolved SRV target.
+- Bounded multi-nameserver SRV resolution to one shared timeout budget.
+- Preserved direct `host:25565` fallback when no usable SRV record exists.
+- Added explicit handling for SRV target `.` as service unavailable.
+- Exposed `MtnMinecraftInfoSrvResolver` for custom/private DNS resolution.
+- Added a default UDP resolver using Cloudflare and Google public DNS.
+- Added deterministic local UDP DNS parsing tests and server-routing tests.
+- Updated the query tool so omitting `--port` exercises SRV discovery.
+
+
 ## 1.0.0-dev.3
 
 Server availability-state correction.

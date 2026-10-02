@@ -5,16 +5,20 @@ import 'package:minecraft_info_provider/minecraft_info_provider.dart';
 
 Future<void> main(List<String> arguments) async {
   final String host = _requiredValue(arguments, '--host');
-  final int port = int.parse(_value(arguments, '--port') ?? '25565');
+  final String? portValue = _value(arguments, '--port');
+  final int? port = portValue == null ? null : int.parse(portValue);
   final int timeoutMilliseconds =
       int.parse(_value(arguments, '--timeout-ms') ?? '5000');
   final int offlineAfterMilliseconds =
       int.parse(_value(arguments, '--offline-after-ms') ?? '60000');
   final bool measureLatency = !arguments.contains('--no-ping');
 
-  final String address = host.contains(':')
-      ? '[$host]:$port'
-      : '$host:$port';
+  final String address;
+  if (port == null) {
+    address = host;
+  } else {
+    address = host.contains(':') ? '[$host]:$port' : '$host:$port';
+  }
   final MtnMinecraftInfoServer server = MtnMinecraftInfoServer(
     name: host,
     address: address,
@@ -28,7 +32,9 @@ Future<void> main(List<String> arguments) async {
   const JsonEncoder encoder = JsonEncoder.withIndent('  ');
   stdout.writeln(encoder.convert(status.toMap()));
   stdout.writeln(
-    'STATUS_RESULT state=${status.state.name} '
+    'STATUS_RESULT address=$address '
+    'target=${status.host}:${status.port} '
+    'state=${status.state.name} '
     'stale=${status.isStale} '
     'version=${status.versionName} '
     'protocol=${status.protocol} '
