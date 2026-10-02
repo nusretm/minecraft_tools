@@ -1,0 +1,13 @@
+name: hypixel_api
+description: Pure Dart Hypixel API and SkyBlock calendar/events prototype.
+version: 1.0.0-dev.1
+publish_to: none
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  crypto: ^3.0.6
+
+dev_dependencies:
+  test: ^1.25.0
