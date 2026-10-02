@@ -12,6 +12,7 @@ Future<void> main(List<String> arguments) async {
   final int offlineAfterMilliseconds =
       int.parse(_value(arguments, '--offline-after-ms') ?? '60000');
   final bool measureLatency = !arguments.contains('--no-ping');
+  final bool allowLegacyFallback = !arguments.contains('--no-legacy');
 
   final String address;
   if (port == null) {
@@ -27,6 +28,7 @@ Future<void> main(List<String> arguments) async {
     timeout: Duration(milliseconds: timeoutMilliseconds),
     offlineAfter: Duration(milliseconds: offlineAfterMilliseconds),
     measureLatency: measureLatency,
+    allowLegacyFallback: allowLegacyFallback,
   );
 
   const JsonEncoder encoder = JsonEncoder.withIndent('  ');
@@ -35,6 +37,7 @@ Future<void> main(List<String> arguments) async {
     'STATUS_RESULT address=$address '
     'target=${status.host}:${status.port} '
     'state=${status.state.name} '
+    'format=${status.format?.name} '
     'stale=${status.isStale} '
     'version=${status.versionName} '
     'protocol=${status.protocol} '

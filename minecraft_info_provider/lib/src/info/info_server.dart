@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'info_server_address.dart';
+import 'info_server_legacy_status_client.dart';
 import 'info_server_srv.dart';
 import 'info_server_status.dart';
 import 'info_server_status_client.dart';
@@ -71,6 +72,7 @@ final class MtnMinecraftInfoServer {
     Duration offlineAfter = const Duration(minutes: 1),
     int protocolVersion = -1,
     bool measureLatency = true,
+    bool allowLegacyFallback = true,
     MtnMinecraftInfoSrvResolver? srvResolver,
   }) async {
     if (offlineAfter <= Duration.zero) {
@@ -80,6 +82,10 @@ final class MtnMinecraftInfoServer {
         'Offline grace period must be greater than zero',
       );
     }
+
+    final MtnMinecraftInfoServerStatus? previousStatus = _status;
+    final bool canDiscoverLegacy =
+        previousStatus?.format != MtnMinecraftInfoServerStatusFormat.modern;
 
     final MtnMinecraftInfoServerAddress target =
         MtnMinecraftInfoServerAddress.parse(address);
@@ -116,16 +122,54 @@ final class MtnMinecraftInfoServer {
 
     MtnMinecraftInfoServerStatus? queried;
     for (final MtnMinecraftInfoServerAddress candidate in candidates) {
-      final MtnMinecraftInfoServerStatus result =
-          await const MtnMinecraftInfoServerStatusClient().query(
-        host: candidate.host,
-        port: candidate.port,
-        timeout: timeout,
-        protocolVersion: protocolVersion,
-        measureLatency: measureLatency,
-        handshakeHost: target.host,
-        handshakePort: target.port,
-      );
+      MtnMinecraftInfoServerStatus result;
+      try {
+        result = await const MtnMinecraftInfoServerStatusClient().query(
+          host: candidate.host,
+          port: candidate.port,
+          timeout: timeout,
+          protocolVersion: protocolVersion,
+          measureLatency: measureLatency,
+          handshakeHost: target.host,
+          handshakePort: target.port,
+        );
+
+        if (allowLegacyFallback &&
+            canDiscoverLegacy &&
+            result.state != MtnMinecraftInfoServerState.online &&
+            result.unavailableReason ==
+                MtnMinecraftInfoServerUnavailableReason.timeout) {
+          final MtnMinecraftInfoServerStatus? legacy =
+              await const MtnMinecraftInfoServerLegacyStatusClient().query(
+            host: candidate.host,
+            port: candidate.port,
+            handshakeHost: target.host,
+            handshakePort: target.port,
+            timeout: timeout,
+            measureLatency: measureLatency,
+          );
+          if (legacy != null) result = legacy;
+        }
+      } on MtnMinecraftInfoServerStatusException catch (error) {
+        if (!allowLegacyFallback ||
+            !canDiscoverLegacy ||
+            error.error != MtnMinecraftInfoServerStatusError.invalidPacket) {
+          rethrow;
+        }
+
+        final MtnMinecraftInfoServerStatus? legacy =
+            await const MtnMinecraftInfoServerLegacyStatusClient().query(
+          host: candidate.host,
+          port: candidate.port,
+          handshakeHost: target.host,
+          handshakePort: target.port,
+          timeout: timeout,
+          measureLatency: measureLatency,
+        );
+        if (legacy == null) rethrow;
+        result = legacy;
+      }
+
       queried = result;
       if (result.state == MtnMinecraftInfoServerState.online) {
         break;
@@ -220,6 +264,7 @@ MtnMinecraftInfoServerStatus _copyStatus(
     state: state,
     host: source.host,
     port: source.port,
+    format: source.format,
     versionName: source.versionName,
     protocol: source.protocol,
     onlinePlayers: source.onlinePlayers,
@@ -246,6 +291,7 @@ bool _sameEffectiveStatus(
   if (left == null) return false;
   return left.state == right.state &&
       left.host == right.host &&
+      left.format == right.format &&
       left.port == right.port &&
       left.versionName == right.versionName &&
       left.protocol == right.protocol &&
