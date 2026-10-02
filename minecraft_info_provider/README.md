@@ -19,6 +19,7 @@ launcher runtime, package-management or UI code.
 - Serialized same-file operations and atomic replacement
 - Java Edition `_minecraft._tcp` SRV discovery for bare hostnames
 - Server address normalization and known-server matching
+- Legacy pre-1.7 Java server-list ping fallback
 
 ## Usage
 
@@ -136,6 +137,63 @@ Server List Ping is not a login handshake. A successful query does not prove
 that authentication, loader negotiation or final join compatibility will
 succeed.
 
+## Legacy pre-1.7 server ping fallback
+
+`MtnMinecraftInfoServer.queryStatus()` tries the modern Java Server List Ping
+first. By default, legacy fallback is enabled:
+
+```dart
+final status = await server.queryStatus(
+  allowLegacyFallback: true,
+);
+```
+
+Fallback is attempted only when the modern endpoint was reachable enough to
+suggest a protocol mismatch:
+
+- modern status timeout
+- invalid modern packet framing
+
+Malformed modern JSON or malformed modern status schema remains
+`MtnMinecraftInfoServerStatusError.invalidResponse` and does not fall back.
+
+Once a server instance has already produced a successful modern response,
+transient modern timeouts do not downgrade that instance to a legacy snapshot.
+The existing stale/grace lifecycle is preserved. Legacy discovery is intended
+for previously unknown or already-legacy servers.
+
+The fallback order is:
+
+1. Minecraft 1.6 extended ping: `FE 01 FA` with `MC|PingHost`
+2. Minecraft 1.4/1.5 ping: `FE 01`
+3. pre-1.4 ping: `FE`
+
+The status exposes which wire format succeeded:
+
+```dart
+switch (status.format) {
+  case MtnMinecraftInfoServerStatusFormat.modern:
+  case MtnMinecraftInfoServerStatusFormat.legacy16:
+  case MtnMinecraftInfoServerStatusFormat.legacy14:
+  case MtnMinecraftInfoServerStatusFormat.legacyPre14:
+  case null:
+}
+```
+
+Legacy 1.6/1.4-style responses can provide protocol version, displayed server
+version, MOTD, online players and max players. Very old responses provide only
+MOTD and player counts, so `protocol` and `versionName` remain null.
+
+Legacy responses do not provide modern JSON-only metadata such as favicon,
+secure-chat state, player samples or Forge status metadata. `rawJson` is null.
+Legacy latency, when requested, is measured over the legacy ping
+request/response because those formats have no separate modern ping/pong
+packet.
+
+Set `allowLegacyFallback: false` when a caller wants strict modern-only
+behavior. The command-line query tool exposes the same behavior with
+`--no-legacy`.
+
 ## Java server SRV discovery
 
 When a server address is a bare hostname, `queryStatus()` first checks:
@@ -198,8 +256,6 @@ dart run tool/query_minecraft_server.dart `
 ```
 
 The tool prints both the original address and the actual resolved target.
-
-Legacy pre-1.7 ping fallback remains outside this checkpoint.
 
 ## Server address normalization and known-server matching
 
@@ -321,7 +377,7 @@ Validated on Windows with Dart:
 
 ## Server status validation status
 
-Java Edition Server Status/Ping foundation is COMPLETE / VALIDATED / LOCKED.
+Java Edition modern Server Status/Ping foundation is COMPLETE / VALIDATED / LOCKED.
 
 Validated on Windows with Dart:
 

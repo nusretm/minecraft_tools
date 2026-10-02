@@ -270,6 +270,7 @@ MtnMinecraftInfoServerStatus _parseStatus(
     state: MtnMinecraftInfoServerState.online,
     host: host,
     port: port,
+    format: MtnMinecraftInfoServerStatusFormat.modern,
     versionName: versionName,
     protocol: protocol,
     onlinePlayers: onlinePlayers,

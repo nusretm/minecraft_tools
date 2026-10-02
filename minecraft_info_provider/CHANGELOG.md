@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.0.0-dev.6
+
+Legacy pre-1.7 Java server-list ping fallback.
+
+- Added transparent legacy fallback after modern status timeout or invalid
+  modern packet framing.
+- Added Minecraft 1.6 extended `FE 01 FA` / `MC|PingHost` support.
+- Added Minecraft 1.4/1.5 `FE 01` support.
+- Added pre-1.4 `FE` ping support.
+- Added `MtnMinecraftInfoServerStatusFormat` to distinguish modern and
+  legacy responses.
+- Preserved malformed modern JSON/schema as `invalidResponse` without hiding
+  it behind legacy fallback.
+- Preserved the existing modern stale/grace lifecycle: a previously modern
+  server is not downgraded to a legacy snapshot after a transient timeout.
+- Added `allowLegacyFallback` to `MtnMinecraftInfoServer.queryStatus()`
+  and `--no-legacy` to the query tool.
+- Added legacy ping RTT measurement when latency measurement is enabled.
+- Added deterministic transport-level tests for all three legacy request
+  variants and strict modern-only behavior.
+
+
 ## 1.0.0-dev.5
 
 Server address normalization and known-server matching foundation.

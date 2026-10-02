@@ -6,6 +6,13 @@ enum MtnMinecraftInfoServerState {
   unavailable,
 }
 
+enum MtnMinecraftInfoServerStatusFormat {
+  modern,
+  legacy16,
+  legacy14,
+  legacyPre14,
+}
+
 enum MtnMinecraftInfoServerUnavailableReason {
   dns,
   srvUnavailable,
@@ -126,6 +133,7 @@ final class MtnMinecraftInfoServerStatus {
     required this.state,
     required this.host,
     required this.port,
+    this.format,
     this.versionName,
     this.protocol,
     this.onlinePlayers,
@@ -163,6 +171,11 @@ final class MtnMinecraftInfoServerStatus {
   final MtnMinecraftInfoServerState state;
   final String host;
   final int port;
+
+  /// Wire format that produced the current fresh or retained status snapshot.
+  ///
+  /// Null when no successful status response has ever been received.
+  final MtnMinecraftInfoServerStatusFormat? format;
 
   bool get isOnline => state == MtnMinecraftInfoServerState.online;
 
@@ -212,6 +225,7 @@ final class MtnMinecraftInfoServerStatus {
         'state': state.name,
         'host': host,
         'port': port,
+        if (format != null) 'format': format!.name,
         if (versionName != null) 'versionName': versionName,
         if (protocol != null) 'protocol': protocol,
         if (onlinePlayers != null) 'onlinePlayers': onlinePlayers,
