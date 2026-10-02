@@ -17,6 +17,7 @@ launcher runtime, package-management or UI code.
 - Preservation of unknown existing NBT tags
 - Server name, address, icon, hidden-address state and resource-pack policy
 - Serialized same-file operations and atomic replacement
+- Java Edition `_minecraft._tcp` SRV discovery for bare hostnames
 
 ## Usage
 
@@ -134,16 +135,70 @@ Server List Ping is not a login handshake. A successful query does not prove
 that authentication, loader negotiation or final join compatibility will
 succeed.
 
-SRV discovery and legacy pre-1.7 ping fallback are outside this checkpoint;
-`host` and `port` are the concrete TCP target.
+## Java server SRV discovery
 
-A real server can be checked with:
+When a server address is a bare hostname, `queryStatus()` first checks:
+
+```text
+_minecraft._tcp.<hostname>
+```
+
+If SRV records exist, their target host and port become the TCP status target.
+The resulting `MtnMinecraftInfoServerStatus.host` and `.port` therefore
+represent the actual resolved endpoint, while `MtnMinecraftInfoServer.address`
+continues to preserve the address supplied by the user.
+
+For Server List Ping specifically, the TCP connection uses the resolved SRV
+target while the handshake address remains the original user-facing hostname
+(and its address-form port). This matches current vanilla status-ping behavior
+and keeps proxy/virtual-host routing compatible.
+
+SRV candidate ordering follows RFC 2782:
+
+- lower numeric priority is attempted first
+- records with equal priority are selected using their weight
+- if one candidate cannot be reached, the next ordered candidate is attempted
+
+A single SRV target of `.` explicitly marks the service unavailable and does
+not fall back to port 25565.
+
+SRV lookup only occurs when no port was explicitly supplied. For example:
+
+```text
+play.example.net
+  -> SRV lookup enabled
+
+play.example.net:25565
+  -> explicit target, SRV skipped
+```
+
+When no usable SRV record exists, the package falls back to the original
+hostname on Java's default port 25565.
+
+The default Pure Dart resolver sends UDP SRV queries to Cloudflare
+(`1.1.1.1`) and then Google (`8.8.8.8`) within one shared lookup timeout
+budget. Applications that need a private,
+split-DNS or system-specific resolver can inject their own
+`MtnMinecraftInfoSrvResolver` into `server.queryStatus()`.
+
+A real server can be checked with SRV enabled by omitting `--port`:
 
 ```powershell
 dart run tool/query_minecraft_server.dart `
-  --host mc.hypixel.net `
+  --host play.example.net
+```
+
+To bypass SRV explicitly:
+
+```powershell
+dart run tool/query_minecraft_server.dart `
+  --host play.example.net `
   --port 25565
 ```
+
+The tool prints both the original address and the actual resolved target.
+
+Legacy pre-1.7 ping fallback remains outside this checkpoint.
 
 ## NBT boundary
 

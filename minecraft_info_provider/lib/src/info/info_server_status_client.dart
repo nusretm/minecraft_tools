@@ -40,6 +40,8 @@ final class MtnMinecraftInfoServerStatusClient {
     Duration timeout = const Duration(seconds: 5),
     int protocolVersion = -1,
     bool measureLatency = true,
+    String? handshakeHost,
+    int? handshakePort,
   }) async {
     final String normalizedHost = host.trim();
     if (normalizedHost.isEmpty) {
@@ -94,8 +96,10 @@ final class MtnMinecraftInfoServerStatusClient {
       final String rawJson = await _requestStatus(
         socket,
         reader,
-        host: normalizedHost,
-        port: port,
+        host: handshakeHost?.trim().isNotEmpty == true
+            ? handshakeHost!.trim()
+            : normalizedHost,
+        port: handshakePort ?? port,
         protocolVersion: protocolVersion,
       ).timeout(timeout);
 

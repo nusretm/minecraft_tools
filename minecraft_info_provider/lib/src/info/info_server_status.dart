@@ -8,6 +8,7 @@ enum MtnMinecraftInfoServerState {
 
 enum MtnMinecraftInfoServerUnavailableReason {
   dns,
+  srvUnavailable,
   timeout,
   connection,
 }
