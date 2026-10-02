@@ -1,7 +1,9 @@
 library;
 
+export 'src/info/info_known_server.dart';
 export 'src/info/info_provider.dart';
 export 'src/info/info_server.dart';
+export 'src/info/info_server_address.dart';
 export 'src/info/info_server_srv.dart';
 export 'src/info/info_server_status.dart';
 export 'src/info/info_server_status_client.dart';
