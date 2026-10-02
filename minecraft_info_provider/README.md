@@ -18,6 +18,7 @@ launcher runtime, package-management or UI code.
 - Server name, address, icon, hidden-address state and resource-pack policy
 - Serialized same-file operations and atomic replacement
 - Java Edition `_minecraft._tcp` SRV discovery for bare hostnames
+- Server address normalization and known-server matching
 
 ## Usage
 
@@ -200,6 +201,73 @@ The tool prints both the original address and the actual resolved target.
 
 Legacy pre-1.7 ping fallback remains outside this checkpoint.
 
+## Server address normalization and known-server matching
+
+`MtnMinecraftInfoServerAddress` parses and canonicalizes Java server
+addresses without changing the persisted value stored in
+`MtnMinecraftInfoServer.address`.
+
+Examples:
+
+```text
+Example.COM.           -> example.com
+example.com:25565      -> example.com
+example.com:25566      -> example.com:25566
+2001:0db8::1           -> [2001:db8::1]
+[2001:db8::1]:25565    -> [2001:db8::1]
+```
+
+Normalization covers:
+
+- surrounding whitespace
+- DNS case folding
+- trailing DNS root dots
+- default Java port equivalence
+- IPv4/IPv6 textual normalization
+- bracketed IPv6 address formatting
+
+The original address is preserved. Canonicalization exists only for identity
+and endpoint comparisons.
+
+Applications can define known networks/servers with
+`MtnMinecraftInfoKnownServer`:
+
+```dart
+final known = MtnMinecraftInfoKnownServer(
+  name: 'Example Network',
+  addresses: [
+    'play.example.net',
+    'example.net:25566',
+  ],
+);
+
+final match = known.match(server);
+
+switch (match.kind) {
+  case MtnMinecraftInfoServerMatchKind.exact:
+  case MtnMinecraftInfoServerMatchKind.normalized:
+    // Strong user-facing address evidence.
+    break;
+  case MtnMinecraftInfoServerMatchKind.resolvedEndpoint:
+    // Weaker evidence: the current resolved TCP backend matched.
+    break;
+  case MtnMinecraftInfoServerMatchKind.none:
+    break;
+}
+```
+
+Match precedence is:
+
+1. exact trimmed user-facing address
+2. normalized address identity
+3. current resolved endpoint from `server.status`
+4. no match
+
+Resolved endpoint matching is intentionally weaker. Multiple domains may share
+the same proxy or backend, so the package does not automatically infer a unique
+known server from protocol, MOTD, version, player counts, favicon, or a shared
+resolved endpoint.
+
 ## NBT boundary
 
 `MtnMinecraftNbtCodec` reads/writes raw Java Edition NBT payloads. Compression
@@ -243,8 +311,7 @@ Validated on Windows with Dart:
 
 ## Deferred
 
-- known-server matching
-- address normalization/deduplication policy
+- address deduplication/write policy
 - world discovery / `level.dat`
 - playerdata
 - statistics

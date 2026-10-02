@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.0-dev.5
+
+Server address normalization and known-server matching foundation.
+
+- Added `MtnMinecraftInfoServerAddress` as the shared Java server address
+  parser/normalizer.
+- Unified status/SRV routing with the public address parser.
+- Canonicalized DNS case, trailing dots, default port 25565, and IPv4/IPv6
+  textual forms without mutating persisted `servers.dat` addresses.
+- Added `MtnMinecraftInfoKnownServer` and explicit match evidence:
+  `exact`, `normalized`, `resolvedEndpoint`, and `none`.
+- Kept resolved endpoint matching weaker than user-facing address identity.
+- Deliberately excluded protocol, MOTD, version, favicon, and player data from
+  server identity inference.
+- Added deterministic normalization, IPv6, alias, and resolved-endpoint tests.
+
+
 ## 1.0.0-dev.4
 
 Java Edition SRV discovery foundation.

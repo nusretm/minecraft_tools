@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'info_server_address.dart';
 import 'info_server_srv.dart';
 import 'info_server_status.dart';
 import 'info_server_status_client.dart';
@@ -32,6 +33,9 @@ final class MtnMinecraftInfoServer {
 
   final String name;
   final String address;
+
+  MtnMinecraftInfoServerAddress get parsedAddress =>
+      MtnMinecraftInfoServerAddress.parse(address);
 
   /// Raw base64-encoded PNG payload persisted by Minecraft, when present.
   final String? icon;
@@ -77,8 +81,10 @@ final class MtnMinecraftInfoServer {
       );
     }
 
-    final _ServerAddress target = _ServerAddress.parse(address);
-    final List<_ServerAddress> candidates = <_ServerAddress>[target];
+    final MtnMinecraftInfoServerAddress target =
+        MtnMinecraftInfoServerAddress.parse(address);
+    final List<MtnMinecraftInfoServerAddress> candidates =
+        <MtnMinecraftInfoServerAddress>[target];
     var srvUnavailable = false;
 
     if (!target.hasExplicitPort &&
@@ -98,10 +104,10 @@ final class MtnMinecraftInfoServer {
           ..clear()
           ..addAll(
             records.map(
-              (MtnMinecraftInfoSrvRecord record) => _ServerAddress(
+              (MtnMinecraftInfoSrvRecord record) =>
+                  MtnMinecraftInfoServerAddress.endpoint(
                 host: record.target,
                 port: record.port,
-                hasExplicitPort: true,
               ),
             ),
           );
@@ -109,7 +115,7 @@ final class MtnMinecraftInfoServer {
     }
 
     MtnMinecraftInfoServerStatus? queried;
-    for (final _ServerAddress candidate in candidates) {
+    for (final MtnMinecraftInfoServerAddress candidate in candidates) {
       final MtnMinecraftInfoServerStatus result =
           await const MtnMinecraftInfoServerStatusClient().query(
         host: candidate.host,
@@ -201,87 +207,6 @@ final class MtnMinecraftInfoServer {
   String toString() => toJson();
 }
 
-final class _ServerAddress {
-  const _ServerAddress({
-    required this.host,
-    required this.port,
-    required this.hasExplicitPort,
-  });
-
-  factory _ServerAddress.parse(String address) {
-    final String value = address.trim();
-    if (value.isEmpty) {
-      throw ArgumentError.value(
-        address,
-        'address',
-        'Server address must not be empty',
-      );
-    }
-
-    if (value.startsWith('[')) {
-      final int closing = value.indexOf(']');
-      if (closing <= 1) {
-        throw ArgumentError.value(
-          address,
-          'address',
-          'Invalid bracketed IPv6 server address',
-        );
-      }
-      final String host = value.substring(1, closing);
-      if (closing == value.length - 1) {
-        return _ServerAddress(
-          host: host,
-          port: 25565,
-          hasExplicitPort: false,
-        );
-      }
-      if (value[closing + 1] != ':') {
-        throw ArgumentError.value(
-          address,
-          'address',
-          'Invalid bracketed IPv6 server address',
-        );
-      }
-      return _ServerAddress(
-        host: host,
-        port: _parsePort(value.substring(closing + 2), address),
-        hasExplicitPort: true,
-      );
-    }
-
-    final int firstColon = value.indexOf(':');
-    final int lastColon = value.lastIndexOf(':');
-    if (firstColon >= 0 && firstColon == lastColon) {
-      return _ServerAddress(
-        host: value.substring(0, firstColon),
-        port: _parsePort(value.substring(firstColon + 1), address),
-        hasExplicitPort: true,
-      );
-    }
-
-    return _ServerAddress(
-      host: value,
-      port: 25565,
-      hasExplicitPort: false,
-    );
-  }
-
-  final String host;
-  final int port;
-  final bool hasExplicitPort;
-}
-
-int _parsePort(String raw, String address) {
-  final int? port = int.tryParse(raw);
-  if (port == null || port < 1 || port > 65535) {
-    throw ArgumentError.value(
-      address,
-      'address',
-      'Server port must be in the range 1..65535',
-    );
-  }
-  return port;
-}
 
 MtnMinecraftInfoServerStatus _copyStatus(
   MtnMinecraftInfoServerStatus source, {
