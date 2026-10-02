@@ -14,3 +14,5 @@ Initial extraction from the MtnLauncher prototype into the standalone
 - Added serialized same-target operations and atomic replacement with rollback.
 - Added focused automated tests and a copy-only real-file validator.
 - Removed all MtnLauncher compile-time dependencies.
+- Validated with clean analyzer output, 10/10 automated tests, and a real
+  Java Edition `servers.dat` preserving all pre-existing server compounds.
