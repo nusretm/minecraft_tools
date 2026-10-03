@@ -811,13 +811,800 @@ final class MtnMinecraftInfoProvider {
   }
 }
 
+const String _playerUuidPattern =
+    r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+
 final RegExp _playerDataFilePattern = RegExp(
-  r'^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.dat$',
+  '^($_playerUuidPattern)[.]dat' r'
+final class _PlayerDataCandidate {
+  const _PlayerDataCandidate({
+    required this.uuid,
+    required this.file,
+    required this.storageLayout,
+  });
+
+  final String uuid;
+  final File file;
+  final MtnMinecraftInfoPlayerStorageLayout storageLayout;
+
+  MtnMinecraftInfoPlayer invalid(MtnMinecraftInfoPlayerError error) =>
+      MtnMinecraftInfoPlayer.invalid(
+        uuid: uuid,
+        dataFile: file,
+        storageLayout: storageLayout,
+        error: error,
+      );
+}
+
+final class _InvalidPlayerData implements Exception {
+  const _InvalidPlayerData();
+}
+
+final class _PlayerStatsCandidate {
+  const _PlayerStatsCandidate({
+    required this.uuid,
+    required this.file,
+    required this.storageLayout,
+  });
+
+  final String uuid;
+  final File file;
+  final MtnMinecraftInfoPlayerStatsStorageLayout storageLayout;
+
+  MtnMinecraftInfoPlayerStats invalid(
+    MtnMinecraftInfoPlayerStatsError error,
+  ) =>
+      MtnMinecraftInfoPlayerStats.invalid(
+        uuid: uuid,
+        file: file,
+        storageLayout: storageLayout,
+        error: error,
+      );
+}
+
+final class _InvalidPlayerStatsData implements Exception {
+  const _InvalidPlayerStatsData();
+}
+
+MtnMinecraftInfoPlayerStats _playerStatsFromJson({
+  required _PlayerStatsCandidate candidate,
+  required Object? value,
+}) {
+  if (value is! Map<String, dynamic>) {
+    throw const _InvalidPlayerStatsData();
+  }
+
+  int? dataVersion;
+  if (value.containsKey('DataVersion')) {
+    final Object? rawDataVersion = value['DataVersion'];
+    if (rawDataVersion is! int) {
+      throw const _InvalidPlayerStatsData();
+    }
+    dataVersion = rawDataVersion;
+  }
+
+  final Object? rawStats = value['stats'];
+  if (rawStats is! Map<String, dynamic>) {
+    throw const _InvalidPlayerStatsData();
+  }
+
+  final Map<String, Map<String, int>> values =
+      <String, Map<String, int>>{};
+  for (final MapEntry<String, dynamic> category in rawStats.entries) {
+    final Object? rawEntries = category.value;
+    if (rawEntries is! Map<String, dynamic>) {
+      throw const _InvalidPlayerStatsData();
+    }
+
+    final Map<String, int> entries = <String, int>{};
+    for (final MapEntry<String, dynamic> stat in rawEntries.entries) {
+      if (stat.value is! int) {
+        throw const _InvalidPlayerStatsData();
+      }
+      entries[stat.key] = stat.value as int;
+    }
+    values[category.key] = entries;
+  }
+
+  return MtnMinecraftInfoPlayerStats.available(
+    uuid: candidate.uuid,
+    file: candidate.file,
+    storageLayout: candidate.storageLayout,
+    dataVersion: dataVersion,
+    values: values,
+  );
+}
+
+MtnMinecraftInfoPlayer _playerFromNbt({
+  required _PlayerDataCandidate candidate,
+  required MtnMinecraftNbtDocument document,
+}) {
+  if (document.root.type != MtnMinecraftNbtType.compound) {
+    throw const _InvalidPlayerData();
+  }
+
+  final Map<String, MtnMinecraftNbtValue> data = document.root.asCompound;
+  return MtnMinecraftInfoPlayer.available(
+    uuid: candidate.uuid,
+    dataFile: candidate.file,
+    storageLayout: candidate.storageLayout,
+    dataVersion: _optionalPlayerInt(data, 'DataVersion'),
+    dimension: _optionalPlayerString(data, 'Dimension'),
+    position: _optionalPlayerPosition(data),
+  );
+}
+
+String? _optionalPlayerString(
+  Map<String, MtnMinecraftNbtValue> data,
+  String name,
+) {
+  final MtnMinecraftNbtValue? value = data[name];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.string) {
+    throw const _InvalidPlayerData();
+  }
+  return value.asString;
+}
+
+int? _optionalPlayerInt(
+  Map<String, MtnMinecraftNbtValue> data,
+  String name,
+) {
+  final MtnMinecraftNbtValue? value = data[name];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.intValue) {
+    throw const _InvalidPlayerData();
+  }
+  return value.asInt;
+}
+
+MtnMinecraftInfoPlayerPosition? _optionalPlayerPosition(
+  Map<String, MtnMinecraftNbtValue> data,
+) {
+  final MtnMinecraftNbtValue? value = data['Pos'];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.list) {
+    throw const _InvalidPlayerData();
+  }
+
+  final MtnMinecraftNbtList list = value.asList;
+  if (list.elementType != MtnMinecraftNbtType.doubleValue ||
+      list.values.length != 3) {
+    throw const _InvalidPlayerData();
+  }
+
+  return MtnMinecraftInfoPlayerPosition(
+    x: list.values[0].asDouble,
+    y: list.values[1].asDouble,
+    z: list.values[2].asDouble,
+  );
+}
+
+final class _InvalidWorldData implements Exception {
+  const _InvalidWorldData();
+}
+
+MtnMinecraftInfoWorld _worldFromNbt({
+  required Directory directory,
+  required String directoryName,
+  required MtnMinecraftNbtDocument document,
+  required List<MtnMinecraftInfoPlayer> players,
+  required MtnMinecraftInfoWorldPlayersState playersState,
+  required MtnMinecraftInfoWorldPlayersError? playersError,
+  required Uint8List? icon,
+}) {
+  if (document.root.type != MtnMinecraftNbtType.compound) {
+    throw const _InvalidWorldData();
+  }
+  final MtnMinecraftNbtValue? dataValue = document.root.asCompound['Data'];
+  if (dataValue?.type != MtnMinecraftNbtType.compound) {
+    throw const _InvalidWorldData();
+  }
+  final Map<String, MtnMinecraftNbtValue> data = dataValue!.asCompound;
+
+  final String? name = _optionalWorldString(data, 'LevelName');
+  final int? dataVersion = _optionalWorldInt(data, 'DataVersion');
+  final int? lastPlayedMilliseconds = _optionalWorldLong(data, 'LastPlayed');
+  final MtnMinecraftInfoWorldVersion? version = _optionalWorldVersion(data);
+
+  DateTime? lastPlayed;
+  if (lastPlayedMilliseconds != null) {
+    const int maximumDateTimeMilliseconds = 8640000000000000;
+    if (lastPlayedMilliseconds < -maximumDateTimeMilliseconds ||
+        lastPlayedMilliseconds > maximumDateTimeMilliseconds) {
+      throw const _InvalidWorldData();
+    }
+    lastPlayed = DateTime.fromMillisecondsSinceEpoch(
+      lastPlayedMilliseconds,
+      isUtc: true,
+    );
+  }
+
+  return MtnMinecraftInfoWorld.available(
+    directory: directory,
+    directoryName: directoryName,
+    name: name,
+    dataVersion: dataVersion,
+    version: version,
+    lastPlayed: lastPlayed,
+    players: players,
+    playersState: playersState,
+    playersError: playersError,
+    icon: icon,
+  );
+}
+
+String? _optionalWorldString(
+  Map<String, MtnMinecraftNbtValue> data,
+  String name,
+) {
+  final MtnMinecraftNbtValue? value = data[name];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.string) {
+    throw const _InvalidWorldData();
+  }
+  return value.asString;
+}
+
+int? _optionalWorldInt(
+  Map<String, MtnMinecraftNbtValue> data,
+  String name,
+) {
+  final MtnMinecraftNbtValue? value = data[name];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.intValue) {
+    throw const _InvalidWorldData();
+  }
+  return value.asInt;
+}
+
+int? _optionalWorldLong(
+  Map<String, MtnMinecraftNbtValue> data,
+  String name,
+) {
+  final MtnMinecraftNbtValue? value = data[name];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.long) {
+    throw const _InvalidWorldData();
+  }
+  return value.asLong;
+}
+
+MtnMinecraftInfoWorldVersion? _optionalWorldVersion(
+  Map<String, MtnMinecraftNbtValue> data,
+) {
+  final MtnMinecraftNbtValue? value = data['Version'];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.compound) {
+    throw const _InvalidWorldData();
+  }
+  final Map<String, MtnMinecraftNbtValue> version = value.asCompound;
+  final MtnMinecraftNbtValue? snapshotValue = version['Snapshot'];
+  bool? snapshot;
+  if (snapshotValue != null) {
+    if (snapshotValue.type != MtnMinecraftNbtType.byte ||
+        (snapshotValue.asByte != 0 && snapshotValue.asByte != 1)) {
+      throw const _InvalidWorldData();
+    }
+    snapshot = snapshotValue.asByte == 1;
+  }
+  return MtnMinecraftInfoWorldVersion(
+    id: _optionalWorldInt(version, 'Id'),
+    name: _optionalWorldString(version, 'Name'),
+    snapshot: snapshot,
+    series: _optionalWorldString(version, 'Series'),
+  );
+}
+
+MtnMinecraftInfoServer _serverFromNbt(MtnMinecraftNbtValue value) {
+  if (value.type != MtnMinecraftNbtType.compound) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+  final Map<String, MtnMinecraftNbtValue> map = value.asCompound;
+  final MtnMinecraftNbtValue? name = map['name'];
+  final MtnMinecraftNbtValue? address = map['ip'];
+  final MtnMinecraftNbtValue? icon = map['icon'];
+  final MtnMinecraftNbtValue? hidden = map['hidden'];
+  final MtnMinecraftNbtValue? acceptTextures = map['acceptTextures'];
+  if (name?.type != MtnMinecraftNbtType.string ||
+      address?.type != MtnMinecraftNbtType.string ||
+      (icon != null && icon.type != MtnMinecraftNbtType.string) ||
+      (hidden != null && hidden.type != MtnMinecraftNbtType.byte) ||
+      (acceptTextures != null &&
+          acceptTextures.type != MtnMinecraftNbtType.byte)) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+  final int? rawHidden = hidden?.asByte;
+  final int? rawAcceptTextures = acceptTextures?.asByte;
+  if (rawHidden != null && rawHidden != 0 && rawHidden != 1) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+  if (rawAcceptTextures != null &&
+      rawAcceptTextures != 0 &&
+      rawAcceptTextures != 1) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+  return MtnMinecraftInfoServer(
+    name: name!.asString,
+    address: address!.asString,
+    icon: icon?.asString,
+    hidden: rawHidden == 1,
+    acceptServerResourcePacks: rawAcceptTextures == null
+        ? null
+        : rawAcceptTextures == 1
+            ? true
+            : rawAcceptTextures == 0
+                ? false
+                : null,
+  );
+}
+
+MtnMinecraftNbtValue _serverToNbt(MtnMinecraftInfoServer server) {
+  return MtnMinecraftNbtValue.compound(
+    <String, MtnMinecraftNbtValue>{
+      'name': MtnMinecraftNbtValue.string(server.name),
+      'ip': MtnMinecraftNbtValue.string(server.address),
+      if (server.icon != null)
+        'icon': MtnMinecraftNbtValue.string(server.icon!),
+      'hidden': MtnMinecraftNbtValue.byte(server.hidden ? 1 : 0),
+      if (server.acceptServerResourcePacks != null)
+        'acceptTextures': MtnMinecraftNbtValue.byte(
+          server.acceptServerResourcePacks! ? 1 : 0,
+        ),
+    },
+  );
+}
+
+Future<T> _inTargetLane<T>(
+  String path,
+  Future<T> Function() action,
+) async {
+  final String key = p.normalize(p.absolute(path)).toLowerCase();
+  final Future<void> previous =
+      MtnMinecraftInfoProvider._targetLanes[key] ?? Future<void>.value();
+  final Completer<void> release = Completer<void>();
+  MtnMinecraftInfoProvider._targetLanes[key] = release.future;
+  try {
+    try {
+      await previous;
+    } on Object {
+      // A previous read/write failure cannot poison this file lane.
+    }
+    return await action();
+  } finally {
+    release.complete();
+    if (identical(
+      MtnMinecraftInfoProvider._targetLanes[key],
+      release.future,
+    )) {
+      final Future<void>? removed =
+          MtnMinecraftInfoProvider._targetLanes.remove(key);
+      assert(identical(removed, release.future));
+    }
+  }
+}
+
+Future<void> _closeBestEffort(RandomAccessFile file) async {
+  try {
+    await file.close();
+  } on FileSystemException {
+    // Preserve the primary write result/error.
+  }
+}
+
+Future<void> _deleteBestEffort(File file) async {
+  try {
+    if (await file.exists()) await file.delete();
+  } on FileSystemException {
+    // Temporary/displaced siblings are never authoritative.
+  }
+}
+,
   caseSensitive: false,
 );
 
 final RegExp _playerStatsFilePattern = RegExp(
-  r'^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.json$',
+  '^($_playerUuidPattern)[.]json' r'
+final class _PlayerDataCandidate {
+  const _PlayerDataCandidate({
+    required this.uuid,
+    required this.file,
+    required this.storageLayout,
+  });
+
+  final String uuid;
+  final File file;
+  final MtnMinecraftInfoPlayerStorageLayout storageLayout;
+
+  MtnMinecraftInfoPlayer invalid(MtnMinecraftInfoPlayerError error) =>
+      MtnMinecraftInfoPlayer.invalid(
+        uuid: uuid,
+        dataFile: file,
+        storageLayout: storageLayout,
+        error: error,
+      );
+}
+
+final class _InvalidPlayerData implements Exception {
+  const _InvalidPlayerData();
+}
+
+final class _PlayerStatsCandidate {
+  const _PlayerStatsCandidate({
+    required this.uuid,
+    required this.file,
+    required this.storageLayout,
+  });
+
+  final String uuid;
+  final File file;
+  final MtnMinecraftInfoPlayerStatsStorageLayout storageLayout;
+
+  MtnMinecraftInfoPlayerStats invalid(
+    MtnMinecraftInfoPlayerStatsError error,
+  ) =>
+      MtnMinecraftInfoPlayerStats.invalid(
+        uuid: uuid,
+        file: file,
+        storageLayout: storageLayout,
+        error: error,
+      );
+}
+
+final class _InvalidPlayerStatsData implements Exception {
+  const _InvalidPlayerStatsData();
+}
+
+MtnMinecraftInfoPlayerStats _playerStatsFromJson({
+  required _PlayerStatsCandidate candidate,
+  required Object? value,
+}) {
+  if (value is! Map<String, dynamic>) {
+    throw const _InvalidPlayerStatsData();
+  }
+
+  int? dataVersion;
+  if (value.containsKey('DataVersion')) {
+    final Object? rawDataVersion = value['DataVersion'];
+    if (rawDataVersion is! int) {
+      throw const _InvalidPlayerStatsData();
+    }
+    dataVersion = rawDataVersion;
+  }
+
+  final Object? rawStats = value['stats'];
+  if (rawStats is! Map<String, dynamic>) {
+    throw const _InvalidPlayerStatsData();
+  }
+
+  final Map<String, Map<String, int>> values =
+      <String, Map<String, int>>{};
+  for (final MapEntry<String, dynamic> category in rawStats.entries) {
+    final Object? rawEntries = category.value;
+    if (rawEntries is! Map<String, dynamic>) {
+      throw const _InvalidPlayerStatsData();
+    }
+
+    final Map<String, int> entries = <String, int>{};
+    for (final MapEntry<String, dynamic> stat in rawEntries.entries) {
+      if (stat.value is! int) {
+        throw const _InvalidPlayerStatsData();
+      }
+      entries[stat.key] = stat.value as int;
+    }
+    values[category.key] = entries;
+  }
+
+  return MtnMinecraftInfoPlayerStats.available(
+    uuid: candidate.uuid,
+    file: candidate.file,
+    storageLayout: candidate.storageLayout,
+    dataVersion: dataVersion,
+    values: values,
+  );
+}
+
+MtnMinecraftInfoPlayer _playerFromNbt({
+  required _PlayerDataCandidate candidate,
+  required MtnMinecraftNbtDocument document,
+}) {
+  if (document.root.type != MtnMinecraftNbtType.compound) {
+    throw const _InvalidPlayerData();
+  }
+
+  final Map<String, MtnMinecraftNbtValue> data = document.root.asCompound;
+  return MtnMinecraftInfoPlayer.available(
+    uuid: candidate.uuid,
+    dataFile: candidate.file,
+    storageLayout: candidate.storageLayout,
+    dataVersion: _optionalPlayerInt(data, 'DataVersion'),
+    dimension: _optionalPlayerString(data, 'Dimension'),
+    position: _optionalPlayerPosition(data),
+  );
+}
+
+String? _optionalPlayerString(
+  Map<String, MtnMinecraftNbtValue> data,
+  String name,
+) {
+  final MtnMinecraftNbtValue? value = data[name];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.string) {
+    throw const _InvalidPlayerData();
+  }
+  return value.asString;
+}
+
+int? _optionalPlayerInt(
+  Map<String, MtnMinecraftNbtValue> data,
+  String name,
+) {
+  final MtnMinecraftNbtValue? value = data[name];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.intValue) {
+    throw const _InvalidPlayerData();
+  }
+  return value.asInt;
+}
+
+MtnMinecraftInfoPlayerPosition? _optionalPlayerPosition(
+  Map<String, MtnMinecraftNbtValue> data,
+) {
+  final MtnMinecraftNbtValue? value = data['Pos'];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.list) {
+    throw const _InvalidPlayerData();
+  }
+
+  final MtnMinecraftNbtList list = value.asList;
+  if (list.elementType != MtnMinecraftNbtType.doubleValue ||
+      list.values.length != 3) {
+    throw const _InvalidPlayerData();
+  }
+
+  return MtnMinecraftInfoPlayerPosition(
+    x: list.values[0].asDouble,
+    y: list.values[1].asDouble,
+    z: list.values[2].asDouble,
+  );
+}
+
+final class _InvalidWorldData implements Exception {
+  const _InvalidWorldData();
+}
+
+MtnMinecraftInfoWorld _worldFromNbt({
+  required Directory directory,
+  required String directoryName,
+  required MtnMinecraftNbtDocument document,
+  required List<MtnMinecraftInfoPlayer> players,
+  required MtnMinecraftInfoWorldPlayersState playersState,
+  required MtnMinecraftInfoWorldPlayersError? playersError,
+  required Uint8List? icon,
+}) {
+  if (document.root.type != MtnMinecraftNbtType.compound) {
+    throw const _InvalidWorldData();
+  }
+  final MtnMinecraftNbtValue? dataValue = document.root.asCompound['Data'];
+  if (dataValue?.type != MtnMinecraftNbtType.compound) {
+    throw const _InvalidWorldData();
+  }
+  final Map<String, MtnMinecraftNbtValue> data = dataValue!.asCompound;
+
+  final String? name = _optionalWorldString(data, 'LevelName');
+  final int? dataVersion = _optionalWorldInt(data, 'DataVersion');
+  final int? lastPlayedMilliseconds = _optionalWorldLong(data, 'LastPlayed');
+  final MtnMinecraftInfoWorldVersion? version = _optionalWorldVersion(data);
+
+  DateTime? lastPlayed;
+  if (lastPlayedMilliseconds != null) {
+    const int maximumDateTimeMilliseconds = 8640000000000000;
+    if (lastPlayedMilliseconds < -maximumDateTimeMilliseconds ||
+        lastPlayedMilliseconds > maximumDateTimeMilliseconds) {
+      throw const _InvalidWorldData();
+    }
+    lastPlayed = DateTime.fromMillisecondsSinceEpoch(
+      lastPlayedMilliseconds,
+      isUtc: true,
+    );
+  }
+
+  return MtnMinecraftInfoWorld.available(
+    directory: directory,
+    directoryName: directoryName,
+    name: name,
+    dataVersion: dataVersion,
+    version: version,
+    lastPlayed: lastPlayed,
+    players: players,
+    playersState: playersState,
+    playersError: playersError,
+    icon: icon,
+  );
+}
+
+String? _optionalWorldString(
+  Map<String, MtnMinecraftNbtValue> data,
+  String name,
+) {
+  final MtnMinecraftNbtValue? value = data[name];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.string) {
+    throw const _InvalidWorldData();
+  }
+  return value.asString;
+}
+
+int? _optionalWorldInt(
+  Map<String, MtnMinecraftNbtValue> data,
+  String name,
+) {
+  final MtnMinecraftNbtValue? value = data[name];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.intValue) {
+    throw const _InvalidWorldData();
+  }
+  return value.asInt;
+}
+
+int? _optionalWorldLong(
+  Map<String, MtnMinecraftNbtValue> data,
+  String name,
+) {
+  final MtnMinecraftNbtValue? value = data[name];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.long) {
+    throw const _InvalidWorldData();
+  }
+  return value.asLong;
+}
+
+MtnMinecraftInfoWorldVersion? _optionalWorldVersion(
+  Map<String, MtnMinecraftNbtValue> data,
+) {
+  final MtnMinecraftNbtValue? value = data['Version'];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.compound) {
+    throw const _InvalidWorldData();
+  }
+  final Map<String, MtnMinecraftNbtValue> version = value.asCompound;
+  final MtnMinecraftNbtValue? snapshotValue = version['Snapshot'];
+  bool? snapshot;
+  if (snapshotValue != null) {
+    if (snapshotValue.type != MtnMinecraftNbtType.byte ||
+        (snapshotValue.asByte != 0 && snapshotValue.asByte != 1)) {
+      throw const _InvalidWorldData();
+    }
+    snapshot = snapshotValue.asByte == 1;
+  }
+  return MtnMinecraftInfoWorldVersion(
+    id: _optionalWorldInt(version, 'Id'),
+    name: _optionalWorldString(version, 'Name'),
+    snapshot: snapshot,
+    series: _optionalWorldString(version, 'Series'),
+  );
+}
+
+MtnMinecraftInfoServer _serverFromNbt(MtnMinecraftNbtValue value) {
+  if (value.type != MtnMinecraftNbtType.compound) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+  final Map<String, MtnMinecraftNbtValue> map = value.asCompound;
+  final MtnMinecraftNbtValue? name = map['name'];
+  final MtnMinecraftNbtValue? address = map['ip'];
+  final MtnMinecraftNbtValue? icon = map['icon'];
+  final MtnMinecraftNbtValue? hidden = map['hidden'];
+  final MtnMinecraftNbtValue? acceptTextures = map['acceptTextures'];
+  if (name?.type != MtnMinecraftNbtType.string ||
+      address?.type != MtnMinecraftNbtType.string ||
+      (icon != null && icon.type != MtnMinecraftNbtType.string) ||
+      (hidden != null && hidden.type != MtnMinecraftNbtType.byte) ||
+      (acceptTextures != null &&
+          acceptTextures.type != MtnMinecraftNbtType.byte)) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+  final int? rawHidden = hidden?.asByte;
+  final int? rawAcceptTextures = acceptTextures?.asByte;
+  if (rawHidden != null && rawHidden != 0 && rawHidden != 1) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+  if (rawAcceptTextures != null &&
+      rawAcceptTextures != 0 &&
+      rawAcceptTextures != 1) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+  return MtnMinecraftInfoServer(
+    name: name!.asString,
+    address: address!.asString,
+    icon: icon?.asString,
+    hidden: rawHidden == 1,
+    acceptServerResourcePacks: rawAcceptTextures == null
+        ? null
+        : rawAcceptTextures == 1
+            ? true
+            : rawAcceptTextures == 0
+                ? false
+                : null,
+  );
+}
+
+MtnMinecraftNbtValue _serverToNbt(MtnMinecraftInfoServer server) {
+  return MtnMinecraftNbtValue.compound(
+    <String, MtnMinecraftNbtValue>{
+      'name': MtnMinecraftNbtValue.string(server.name),
+      'ip': MtnMinecraftNbtValue.string(server.address),
+      if (server.icon != null)
+        'icon': MtnMinecraftNbtValue.string(server.icon!),
+      'hidden': MtnMinecraftNbtValue.byte(server.hidden ? 1 : 0),
+      if (server.acceptServerResourcePacks != null)
+        'acceptTextures': MtnMinecraftNbtValue.byte(
+          server.acceptServerResourcePacks! ? 1 : 0,
+        ),
+    },
+  );
+}
+
+Future<T> _inTargetLane<T>(
+  String path,
+  Future<T> Function() action,
+) async {
+  final String key = p.normalize(p.absolute(path)).toLowerCase();
+  final Future<void> previous =
+      MtnMinecraftInfoProvider._targetLanes[key] ?? Future<void>.value();
+  final Completer<void> release = Completer<void>();
+  MtnMinecraftInfoProvider._targetLanes[key] = release.future;
+  try {
+    try {
+      await previous;
+    } on Object {
+      // A previous read/write failure cannot poison this file lane.
+    }
+    return await action();
+  } finally {
+    release.complete();
+    if (identical(
+      MtnMinecraftInfoProvider._targetLanes[key],
+      release.future,
+    )) {
+      final Future<void>? removed =
+          MtnMinecraftInfoProvider._targetLanes.remove(key);
+      assert(identical(removed, release.future));
+    }
+  }
+}
+
+Future<void> _closeBestEffort(RandomAccessFile file) async {
+  try {
+    await file.close();
+  } on FileSystemException {
+    // Preserve the primary write result/error.
+  }
+}
+
+Future<void> _deleteBestEffort(File file) async {
+  try {
+    if (await file.exists()) await file.delete();
+  } on FileSystemException {
+    // Temporary/displaced siblings are never authoritative.
+  }
+}
+,
   caseSensitive: false,
 );
 
