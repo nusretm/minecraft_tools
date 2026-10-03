@@ -23,6 +23,8 @@ aksi açıkça söylenmedikçe bu belge esas alınır.
 - Pure Dart kodlarında `dart format` kullanılmaz; formatter'ın satır uzunluğu veya otomatik bölme tercihleri kaynak düzenini belirlemez.
 - Pure Dart kodunda satırlar gerektiğinde doğal ifade tamamlanana kadar uzun kalabilir; okunabilirlik, formatter uyumundan önce gelir.
 - Pure Dart doğrulamasında varsayılan komutlar `dart analyze` ve `dart test`tir; `dart format` yalnız kullanıcı açıkça isterse çalıştırılır.
+- Dart library/package projelerinde `.dart_tool/` ve `pubspec.lock` varsayılan olarak repository'ye alınmaz; `.gitignore` ile dışarıda tutulur.
+- Bir repository birden fazla Dart package/application içeriyorsa ignore kuralları mümkün olduğunca package-specific yazılır; application/executable projelerde `pubspec.lock` bilinçli olarak track edilebilir.
 
 ---
 
