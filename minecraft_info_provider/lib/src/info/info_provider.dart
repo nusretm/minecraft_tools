@@ -158,13 +158,6 @@ final class MtnMinecraftInfoProvider {
   ) async {
     await _validatePlayerForWorld(world, player);
 
-    final _PlayerStatsCandidate? legacy = await _findPlayerStatsCandidate(
-      directory: Directory(
-        p.join(world.directory.path, _playerStatsDirectoryName),
-      ),
-      uuid: player.uuid,
-      storageLayout: MtnMinecraftInfoPlayerStatsStorageLayout.legacy,
-    );
     final _PlayerStatsCandidate? modern = await _findPlayerStatsCandidate(
       directory: Directory(
         p.join(
@@ -176,10 +169,17 @@ final class MtnMinecraftInfoProvider {
       uuid: player.uuid,
       storageLayout: MtnMinecraftInfoPlayerStatsStorageLayout.modern,
     );
+    if (modern != null) return _readPlayerStats(modern);
 
-    final _PlayerStatsCandidate? candidate = modern ?? legacy;
-    if (candidate == null) return null;
-    return _readPlayerStats(candidate);
+    final _PlayerStatsCandidate? legacy = await _findPlayerStatsCandidate(
+      directory: Directory(
+        p.join(world.directory.path, _playerStatsDirectoryName),
+      ),
+      uuid: player.uuid,
+      storageLayout: MtnMinecraftInfoPlayerStatsStorageLayout.legacy,
+    );
+    if (legacy == null) return null;
+    return _readPlayerStats(legacy);
   }
 
   /// Atomically replaces the Java Edition `icon.png` for [world].
