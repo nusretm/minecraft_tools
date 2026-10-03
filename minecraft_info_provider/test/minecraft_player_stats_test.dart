@@ -111,6 +111,65 @@ void main() {
       expect(stats.values['minecraft:custom']?['minecraft:jump'], 9);
     });
 
+    test('stats layout is independent from player-data layout', () async {
+      final MtnMinecraftInfoPlayer modernPlayer =
+          MtnMinecraftInfoPlayer.available(
+        uuid: _uuidA,
+        dataFile: File(
+          p.join(
+            worldDirectory.path,
+            'players',
+            'data',
+            '$_uuidA.dat',
+          ),
+        ),
+        storageLayout: MtnMinecraftInfoPlayerStorageLayout.modern,
+      );
+      await _writeStats(
+        worldDirectory,
+        uuid: _uuidA,
+        layout: MtnMinecraftInfoPlayerStatsStorageLayout.legacy,
+        data: <String, Object?>{
+          'stats': <String, Object?>{
+            'minecraft:custom': <String, Object?>{
+              'minecraft:jump': 7,
+            },
+          },
+        },
+      );
+
+      final MtnMinecraftInfoPlayerStats stats =
+          (await provider.readPlayerStats(world, modernPlayer))!;
+
+      expect(
+        stats.storageLayout,
+        MtnMinecraftInfoPlayerStatsStorageLayout.legacy,
+      );
+      expect(stats.values['minecraft:custom']?['minecraft:jump'], 7);
+    });
+
+    test('valid modern stats do not depend on legacy storage shape', () async {
+      await File(p.join(worldDirectory.path, 'stats')).writeAsString('x');
+      await _writeStats(
+        worldDirectory,
+        uuid: _uuidA,
+        layout: MtnMinecraftInfoPlayerStatsStorageLayout.modern,
+        data: <String, Object?>{
+          'DataVersion': 5000,
+          'stats': <String, Object?>{},
+        },
+      );
+
+      final MtnMinecraftInfoPlayerStats stats =
+          (await provider.readPlayerStats(world, player))!;
+
+      expect(
+        stats.storageLayout,
+        MtnMinecraftInfoPlayerStatsStorageLayout.modern,
+      );
+      expect(stats.dataVersion, 5000);
+    });
+
     test('modern stats win when the same UUID exists in both layouts',
         () async {
       await _writeStats(
