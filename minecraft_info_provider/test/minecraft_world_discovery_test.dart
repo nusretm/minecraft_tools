@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:minecraft_info_provider/minecraft_info_provider.dart';
 import 'package:path/path.dart' as p;
@@ -219,6 +220,175 @@ void main() {
       expect(world.error, MtnMinecraftInfoWorldError.invalidData);
     });
 
+    test('world snapshot includes its discovered players', () async {
+      final Directory worldDirectory = await _writeWorld(
+        gameDirectory,
+        directoryName: 'Players World',
+        data: <String, MtnMinecraftNbtValue>{},
+      );
+      const String uuid = '00112233-4455-6677-8899-aabbccddeeff';
+      await _writeWorldPlayer(
+        worldDirectory,
+        uuid: uuid,
+        dataVersion: 5000,
+      );
+
+      final MtnMinecraftInfoWorld world = (await provider.readWorlds()).single;
+
+      expect(world.playersState, MtnMinecraftInfoWorldPlayersState.available);
+      expect(world.playersError, isNull);
+      expect(world.players, hasLength(1));
+      expect(world.players.single.uuid, uuid);
+      expect(world.players.single.dataVersion, 5000);
+      expect(
+        () => world.players.add(
+          MtnMinecraftInfoPlayer.invalid(
+            uuid: '11112222-3333-4444-aaaa-bbbbccccdddd',
+            dataFile: File('unused'),
+            storageLayout: MtnMinecraftInfoPlayerStorageLayout.modern,
+            error: MtnMinecraftInfoPlayerError.invalidData,
+          ),
+        ),
+        throwsUnsupportedError,
+      );
+    });
+
+    test('invalid player storage does not fail world discovery', () async {
+      final Directory brokenWorld = await _writeWorld(
+        gameDirectory,
+        directoryName: 'A-broken-players',
+        data: <String, MtnMinecraftNbtValue>{
+          'LevelName': MtnMinecraftNbtValue.string('Broken Players'),
+        },
+      );
+      final Directory playersDirectory = Directory(
+        p.join(brokenWorld.path, 'players'),
+      );
+      await playersDirectory.create();
+      await File(p.join(playersDirectory.path, 'data')).writeAsString('x');
+
+      await _writeWorld(
+        gameDirectory,
+        directoryName: 'B-valid',
+        data: <String, MtnMinecraftNbtValue>{
+          'LevelName': MtnMinecraftNbtValue.string('Valid'),
+        },
+      );
+
+      final List<MtnMinecraftInfoWorld> worlds = await provider.readWorlds();
+
+      expect(worlds, hasLength(2));
+      expect(worlds.first.directoryName, 'A-broken-players');
+      expect(worlds.first.state, MtnMinecraftInfoWorldState.available);
+      expect(worlds.first.error, isNull);
+      expect(
+        worlds.first.playersState,
+        MtnMinecraftInfoWorldPlayersState.invalid,
+      );
+      expect(
+        worlds.first.playersError,
+        MtnMinecraftInfoWorldPlayersError.invalidPath,
+      );
+      expect(worlds.first.players, isEmpty);
+
+      expect(worlds.last.directoryName, 'B-valid');
+      expect(worlds.last.state, MtnMinecraftInfoWorldState.available);
+      expect(
+        worlds.last.playersState,
+        MtnMinecraftInfoWorldPlayersState.available,
+      );
+      expect(worlds.last.playersError, isNull);
+    });
+
+    test('world snapshot exposes defensive raw icon bytes', () async {
+      final Directory worldDirectory = await _writeWorld(
+        gameDirectory,
+        directoryName: 'Icon World',
+        data: <String, MtnMinecraftNbtValue>{},
+      );
+      final File iconFile = File(
+        p.join(worldDirectory.path, MtnMinecraftInfoWorld.iconFileName),
+      );
+      await iconFile.writeAsBytes(<int>[1, 2, 3, 4], flush: true);
+
+      final MtnMinecraftInfoWorld world = (await provider.readWorlds()).single;
+      final Uint8List icon = world.icon!;
+
+      expect(icon, <int>[1, 2, 3, 4]);
+      icon[0] = 99;
+      expect(world.icon, <int>[1, 2, 3, 4]);
+    });
+
+    test('missing world icon is represented as null', () async {
+      await _writeWorld(
+        gameDirectory,
+        directoryName: 'No Icon',
+        data: <String, MtnMinecraftNbtValue>{},
+      );
+
+      final MtnMinecraftInfoWorld world = (await provider.readWorlds()).single;
+
+      expect(world.icon, isNull);
+    });
+
+    test('writeWorldIcon atomically replaces icon bytes', () async {
+      final Directory worldDirectory = await _writeWorld(
+        gameDirectory,
+        directoryName: 'Writable Icon',
+        data: <String, MtnMinecraftNbtValue>{},
+      );
+      final File iconFile = File(
+        p.join(worldDirectory.path, MtnMinecraftInfoWorld.iconFileName),
+      );
+      await iconFile.writeAsBytes(<int>[1, 2, 3], flush: true);
+      final MtnMinecraftInfoWorld world = (await provider.readWorlds()).single;
+
+      await provider.writeWorldIcon(
+        world,
+        Uint8List.fromList(<int>[9, 8, 7, 6]),
+      );
+
+      expect(await iconFile.readAsBytes(), <int>[9, 8, 7, 6]);
+      final List<FileSystemEntity> siblings =
+          await worldDirectory.list(followLinks: false).toList();
+      expect(
+        siblings.where(
+          (FileSystemEntity entry) =>
+              p.basename(entry.path).startsWith('icon.png.tmp-') ||
+              p.basename(entry.path).startsWith('icon.png.old-'),
+        ),
+        isEmpty,
+      );
+      expect((await provider.readWorlds()).single.icon, <int>[9, 8, 7, 6]);
+    });
+
+    test('writeWorldIcon rejects a world outside provider saves', () async {
+      final Directory foreign = await Directory.systemTemp.createTemp(
+        'mtn-minecraft-world-icon-foreign-',
+      );
+      addTearDown(() async {
+        if (await foreign.exists()) await foreign.delete(recursive: true);
+      });
+      final MtnMinecraftInfoWorld world = MtnMinecraftInfoWorld.available(
+        directory: foreign,
+        directoryName: p.basename(foreign.path),
+      );
+
+      expect(
+        provider.writeWorldIcon(
+          world,
+          Uint8List.fromList(<int>[1, 2, 3]),
+        ),
+        throwsA(
+          isA<MtnMinecraftInfoProviderException>().having(
+            (MtnMinecraftInfoProviderException exception) => exception.error,
+            'error',
+            MtnMinecraftInfoProviderError.invalidPath,
+          ),
+        ),
+      );
+    });
+
     test('non-directory saves path fails at provider level', () async {
       await File(p.join(gameDirectory.path, 'saves')).writeAsString('x');
 
@@ -280,4 +450,28 @@ Future<Directory> _writeDocument(
     flush: true,
   );
   return directory;
+}
+
+
+Future<File> _writeWorldPlayer(
+  Directory worldDirectory, {
+  required String uuid,
+  required int dataVersion,
+}) async {
+  final File file = File(
+    p.join(worldDirectory.path, 'players', 'data', '$uuid.dat'),
+  );
+  await file.parent.create(recursive: true);
+  final Uint8List encoded = const MtnMinecraftNbtCodec().encode(
+    MtnMinecraftNbtDocument(
+      name: '',
+      root: MtnMinecraftNbtValue.compound(
+        <String, MtnMinecraftNbtValue>{
+          'DataVersion': MtnMinecraftNbtValue.intValue(dataVersion),
+        },
+      ),
+    ),
+  );
+  await file.writeAsBytes(gzip.encode(encoded), flush: true);
+  return file;
 }

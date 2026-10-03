@@ -139,14 +139,34 @@ final class MtnMinecraftInfoProvider {
   Future<List<MtnMinecraftInfoPlayer>> readPlayers(
     MtnMinecraftInfoWorld world,
   ) async {
-    await _validateWorldDirectoryForRead(world);
+    await _validateWorldDirectory(world, forWrite: false);
+    return _readPlayersFromDirectory(world.directory);
+  }
 
+  /// Atomically replaces the Java Edition `icon.png` for [world].
+  ///
+  /// The provider persists the supplied bytes as-is. PNG decoding, resizing
+  /// and image editing remain caller/UI responsibilities.
+  Future<void> writeWorldIcon(
+    MtnMinecraftInfoWorld world,
+    Uint8List icon,
+  ) {
+    final Uint8List bytes = Uint8List.fromList(icon);
+    return _inTargetLane<void>(world.iconFile.path, () async {
+      await _validateWorldDirectory(world, forWrite: true);
+      await _writeFileAtomic(world.iconFile, bytes);
+    });
+  }
+
+  Future<List<MtnMinecraftInfoPlayer>> _readPlayersFromDirectory(
+    Directory worldDirectory,
+  ) async {
     final Map<String, _PlayerDataCandidate> candidates =
         <String, _PlayerDataCandidate>{};
 
     await _collectPlayerDataCandidates(
       directory: Directory(
-        p.join(world.directory.path, _legacyPlayerDataDirectoryName),
+        p.join(worldDirectory.path, _legacyPlayerDataDirectoryName),
       ),
       storageLayout: MtnMinecraftInfoPlayerStorageLayout.legacy,
       candidates: candidates,
@@ -156,7 +176,7 @@ final class MtnMinecraftInfoProvider {
     await _collectPlayerDataCandidates(
       directory: Directory(
         p.join(
-          world.directory.path,
+          worldDirectory.path,
           _modernPlayersDirectoryName,
           _modernPlayerDataDirectoryName,
         ),
@@ -264,6 +284,25 @@ final class MtnMinecraftInfoProvider {
 
   Future<MtnMinecraftInfoWorld> _readWorld(Directory directory) async {
     final String directoryName = p.basename(directory.path);
+
+    List<MtnMinecraftInfoPlayer> players = const <MtnMinecraftInfoPlayer>[];
+    MtnMinecraftInfoWorldPlayersState playersState =
+        MtnMinecraftInfoWorldPlayersState.available;
+    MtnMinecraftInfoWorldPlayersError? playersError;
+    try {
+      players = await _readPlayersFromDirectory(directory);
+    } on MtnMinecraftInfoProviderException catch (exception) {
+      playersState = MtnMinecraftInfoWorldPlayersState.invalid;
+      if (exception.error == MtnMinecraftInfoProviderError.invalidPath) {
+        playersError = MtnMinecraftInfoWorldPlayersError.invalidPath;
+      } else if (exception.error == MtnMinecraftInfoProviderError.readFailed) {
+        playersError = MtnMinecraftInfoWorldPlayersError.readFailed;
+      } else {
+        rethrow;
+      }
+    }
+
+    final Uint8List? icon = await _readWorldIcon(directory);
     final File levelFile = File(p.join(directory.path, 'level.dat'));
     late final List<int> compressed;
     try {
@@ -272,6 +311,10 @@ final class MtnMinecraftInfoProvider {
       return MtnMinecraftInfoWorld.invalid(
         directory: directory,
         directoryName: directoryName,
+        players: players,
+        playersState: playersState,
+        playersError: playersError,
+        icon: icon,
         error: MtnMinecraftInfoWorldError.readFailed,
       );
     }
@@ -283,6 +326,10 @@ final class MtnMinecraftInfoProvider {
       return MtnMinecraftInfoWorld.invalid(
         directory: directory,
         directoryName: directoryName,
+        players: players,
+        playersState: playersState,
+        playersError: playersError,
+        icon: icon,
         error: MtnMinecraftInfoWorldError.invalidCompression,
       );
     }
@@ -294,6 +341,10 @@ final class MtnMinecraftInfoProvider {
       return MtnMinecraftInfoWorld.invalid(
         directory: directory,
         directoryName: directoryName,
+        players: players,
+        playersState: playersState,
+        playersError: playersError,
+        icon: icon,
         error: MtnMinecraftInfoWorldError.invalidNbt,
       );
     }
@@ -303,23 +354,48 @@ final class MtnMinecraftInfoProvider {
         directory: directory,
         directoryName: directoryName,
         document: document,
+        players: players,
+        playersState: playersState,
+        playersError: playersError,
+        icon: icon,
       );
     } on _InvalidWorldData {
       return MtnMinecraftInfoWorld.invalid(
         directory: directory,
         directoryName: directoryName,
+        players: players,
+        playersState: playersState,
+        playersError: playersError,
+        icon: icon,
         error: MtnMinecraftInfoWorldError.invalidData,
       );
     }
   }
 
-  Future<void> _validateWorldDirectoryForRead(
-    MtnMinecraftInfoWorld world,
-  ) async {
+  Future<Uint8List?> _readWorldIcon(Directory directory) async {
+    final File iconFile = File(
+      p.join(directory.path, MtnMinecraftInfoWorld.iconFileName),
+    );
+    try {
+      final FileSystemEntityType type = await FileSystemEntity.type(
+        iconFile.path,
+        followLinks: false,
+      );
+      if (type != FileSystemEntityType.file) return null;
+      return await iconFile.readAsBytes();
+    } on FileSystemException {
+      return null;
+    }
+  }
+
+  Future<void> _validateWorldDirectory(
+    MtnMinecraftInfoWorld world, {
+    required bool forWrite,
+  }) async {
     final FileSystemEntityType gameDirectoryType =
-        await _entityType(gameDirectory.path, forWrite: false);
+        await _entityType(gameDirectory.path, forWrite: forWrite);
     final FileSystemEntityType savesType =
-        await _entityType(savesDirectory.path, forWrite: false);
+        await _entityType(savesDirectory.path, forWrite: forWrite);
     final String savesPath = p.normalize(p.absolute(savesDirectory.path));
     final String worldPath = p.normalize(p.absolute(world.directory.path));
 
@@ -332,7 +408,7 @@ final class MtnMinecraftInfoProvider {
     }
 
     final FileSystemEntityType worldType =
-        await _entityType(worldPath, forWrite: false);
+        await _entityType(worldPath, forWrite: forWrite);
     if (worldType != FileSystemEntityType.directory) {
       throw const MtnMinecraftInfoProviderException(
         MtnMinecraftInfoProviderError.invalidPath,
@@ -469,9 +545,13 @@ final class MtnMinecraftInfoProvider {
 
   Future<void> _writeUnlocked(Uint8List bytes) async {
     await _validatePath(forWrite: true);
-    final String suffix = await _uniqueSuffix();
-    final File temporary = File('${serversFile.path}.tmp-$suffix');
-    final File displaced = File('${serversFile.path}.old-$suffix');
+    await _writeFileAtomic(serversFile, bytes);
+  }
+
+  Future<void> _writeFileAtomic(File target, Uint8List bytes) async {
+    final String suffix = await _uniqueSuffix(target);
+    final File temporary = File('${target.path}.tmp-$suffix');
+    final File displaced = File('${target.path}.old-$suffix');
     RandomAccessFile? writer;
     try {
       try {
@@ -485,7 +565,11 @@ final class MtnMinecraftInfoProvider {
           MtnMinecraftInfoProviderError.writeFailed,
         );
       }
-      await _replace(temporary: temporary, displaced: displaced);
+      await _replace(
+        target: target,
+        temporary: temporary,
+        displaced: displaced,
+      );
     } finally {
       if (writer != null) await _closeBestEffort(writer);
       await _deleteBestEffort(temporary);
@@ -493,12 +577,14 @@ final class MtnMinecraftInfoProvider {
   }
 
   Future<void> _replace({
+    required File target,
     required File temporary,
     required File displaced,
   }) async {
-    final FileStat targetStat = await _stat(forWrite: true);
-    if (targetStat.type != FileSystemEntityType.notFound &&
-        targetStat.type != FileSystemEntityType.file) {
+    final FileSystemEntityType targetType =
+        await _entityType(target.path, forWrite: true);
+    if (targetType != FileSystemEntityType.notFound &&
+        targetType != FileSystemEntityType.file) {
       throw const MtnMinecraftInfoProviderException(
         MtnMinecraftInfoProviderError.invalidPath,
       );
@@ -506,18 +592,18 @@ final class MtnMinecraftInfoProvider {
 
     var movedExisting = false;
     try {
-      if (targetStat.type == FileSystemEntityType.file) {
-        await serversFile.rename(displaced.path);
+      if (targetType == FileSystemEntityType.file) {
+        await target.rename(displaced.path);
         movedExisting = true;
       }
-      await temporary.rename(serversFile.path);
+      await temporary.rename(target.path);
       await _deleteBestEffort(displaced);
     } on FileSystemException {
       if (movedExisting &&
           await displaced.exists() &&
-          !await serversFile.exists()) {
+          !await target.exists()) {
         try {
-          await displaced.rename(serversFile.path);
+          await displaced.rename(target.path);
         } on FileSystemException {
           throw const MtnMinecraftInfoProviderException(
             MtnMinecraftInfoProviderError.replaceFailed,
@@ -571,7 +657,7 @@ final class MtnMinecraftInfoProvider {
     }
   }
 
-  Future<String> _uniqueSuffix() async {
+  Future<String> _uniqueSuffix(File target) async {
     final Random random = Random.secure();
     while (true) {
       final String suffix = List<int>.generate(
@@ -579,8 +665,8 @@ final class MtnMinecraftInfoProvider {
         (_) => random.nextInt(256),
         growable: false,
       ).map((value) => value.toRadixString(16).padLeft(2, '0')).join();
-      if (!await File('${serversFile.path}.tmp-$suffix').exists() &&
-          !await File('${serversFile.path}.old-$suffix').exists()) {
+      if (!await File('${target.path}.tmp-$suffix').exists() &&
+          !await File('${target.path}.old-$suffix').exists()) {
         return suffix;
       }
     }
@@ -689,6 +775,10 @@ MtnMinecraftInfoWorld _worldFromNbt({
   required Directory directory,
   required String directoryName,
   required MtnMinecraftNbtDocument document,
+  required List<MtnMinecraftInfoPlayer> players,
+  required MtnMinecraftInfoWorldPlayersState playersState,
+  required MtnMinecraftInfoWorldPlayersError? playersError,
+  required Uint8List? icon,
 }) {
   if (document.root.type != MtnMinecraftNbtType.compound) {
     throw const _InvalidWorldData();
@@ -724,6 +814,10 @@ MtnMinecraftInfoWorld _worldFromNbt({
     dataVersion: dataVersion,
     version: version,
     lastPlayed: lastPlayed,
+    players: players,
+    playersState: playersState,
+    playersError: playersError,
+    icon: icon,
   );
 }
 

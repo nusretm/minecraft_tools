@@ -10,14 +10,17 @@ Last updated: 2026-10-03
   - `hypixel_api/` — unrelated to the current Minecraft info work
   - `minecraft_info_provider/` — current package
 - Do not modify `hypixel_api/` for `minecraft_info_provider` checkpoints.
+- `docs/WORKING_RULES.md` is the authoritative development and architecture
+  standard for this repository work.
 
-## Authoritative baseline
+## Authoritative merged baseline
 
 Merged `main` baseline before the active checkpoint:
 
 ```text
 main
-35de8cf2b84bcd72a6e0b2e79c9a0d5eb66966aa
+1a488007474b5aee5257f3a2d7fe84176bd190f3
+Add working and architecture rules
 ```
 
 This baseline includes the COMPLETE / VALIDATED / MERGED foundations for:
@@ -31,213 +34,198 @@ This baseline includes the COMPLETE / VALIDATED / MERGED foundations for:
 - server address normalization and known-server matching
 - legacy pre-1.7 server-list ping fallback
 - Java Edition world discovery / `level.dat`
+- Java Edition player discovery
 
-The world foundation merged as:
+Player discovery merged as:
 
 ```text
-35de8cf2b84bcd72a6e0b2e79c9a0d5eb66966aa
-Add Minecraft world discovery foundation
+41acef78626b97d27d38e98c7f3d9484ae0b670d
+Add Minecraft player discovery foundation
 ```
+
+The working-rules commit followed it on `main` and is the current branch base.
 
 ## Active checkpoint
 
-Java Edition player discovery foundation.
+Java Edition world aggregate player snapshots and world icon I/O.
 
 Current branch:
 
 ```text
-feature/minecraft-player-discovery-foundation
+feature/minecraft-world-player-icon
 ```
 
-Remote implementation HEAD before this continuity pass:
+Implementation/tool HEAD before this metadata pass:
 
 ```text
-b3cbde5b290a7fcc91bf9e90f7f21d65a6880aa7
+2944632898b90ca51bc4710ca7b44b6cad156358
 ```
 
 Package version for this checkpoint:
 
 ```text
-1.0.0-dev.8
+1.0.0-dev.9
 ```
 
-## Public API
+## Public world aggregate API
 
-Provider addition:
+`MtnMinecraftInfoWorld` now owns the immutable player snapshots discovered
+with the world:
 
 ```dart
-Future<List<MtnMinecraftInfoPlayer>> readPlayers(
+final List<MtnMinecraftInfoPlayer> players;
+final MtnMinecraftInfoWorldPlayersState playersState;
+final MtnMinecraftInfoWorldPlayersError? playersError;
+```
+
+`world.state` / `world.error` continue to describe `level.dat` world
+metadata only.
+
+`world.playersState` / `world.playersError` independently describe aggregate
+player-list discovery. A malformed player-storage directory therefore does not
+invalidate a valid world and does not abort sibling world discovery.
+
+Individual corrupt `<uuid>.dat` files remain represented by
+`MtnMinecraftInfoPlayer.state == invalid`; they do not invalidate the
+aggregate player list.
+
+`MtnMinecraftInfoProvider.readPlayers(world)` remains the explicit re-read API
+for callers that want a fresh player snapshot independently of `readWorlds()`.
+
+## World icon API
+
+`MtnMinecraftInfoWorld` exposes:
+
+```dart
+File get iconFile;
+Uint8List? get icon;
+```
+
+`icon` is a defensive copy of the raw `<world>/icon.png` bytes.
+
+Read semantics:
+
+- regular readable `icon.png` -> raw bytes
+- missing icon -> `null`
+- non-file icon path -> `null`
+- icon read failure -> `null`
+- no PNG decoding, validation or resizing
+
+Write API:
+
+```dart
+Future<void> writeWorldIcon(
   MtnMinecraftInfoWorld world,
+  Uint8List icon,
 );
 ```
 
-Public player types:
+The supplied world must belong directly under the provider's `saves`
+directory. Writes use the existing serialized same-target lane and shared
+atomic replace/rollback machinery. Supplied bytes are persisted as-is.
+
+Image processing remains outside the provider.
+
+## Tool smoke validation
+
+Added:
 
 ```text
-MtnMinecraftInfoPlayer
-MtnMinecraftInfoPlayerPosition
-MtnMinecraftInfoPlayerStorageLayout
-MtnMinecraftInfoPlayerState
-MtnMinecraftInfoPlayerError
+minecraft_info_provider/tool/query_minecraft_worlds.dart
 ```
 
-Public naming remains:
+Default mode is read-only and prints:
+
+- world directory/display name
+- world state/error
+- DataVersion/version/lastPlayed
+- player aggregate state/error/count
+- raw icon byte count
+- each player's UUID/state/layout/DataVersion/dimension/position
+
+Optional:
 
 ```text
-MtnMinecraftInfo<Subject>
+--world <directoryName>
+--set-icon <png>
 ```
 
-## Player discovery semantics
-
-Supported layouts:
-
-```text
-pre-26.1:
-<world>/playerdata/<uuid>.dat
-
-26.1+:
-<world>/players/data/<uuid>.dat
-```
-
-Rules:
-
-- the supplied world must be a direct child of this provider's `saves`
-  directory
-- the world directory must still exist and be a directory
-- missing player-data directories -> immutable empty list
-- only UUID-shaped `<uuid>.dat` filenames are candidates
-- public UUID identity is canonical lowercase
-- the exact discovered filename/path remains available through `dataFile`
-- results are deterministically ordered by canonical UUID
-- non-file entries and symlink entries are not treated as player-data files
-- one invalid/corrupt player does not fail sibling discovery
-- if the same UUID exists in both layouts, modern `players/data` wins
-- a corrupt modern duplicate does not silently fall back to legacy
-
-## Player .dat / NBT boundary
-
-Each candidate is decoded as:
-
-```text
-file bytes
-  -> gzip decode
-  -> MtnMinecraftNbtCodec.decode()
-  -> Compound root
-  -> MtnMinecraftInfoPlayer
-```
-
-The raw NBT codec remains compression-agnostic. No new runtime dependency was
-introduced.
-
-Core metadata:
-
-- root `DataVersion`
-- root `Dimension`
-- root `Pos` as exactly three doubles
-
-All core metadata is nullable when absent. A present field with an incompatible
-NBT type is treated as invalid player data.
-
-Player-local invalid reasons:
-
-```text
-readFailed
-invalidCompression
-invalidNbt
-invalidData
-```
-
-Storage layout:
-
-```text
-legacy
-modern
-```
-
-## Explicitly deferred player fields
-
-The foundation deliberately does not model/normalize:
-
-- inventory / selected item
-- ender chest
-- health
-- food / hunger
-- XP
-- game mode
-- abilities
-- effects
-- spawn state
-- stats
-- advancements
-- `singleplayer_uuid` relationship
-
-These remain separate checkpoints because their storage and cross-version
-semantics are broader than player discovery identity and core location data.
+`--set-icon` requires `--world`, writes the icon, re-runs world discovery and
+verifies the persisted bytes.
 
 ## Validation status
 
-Validated locally on Windows on 2026-10-03:
+Automated validation on Windows:
 
 ```text
 dart analyze
 No issues found!
 
 dart test
-00:02 +62: All tests passed!
+00:02 +68: All tests passed!
 
-git diff --check
+git diff --check origin/main...HEAD
 PASS
 ```
 
-The local validation sequence ran `dart format` before analyzer/tests. It left
-only a formatter diff in `test/minecraft_player_discovery_test.dart`; no
-behavior changed. That local formatter diff is intentionally not overwritten by
-this remote metadata pass.
+No `dart format` was run for this Pure Dart checkpoint.
+
+Real Java Edition smoke validation against the user's actual game directory:
+
+- 3 worlds discovered successfully
+- player counts observed: 1, 6 and 1
+- player UUID/DataVersion/dimension/position parsed successfully
+- all 3 world icons read successfully
+- selected world icon initially read as 9918 bytes
+- replacement PNG written as 8929 bytes
+- post-write re-read verified byte-for-byte
+- tool reported `ICON_WRITE_RESULT PASS`
 
 Current checkpoint state:
 
 ```text
-IMPLEMENTED / LOCALLY VALIDATED
+IMPLEMENTED / AUTOMATED VALIDATED / REAL-WORLD VALIDATED
 ```
-
-The remote feature branch currently contains implementation commits and this
-metadata/continuity pass. Branch history may be squashed before merging to
-`main`.
 
 ## Locked foundations
 
-The merged server and world foundations remain locked. Player discovery does
-not redesign:
+This checkpoint does not redesign:
 
 - server lifecycle/status/SRV/address matching/legacy ping
 - raw NBT codec
-- world discovery semantics
-- `level.dat` schema handling
+- world `level.dat` schema semantics
+- player UUID identity or NBT field semantics
+- legacy/modern player-data precedence
 
 ## Development rules
 
-- Do not start a new checkpoint without explicit user approval.
-- Keep checkpoints small and independently reviewable.
-- Do not commit/push/merge/tag unless the current task explicitly calls for it.
-- Prefer deterministic automated tests before live smoke tests.
-- Do not introduce Flutter or MtnLauncher dependencies.
-- Preserve Pure Dart operation.
-- Do not add backward-compatibility layers unless explicitly requested.
+Always read and follow:
+
+```text
+docs/WORKING_RULES.md
+```
+
+In particular:
+
+- no implementation without explicit user approval
+- small, independently reviewable steps
+- GitHub repository changes preferred over patch files
+- no `dart format` for Pure Dart unless explicitly requested
+- default Pure Dart validation is `dart analyze` + `dart test`
+- architecture/naming/core boundaries matter in addition to passing tests
+- no backward-compatibility additions unless explicitly requested
 
 ## Next action
 
 1. Pull this metadata/continuity pass into the local feature branch.
-2. Preserve/apply the local formatter-only player-test change.
-3. Run final `git diff --check`, `dart analyze` and `dart test`.
-4. Inspect the final checkpoint diff.
-5. Squash the feature branch to one clean commit if desired.
-6. Merge only after explicit approval.
+2. Run final `dart analyze`, `dart test` and `git diff --check`.
+3. Confirm working tree is clean.
+4. Squash the feature branch to one clean commit against
+   `1a488007474b5aee5257f3a2d7fe84176bd190f3`.
+5. Force-push only with `--force-with-lease`.
+6. Merge to `main` only after final local verification.
 
-Likely later domains include:
+Likely next domain after this checkpoint:
 
-- player stats
-- player advancements
-- richer player gameplay state
-- `singleplayer_uuid` relation
-- richer world metadata / version history
-- installed content discovery
+- player statistics as world/player-owned information
+- then player advancements

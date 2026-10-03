@@ -23,6 +23,8 @@ launcher runtime, package-management or UI code.
 - Java Edition `saves/*/level.dat` world discovery
 - Gzip-wrapped `level.dat` decoding through the existing raw NBT codec
 - Immutable core world metadata and per-world invalid/corrupt status
+- World-owned immutable player snapshots with isolated player-aggregate status
+- Raw Java Edition world `icon.png` read and atomic write
 - Java Edition player-data discovery for legacy `playerdata/` and 26.1+ `players/data/`
 - Immutable core player metadata with modern-over-legacy UUID precedence
 
@@ -41,7 +43,8 @@ final servers = await info.readServers();
 final worlds = await info.readWorlds();
 final players = worlds.isEmpty
     ? const <MtnMinecraftInfoPlayer>[]
-    : await info.readPlayers(worlds.first);
+    : worlds.first.players;
+final iconBytes = worlds.isEmpty ? null : worlds.first.icon;
 
 await info.addServer(
   MtnMinecraftInfoServer(
@@ -79,6 +82,9 @@ The first world foundation exposes:
 - nullable `Version` metadata (`Id`, `Name`, `Snapshot`, `Series`)
 - nullable `LastPlayed` as UTC `DateTime`
 - `levelFile` and `iconFile` path accessors
+- immutable `players` snapshots discovered with the world
+- independent `playersState` / `playersError` aggregate status
+- raw nullable `icon` bytes from `icon.png`
 - `available` / `invalid` world state
 - world-local errors for read, gzip, NBT and schema failures
 
@@ -89,14 +95,35 @@ A missing `saves` directory produces an immutable empty list. Discovery is
 deterministically ordered by directory name. Symlink entries are not followed.
 One corrupt world does not fail discovery of sibling worlds.
 
+Player discovery is part of the returned world snapshot. A malformed aggregate
+player-storage path does not make an otherwise valid `level.dat` world
+invalid: `world.state` continues to represent the world metadata, while
+`world.playersState` and `world.playersError` report player-list discovery
+separately. Individual corrupt player files remain player-local invalid
+snapshots.
+
+World icons are read as raw bytes from `<world>/icon.png`. Missing,
+non-file or unreadable icon data is represented as `null`; the provider does
+not decode, resize or validate PNG image content. Applications can replace an
+icon atomically with:
+
+```dart
+await info.writeWorldIcon(world, pngBytes);
+```
+
+The bytes are persisted as supplied. Image processing remains a caller/UI
+responsibility.
+
 This checkpoint intentionally does not normalize version-specific fields such
-as difficulty, game mode, spawn, world border, player data or world generation.
+as difficulty, game mode, spawn, world border or world generation.
 `level.dat_old` is not used as an implicit recovery source.
 
 ## Java player discovery
 
-`MtnMinecraftInfoProvider.readPlayers(world)` discovers Java Edition
-player-data snapshots belonging to a discovered world.
+`MtnMinecraftInfoWorld.players` contains the player-data snapshots discovered
+while reading the world. `MtnMinecraftInfoProvider.readPlayers(world)` remains
+available when a caller explicitly wants to re-read the player storage for an
+existing world snapshot.
 
 Two on-disk layouts are supported:
 
@@ -449,6 +476,24 @@ dart run tool/validate_minecraft_info_provider.dart `
 The validator copies the source to a temporary directory, reads it through the
 public provider, appends a validation server to the copy, re-reads it and
 verifies preservation of every pre-existing server compound.
+
+Real world/player/icon smoke inspection is available through:
+
+```powershell
+dart run tool/query_minecraft_worlds.dart `
+  --game-directory "$env:APPDATA\.minecraft"
+```
+
+Selecting one world prints its icon path/size:
+
+```powershell
+dart run tool/query_minecraft_worlds.dart `
+  --game-directory "$env:APPDATA\.minecraft" `
+  --world "New World"
+```
+
+Supplying `--set-icon <png>` atomically replaces that world's icon and
+re-reads it to verify the persisted bytes.
 
 ## Validation status
 

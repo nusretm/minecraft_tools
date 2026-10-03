@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.0.0-dev.9
+
+Java Edition world aggregate player snapshots and world icon I/O.
+
+- Added immutable `MtnMinecraftInfoWorld.players` snapshots populated during
+  `readWorlds()`.
+- Added independent `MtnMinecraftInfoWorldPlayersState` and
+  `MtnMinecraftInfoWorldPlayersError` so aggregate player-storage failures do
+  not invalidate an otherwise valid world or abort sibling world discovery.
+- Kept individual corrupt player files represented by the existing
+  `MtnMinecraftInfoPlayer.invalid` model.
+- Added raw nullable `MtnMinecraftInfoWorld.icon` bytes backed by
+  `<world>/icon.png`, with defensive-copy immutability.
+- Added `MtnMinecraftInfoProvider.writeWorldIcon(world, bytes)` with serialized
+  same-target atomic replacement.
+- Generalized the existing atomic file-replacement primitive so server and
+  world-icon writes share one implementation.
+- Kept PNG decoding, resizing and validation outside the provider.
+- Added `tool/query_minecraft_worlds.dart` for real world/player/icon
+  inspection and opt-in icon-write verification.
+- Automated validation passes with `dart analyze`, 68/68 tests and
+  `git diff --check` on Windows.
+- Real Java Edition smoke validation discovered 3 worlds with player counts
+  1/6/1, read all three icons, and successfully replaced/re-read one icon
+  byte-for-byte.
+
 ## 1.0.0-dev.8
 
 Java Edition player discovery foundation.
