@@ -56,6 +56,38 @@ Future<void> main(List<String> arguments) async {
         'dimension=${player.dimension} '
         'position=${_position(player.position)}',
       );
+
+      final MtnMinecraftInfoPlayerStats? stats =
+          await provider.readPlayerStats(world, player);
+      if (stats == null) {
+        stdout.writeln(
+          'STATS world=${world.directoryName} '
+          'uuid=${player.uuid} missing=true',
+        );
+        continue;
+      }
+
+      stdout.writeln(
+        'STATS world=${world.directoryName} '
+        'uuid=${player.uuid} '
+        'state=${stats.state.name} '
+        'error=${stats.error?.name} '
+        'layout=${stats.storageLayout.name} '
+        'dataVersion=${stats.dataVersion} '
+        'categories=${stats.values.length} '
+        'counters=${_statsCounterCount(stats)} '
+        'file=${stats.file.path}',
+      );
+
+      final List<String> categories = stats.values.keys.toList()..sort();
+      for (final String category in categories) {
+        stdout.writeln(
+          'STATS_CATEGORY world=${world.directoryName} '
+          'uuid=${player.uuid} '
+          'category=$category '
+          'counters=${stats.values[category]!.length}',
+        );
+      }
     }
   }
 
@@ -120,6 +152,14 @@ MtnMinecraftInfoWorld _worldByDirectoryName(
 String _position(MtnMinecraftInfoPlayerPosition? position) {
   if (position == null) return 'null';
   return '${position.x},${position.y},${position.z}';
+}
+
+int _statsCounterCount(MtnMinecraftInfoPlayerStats stats) {
+  var count = 0;
+  for (final Map<String, int> values in stats.values.values) {
+    count += values.length;
+  }
+  return count;
 }
 
 String _requiredValue(List<String> arguments, String name) {

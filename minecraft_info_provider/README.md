@@ -27,6 +27,8 @@ launcher runtime, package-management or UI code.
 - Raw Java Edition world `icon.png` read and atomic write
 - Java Edition player-data discovery for legacy `playerdata/` and 26.1+ `players/data/`
 - Immutable core player metadata with modern-over-legacy UUID precedence
+- On-demand Java Edition player statistics for legacy `stats/` and 26.1+ `players/stats/`
+- Generic immutable statistics maps that preserve unknown vanilla, future and modded keys
 
 ## Usage
 
@@ -45,6 +47,14 @@ final players = worlds.isEmpty
     ? const <MtnMinecraftInfoPlayer>[]
     : worlds.first.players;
 final iconBytes = worlds.isEmpty ? null : worlds.first.icon;
+
+if (worlds.isNotEmpty && worlds.first.players.isNotEmpty) {
+  final stats = await info.readPlayerStats(
+    worlds.first,
+    worlds.first.players.first,
+  );
+  print(stats?.values['minecraft:custom']?['minecraft:jump']);
+}
 
 await info.addServer(
   MtnMinecraftInfoServer(
@@ -174,8 +184,62 @@ directory and must still exist as a directory. Invalid storage-directory shapes
 remain provider-level path errors.
 
 This foundation intentionally does not expose inventory, ender chest, health,
-food, XP, game mode, abilities, effects, spawn state, stats, advancements or
-the singleplayer-player relationship yet.
+food, XP, game mode, abilities, effects, spawn state, advancements or the
+singleplayer-player relationship yet.
+
+## Java player statistics
+
+`MtnMinecraftInfoProvider.readPlayerStats(world, player)` reads one
+player-owned statistics snapshot on demand. Statistics are not eagerly parsed
+by `readWorlds()`, so ordinary world/player discovery does not pay the I/O and
+JSON parsing cost for potentially large stats files.
+
+Supported layouts:
+
+```text
+pre-26.1:
+<world>/stats/<uuid>.json
+
+26.1+:
+<world>/players/stats/<uuid>.json
+```
+
+Stats storage is resolved independently from the player's data-file layout. A
+legacy player-data snapshot can therefore use modern stats, and a modern
+player-data snapshot can use legacy stats when that is the data actually
+present on disk.
+
+When both stats layouts contain the same UUID, `players/stats` is
+authoritative. A corrupt modern file does not silently fall back to an older
+legacy copy. Modern storage is resolved first, so an unrelated malformed
+legacy stats path does not block valid modern data.
+
+A missing stats file returns `null`. A present file produces
+`MtnMinecraftInfoPlayerStats` with:
+
+- canonical player UUID
+- exact discovered JSON file
+- `legacy` / `modern` stats storage layout
+- nullable root `DataVersion`
+- `available` / `invalid` state
+- `readFailed`, `invalidJson` or `invalidData` error classification
+- deeply immutable `Map<String, Map<String, int>> values`
+
+The outer keys are Minecraft statistic categories such as
+`minecraft:mined` or `minecraft:custom`; inner keys are the external
+statistic/resource identifiers. These keys are intentionally not modeled as a
+closed enum so unknown vanilla, future and modded values remain available.
+
+The parser preserves raw integer counters. It does not convert ticks,
+centimeters, damage units or other statistic-specific units into higher-level
+values.
+
+The supplied player must belong to the supplied world. Player ownership is
+validated from the canonical UUID, storage layout and exact player-data path;
+a stats JSON file alone never creates a new player identity.
+
+Statistics writing, aggregation/leaderboards and semantic unit conversion are
+outside this foundation.
 
 ## Java server status
 
@@ -477,7 +541,7 @@ The validator copies the source to a temporary directory, reads it through the
 public provider, appends a validation server to the copy, re-reads it and
 verifies preservation of every pre-existing server compound.
 
-Real world/player/icon smoke inspection is available through:
+Real world/player/icon/stats smoke inspection is available through:
 
 ```powershell
 dart run tool/query_minecraft_worlds.dart `
@@ -492,8 +556,10 @@ dart run tool/query_minecraft_worlds.dart `
   --world "New World"
 ```
 
-Supplying `--set-icon <png>` atomically replaces that world's icon and
-re-reads it to verify the persisted bytes.
+The tool also reads player stats on demand and prints the stats layout,
+state/error, DataVersion, category count and total counter count for each
+discovered player. Supplying `--set-icon <png>` atomically replaces that
+world's icon and re-reads it to verify the persisted bytes.
 
 ## Validation status
 
@@ -513,7 +579,7 @@ Validated on Windows with Dart:
 - richer world metadata and cross-version normalization
 - richer player gameplay state
 - singleplayer UUID relationship
-- statistics
+- statistics aggregation / semantic unit conversion / writing
 - advancements
 - installed-content information
 - client-mod activity discovery

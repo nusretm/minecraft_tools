@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.0.0-dev.10
+
+Java Edition player statistics foundation.
+
+- Added `MtnMinecraftInfoPlayerStats`,
+  `MtnMinecraftInfoPlayerStatsStorageLayout`,
+  `MtnMinecraftInfoPlayerStatsState` and
+  `MtnMinecraftInfoPlayerStatsError`.
+- Added `MtnMinecraftInfoProvider.readPlayerStats(world, player)` as an
+  on-demand player-owned statistics read API.
+- Added explicit support for legacy `stats/<uuid>.json` and 26.1+
+  `players/stats/<uuid>.json` storage.
+- Added deterministic modern-over-legacy precedence without silently falling
+  back when the authoritative modern file is corrupt.
+- Kept stats storage discovery independent from the player's data-file layout.
+- Added world/player ownership validation so stats lookup cannot attach a
+  foreign player snapshot by UUID alone.
+- Added nullable missing-stats semantics and local `readFailed`,
+  `invalidJson` and `invalidData` states for present files.
+- Added nullable root `DataVersion` and deeply immutable generic
+  category/statistic integer maps that preserve unknown external keys.
+- Kept unit conversion, closed vanilla-stat enums, aggregation/leaderboards,
+  writing and advancements outside this foundation.
+- Extended `tool/query_minecraft_worlds.dart` with player-stats smoke output.
+- Automated validation passes with `dart analyze`, 84/84 tests and
+  `git diff --check` on Windows.
+- Real Java Edition 1.20.1 smoke validation read legacy stats for all 8
+  discovered player snapshots across 3 worlds, including varying category and
+  counter sets.
+
 ## 1.0.0-dev.9
 
 Java Edition world aggregate player snapshots and world icon I/O.
