@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.0.0-dev.11
+
+Java Edition player advancements foundation.
+
+- Added `MtnMinecraftInfoPlayerAdvancements`,
+  `MtnMinecraftInfoPlayerAdvancement`,
+  `MtnMinecraftInfoPlayerAdvancementsStorageLayout`,
+  `MtnMinecraftInfoPlayerAdvancementsState` and
+  `MtnMinecraftInfoPlayerAdvancementsError`.
+- Added `MtnMinecraftInfoProvider.readPlayerAdvancements(world, player)` as
+  an on-demand player-owned advancement-progress API.
+- Added legacy `advancements/<uuid>.json` and 26.1+
+  `players/advancements/<uuid>.json` storage with deterministic
+  modern-over-legacy precedence and no corrupt-modern fallback.
+- Kept advancement storage independent from player-data storage.
+- Added nullable missing-file semantics and local `readFailed`,
+  `invalidJson` and `invalidData` states for present files.
+- Added nullable root `DataVersion`, arbitrary advancement resource IDs,
+  authoritative stored `done` state and immutable criterion completion maps.
+- Parsed vanilla criterion completion timestamps into UTC `DateTime` values.
+- Preserved unknown vanilla, future and modded advancement/criterion IDs.
+- Refactored stats and advancements onto one internal player-owned JSON
+  resource reader for ownership validation, storage resolution and JSON I/O.
+- Kept advancement definitions, requirements, display metadata, rewards,
+  semantic progress calculation and writing outside this foundation.
+- Extended `tool/query_minecraft_worlds.dart` with bounded advancement smoke
+  output.
+- Automated validation passes with `dart analyze`, 104/104 tests and
+  `git diff --check` on Windows.
+- Real Java Edition 1.20.1 smoke validation read all 8 discovered legacy
+  advancement snapshots across 3 worlds, including modded namespaces and
+  datasets ranging from 2 to 1363 advancement entries.
+
 ## 1.0.0-dev.10
 
 Java Edition player statistics foundation.

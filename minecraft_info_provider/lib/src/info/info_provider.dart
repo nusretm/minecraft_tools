@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 
 import '../nbt/minecraft_nbt.dart';
 import 'info_player.dart';
+import 'info_player_advancements.dart';
 import 'info_player_stats.dart';
 import 'info_server.dart';
 import 'info_world.dart';
@@ -19,6 +20,7 @@ const String _legacyPlayerDataDirectoryName = 'playerdata';
 const String _modernPlayersDirectoryName = 'players';
 const String _modernPlayerDataDirectoryName = 'data';
 const String _playerStatsDirectoryName = 'stats';
+const String _playerAdvancementsDirectoryName = 'advancements';
 
 enum MtnMinecraftInfoProviderError {
   invalidPath(8101),
@@ -156,30 +158,107 @@ final class MtnMinecraftInfoProvider {
     MtnMinecraftInfoWorld world,
     MtnMinecraftInfoPlayer player,
   ) async {
-    await _validatePlayerForWorld(world, player);
-
-    final _PlayerStatsCandidate? modern = await _findPlayerStatsCandidate(
-      directory: Directory(
-        p.join(
-          world.directory.path,
-          _modernPlayersDirectoryName,
-          _playerStatsDirectoryName,
-        ),
-      ),
-      uuid: player.uuid,
-      storageLayout: MtnMinecraftInfoPlayerStatsStorageLayout.modern,
+    final _PlayerJsonResource? resource = await _readPlayerJsonResource(
+      world,
+      player,
+      resourceDirectoryName: _playerStatsDirectoryName,
     );
-    if (modern != null) return _readPlayerStats(modern);
+    if (resource == null) return null;
 
-    final _PlayerStatsCandidate? legacy = await _findPlayerStatsCandidate(
-      directory: Directory(
-        p.join(world.directory.path, _playerStatsDirectoryName),
-      ),
-      uuid: player.uuid,
-      storageLayout: MtnMinecraftInfoPlayerStatsStorageLayout.legacy,
+    final MtnMinecraftInfoPlayerStatsStorageLayout storageLayout =
+        switch (resource.storageLayout) {
+      _PlayerJsonResourceStorageLayout.legacy =>
+        MtnMinecraftInfoPlayerStatsStorageLayout.legacy,
+      _PlayerJsonResourceStorageLayout.modern =>
+        MtnMinecraftInfoPlayerStatsStorageLayout.modern,
+    };
+
+    final _PlayerJsonResourceError? resourceError = resource.error;
+    if (resourceError != null) {
+      return MtnMinecraftInfoPlayerStats.invalid(
+        uuid: resource.uuid,
+        file: resource.file,
+        storageLayout: storageLayout,
+        error: switch (resourceError) {
+          _PlayerJsonResourceError.readFailed =>
+            MtnMinecraftInfoPlayerStatsError.readFailed,
+          _PlayerJsonResourceError.invalidJson =>
+            MtnMinecraftInfoPlayerStatsError.invalidJson,
+        },
+      );
+    }
+
+    try {
+      return _playerStatsFromJson(
+        resource: resource,
+        storageLayout: storageLayout,
+      );
+    } on _InvalidPlayerStatsData {
+      return MtnMinecraftInfoPlayerStats.invalid(
+        uuid: resource.uuid,
+        file: resource.file,
+        storageLayout: storageLayout,
+        error: MtnMinecraftInfoPlayerStatsError.invalidData,
+      );
+    }
+  }
+
+  /// Reads the advancement progress snapshot belonging to [player] in [world].
+  ///
+  /// Both the pre-26.1 `advancements/<uuid>.json` layout and the 26.1+
+  /// `players/advancements/<uuid>.json` layout are supported. If the same
+  /// UUID exists in both locations, the modern file is authoritative.
+  ///
+  /// A missing advancements file is represented by null. A present but
+  /// unreadable, malformed or schema-invalid file is returned as an invalid
+  /// [MtnMinecraftInfoPlayerAdvancements] snapshot.
+  Future<MtnMinecraftInfoPlayerAdvancements?> readPlayerAdvancements(
+    MtnMinecraftInfoWorld world,
+    MtnMinecraftInfoPlayer player,
+  ) async {
+    final _PlayerJsonResource? resource = await _readPlayerJsonResource(
+      world,
+      player,
+      resourceDirectoryName: _playerAdvancementsDirectoryName,
     );
-    if (legacy == null) return null;
-    return _readPlayerStats(legacy);
+    if (resource == null) return null;
+
+    final MtnMinecraftInfoPlayerAdvancementsStorageLayout storageLayout =
+        switch (resource.storageLayout) {
+      _PlayerJsonResourceStorageLayout.legacy =>
+        MtnMinecraftInfoPlayerAdvancementsStorageLayout.legacy,
+      _PlayerJsonResourceStorageLayout.modern =>
+        MtnMinecraftInfoPlayerAdvancementsStorageLayout.modern,
+    };
+
+    final _PlayerJsonResourceError? resourceError = resource.error;
+    if (resourceError != null) {
+      return MtnMinecraftInfoPlayerAdvancements.invalid(
+        uuid: resource.uuid,
+        file: resource.file,
+        storageLayout: storageLayout,
+        error: switch (resourceError) {
+          _PlayerJsonResourceError.readFailed =>
+            MtnMinecraftInfoPlayerAdvancementsError.readFailed,
+          _PlayerJsonResourceError.invalidJson =>
+            MtnMinecraftInfoPlayerAdvancementsError.invalidJson,
+        },
+      );
+    }
+
+    try {
+      return _playerAdvancementsFromJson(
+        resource: resource,
+        storageLayout: storageLayout,
+      );
+    } on _InvalidPlayerAdvancementsData {
+      return MtnMinecraftInfoPlayerAdvancements.invalid(
+        uuid: resource.uuid,
+        file: resource.file,
+        storageLayout: storageLayout,
+        error: MtnMinecraftInfoPlayerAdvancementsError.invalidData,
+      );
+    }
   }
 
   /// Atomically replaces the Java Edition `icon.png` for [world].
@@ -487,10 +566,43 @@ final class MtnMinecraftInfoProvider {
     }
   }
 
-  Future<_PlayerStatsCandidate?> _findPlayerStatsCandidate({
+  Future<_PlayerJsonResource?> _readPlayerJsonResource(
+    MtnMinecraftInfoWorld world,
+    MtnMinecraftInfoPlayer player, {
+    required String resourceDirectoryName,
+  }) async {
+    await _validatePlayerForWorld(world, player);
+
+    final _PlayerJsonResourceCandidate? modern =
+        await _findPlayerJsonResourceCandidate(
+      directory: Directory(
+        p.join(
+          world.directory.path,
+          _modernPlayersDirectoryName,
+          resourceDirectoryName,
+        ),
+      ),
+      uuid: player.uuid,
+      storageLayout: _PlayerJsonResourceStorageLayout.modern,
+    );
+    if (modern != null) return _decodePlayerJsonResource(modern);
+
+    final _PlayerJsonResourceCandidate? legacy =
+        await _findPlayerJsonResourceCandidate(
+      directory: Directory(
+        p.join(world.directory.path, resourceDirectoryName),
+      ),
+      uuid: player.uuid,
+      storageLayout: _PlayerJsonResourceStorageLayout.legacy,
+    );
+    if (legacy == null) return null;
+    return _decodePlayerJsonResource(legacy);
+  }
+
+  Future<_PlayerJsonResourceCandidate?> _findPlayerJsonResourceCandidate({
     required Directory directory,
     required String uuid,
-    required MtnMinecraftInfoPlayerStatsStorageLayout storageLayout,
+    required _PlayerJsonResourceStorageLayout storageLayout,
   }) async {
     final FileSystemEntityType directoryType =
         await _entityType(directory.path, forWrite: false);
@@ -517,9 +629,9 @@ final class MtnMinecraftInfoProvider {
     for (final FileSystemEntity entry in entries) {
       if (entry is! File) continue;
       final RegExpMatch? match =
-          _playerStatsFilePattern.firstMatch(p.basename(entry.path));
+          _playerJsonFilePattern.firstMatch(p.basename(entry.path));
       if (match == null || match.group(1)!.toLowerCase() != uuid) continue;
-      return _PlayerStatsCandidate(
+      return _PlayerJsonResourceCandidate(
         uuid: uuid,
         file: entry,
         storageLayout: storageLayout,
@@ -528,29 +640,22 @@ final class MtnMinecraftInfoProvider {
     return null;
   }
 
-  Future<MtnMinecraftInfoPlayerStats> _readPlayerStats(
-    _PlayerStatsCandidate candidate,
+  Future<_PlayerJsonResource> _decodePlayerJsonResource(
+    _PlayerJsonResourceCandidate candidate,
   ) async {
     late final String source;
     try {
       source = await candidate.file.readAsString();
     } on FileSystemException {
-      return candidate.invalid(MtnMinecraftInfoPlayerStatsError.readFailed);
+      return candidate.error(_PlayerJsonResourceError.readFailed);
     } on FormatException {
-      return candidate.invalid(MtnMinecraftInfoPlayerStatsError.invalidJson);
-    }
-
-    late final Object? decoded;
-    try {
-      decoded = jsonDecode(source);
-    } on FormatException {
-      return candidate.invalid(MtnMinecraftInfoPlayerStatsError.invalidJson);
+      return candidate.error(_PlayerJsonResourceError.invalidJson);
     }
 
     try {
-      return _playerStatsFromJson(candidate: candidate, value: decoded);
-    } on _InvalidPlayerStatsData {
-      return candidate.invalid(MtnMinecraftInfoPlayerStatsError.invalidData);
+      return candidate.available(jsonDecode(source));
+    } on FormatException {
+      return candidate.error(_PlayerJsonResourceError.invalidJson);
     }
   }
 
@@ -819,7 +924,7 @@ final RegExp _playerDataFilePattern = RegExp(
   caseSensitive: false,
 );
 
-final RegExp _playerStatsFilePattern = RegExp(
+final RegExp _playerJsonFilePattern = RegExp(
   '^($_playerUuidPattern)[.]json' r'$',
   caseSensitive: false,
 );
@@ -848,8 +953,18 @@ final class _InvalidPlayerData implements Exception {
   const _InvalidPlayerData();
 }
 
-final class _PlayerStatsCandidate {
-  const _PlayerStatsCandidate({
+enum _PlayerJsonResourceStorageLayout {
+  legacy,
+  modern,
+}
+
+enum _PlayerJsonResourceError {
+  readFailed,
+  invalidJson,
+}
+
+final class _PlayerJsonResourceCandidate {
+  const _PlayerJsonResourceCandidate({
     required this.uuid,
     required this.file,
     required this.storageLayout,
@@ -857,17 +972,40 @@ final class _PlayerStatsCandidate {
 
   final String uuid;
   final File file;
-  final MtnMinecraftInfoPlayerStatsStorageLayout storageLayout;
+  final _PlayerJsonResourceStorageLayout storageLayout;
 
-  MtnMinecraftInfoPlayerStats invalid(
-    MtnMinecraftInfoPlayerStatsError error,
-  ) =>
-      MtnMinecraftInfoPlayerStats.invalid(
+  _PlayerJsonResource available(Object? value) => _PlayerJsonResource(
         uuid: uuid,
         file: file,
         storageLayout: storageLayout,
+        value: value,
+        error: null,
+      );
+
+  _PlayerJsonResource error(_PlayerJsonResourceError error) =>
+      _PlayerJsonResource(
+        uuid: uuid,
+        file: file,
+        storageLayout: storageLayout,
+        value: null,
         error: error,
       );
+}
+
+final class _PlayerJsonResource {
+  const _PlayerJsonResource({
+    required this.uuid,
+    required this.file,
+    required this.storageLayout,
+    required this.value,
+    required this.error,
+  });
+
+  final String uuid;
+  final File file;
+  final _PlayerJsonResourceStorageLayout storageLayout;
+  final Object? value;
+  final _PlayerJsonResourceError? error;
 }
 
 final class _InvalidPlayerStatsData implements Exception {
@@ -875,9 +1013,10 @@ final class _InvalidPlayerStatsData implements Exception {
 }
 
 MtnMinecraftInfoPlayerStats _playerStatsFromJson({
-  required _PlayerStatsCandidate candidate,
-  required Object? value,
+  required _PlayerJsonResource resource,
+  required MtnMinecraftInfoPlayerStatsStorageLayout storageLayout,
 }) {
+  final Object? value = resource.value;
   if (value is! Map<String, dynamic>) {
     throw const _InvalidPlayerStatsData();
   }
@@ -916,12 +1055,123 @@ MtnMinecraftInfoPlayerStats _playerStatsFromJson({
   }
 
   return MtnMinecraftInfoPlayerStats.available(
-    uuid: candidate.uuid,
-    file: candidate.file,
-    storageLayout: candidate.storageLayout,
+    uuid: resource.uuid,
+    file: resource.file,
+    storageLayout: storageLayout,
     dataVersion: dataVersion,
     values: values,
   );
+}
+
+final class _InvalidPlayerAdvancementsData implements Exception {
+  const _InvalidPlayerAdvancementsData();
+}
+
+final RegExp _advancementTimestampPattern = RegExp(
+  r'^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) ([+-])(\d{2})(\d{2})$',
+);
+
+MtnMinecraftInfoPlayerAdvancements _playerAdvancementsFromJson({
+  required _PlayerJsonResource resource,
+  required MtnMinecraftInfoPlayerAdvancementsStorageLayout storageLayout,
+}) {
+  final Object? value = resource.value;
+  if (value is! Map<String, dynamic>) {
+    throw const _InvalidPlayerAdvancementsData();
+  }
+
+  int? dataVersion;
+  final Map<String, MtnMinecraftInfoPlayerAdvancement> advancements =
+      <String, MtnMinecraftInfoPlayerAdvancement>{};
+
+  for (final MapEntry<String, dynamic> entry in value.entries) {
+    if (entry.key == 'DataVersion') {
+      if (entry.value is! int) {
+        throw const _InvalidPlayerAdvancementsData();
+      }
+      dataVersion = entry.value as int;
+      continue;
+    }
+
+    final Object? rawProgress = entry.value;
+    if (rawProgress is! Map<String, dynamic>) {
+      throw const _InvalidPlayerAdvancementsData();
+    }
+
+    final Object? rawDone = rawProgress['done'];
+    final Object? rawCriteria = rawProgress['criteria'];
+    if (rawDone is! bool || rawCriteria is! Map<String, dynamic>) {
+      throw const _InvalidPlayerAdvancementsData();
+    }
+
+    final Map<String, DateTime> criteria = <String, DateTime>{};
+    for (final MapEntry<String, dynamic> criterion in rawCriteria.entries) {
+      final Object? rawTimestamp = criterion.value;
+      if (rawTimestamp is! String) {
+        throw const _InvalidPlayerAdvancementsData();
+      }
+      criteria[criterion.key] = _parseAdvancementTimestamp(rawTimestamp);
+    }
+
+    advancements[entry.key] = MtnMinecraftInfoPlayerAdvancement(
+      id: entry.key,
+      done: rawDone,
+      criteria: criteria,
+    );
+  }
+
+  return MtnMinecraftInfoPlayerAdvancements.available(
+    uuid: resource.uuid,
+    file: resource.file,
+    storageLayout: storageLayout,
+    dataVersion: dataVersion,
+    advancements: advancements,
+  );
+}
+
+DateTime _parseAdvancementTimestamp(String source) {
+  final RegExpMatch? match = _advancementTimestampPattern.firstMatch(source);
+  if (match == null) {
+    throw const _InvalidPlayerAdvancementsData();
+  }
+
+  final int year = int.parse(match.group(1)!);
+  final int month = int.parse(match.group(2)!);
+  final int day = int.parse(match.group(3)!);
+  final int hour = int.parse(match.group(4)!);
+  final int minute = int.parse(match.group(5)!);
+  final int second = int.parse(match.group(6)!);
+  final int offsetHour = int.parse(match.group(8)!);
+  final int offsetMinute = int.parse(match.group(9)!);
+
+  if (offsetHour > 23 || offsetMinute > 59) {
+    throw const _InvalidPlayerAdvancementsData();
+  }
+
+  final DateTime local = DateTime.utc(
+    year,
+    month,
+    day,
+    hour,
+    minute,
+    second,
+  );
+  if (local.year != year ||
+      local.month != month ||
+      local.day != day ||
+      local.hour != hour ||
+      local.minute != minute ||
+      local.second != second) {
+    throw const _InvalidPlayerAdvancementsData();
+  }
+
+  final Duration offset = Duration(
+    hours: offsetHour,
+    minutes: offsetMinute,
+  );
+  return match.group(7) == '+'
+      ? local.subtract(offset)
+      : local.add(offset);
 }
 
 MtnMinecraftInfoPlayer _playerFromNbt({

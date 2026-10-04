@@ -64,28 +64,72 @@ Future<void> main(List<String> arguments) async {
           'STATS world=${world.directoryName} '
           'uuid=${player.uuid} missing=true',
         );
+      } else {
+        stdout.writeln(
+          'STATS world=${world.directoryName} '
+          'uuid=${player.uuid} '
+          'state=${stats.state.name} '
+          'error=${stats.error?.name} '
+          'layout=${stats.storageLayout.name} '
+          'dataVersion=${stats.dataVersion} '
+          'categories=${stats.values.length} '
+          'counters=${_statsCounterCount(stats)} '
+          'file=${stats.file.path}',
+        );
+
+        final List<String> categories = stats.values.keys.toList()..sort();
+        for (final String category in categories) {
+          stdout.writeln(
+            'STATS_CATEGORY world=${world.directoryName} '
+            'uuid=${player.uuid} '
+            'category=$category '
+            'counters=${stats.values[category]!.length}',
+          );
+        }
+      }
+
+      final MtnMinecraftInfoPlayerAdvancements? advancements =
+          await provider.readPlayerAdvancements(world, player);
+      if (advancements == null) {
+        stdout.writeln(
+          'ADVANCEMENTS world=${world.directoryName} '
+          'uuid=${player.uuid} missing=true',
+        );
         continue;
       }
 
       stdout.writeln(
-        'STATS world=${world.directoryName} '
+        'ADVANCEMENTS world=${world.directoryName} '
         'uuid=${player.uuid} '
-        'state=${stats.state.name} '
-        'error=${stats.error?.name} '
-        'layout=${stats.storageLayout.name} '
-        'dataVersion=${stats.dataVersion} '
-        'categories=${stats.values.length} '
-        'counters=${_statsCounterCount(stats)} '
-        'file=${stats.file.path}',
+        'state=${advancements.state.name} '
+        'error=${advancements.error?.name} '
+        'layout=${advancements.storageLayout.name} '
+        'dataVersion=${advancements.dataVersion} '
+        'advancements=${advancements.advancements.length} '
+        'completed=${_completedAdvancementCount(advancements)} '
+        'criteria=${_advancementCriterionCount(advancements)} '
+        'file=${advancements.file.path}',
       );
 
-      final List<String> categories = stats.values.keys.toList()..sort();
-      for (final String category in categories) {
+      final List<String> advancementIds =
+          advancements.advancements.keys.toList()..sort();
+      const int advancementPreviewLimit = 10;
+      for (final String id in advancementIds.take(advancementPreviewLimit)) {
+        final MtnMinecraftInfoPlayerAdvancement advancement =
+            advancements.advancements[id]!;
         stdout.writeln(
-          'STATS_CATEGORY world=${world.directoryName} '
+          'ADVANCEMENT world=${world.directoryName} '
           'uuid=${player.uuid} '
-          'category=$category '
-          'counters=${stats.values[category]!.length}',
+          'id=$id '
+          'done=${advancement.done} '
+          'criteria=${advancement.criteria.length}',
+        );
+      }
+      if (advancementIds.length > advancementPreviewLimit) {
+        stdout.writeln(
+          'ADVANCEMENT_MORE world=${world.directoryName} '
+          'uuid=${player.uuid} '
+          'count=${advancementIds.length - advancementPreviewLimit}',
         );
       }
     }
@@ -158,6 +202,28 @@ int _statsCounterCount(MtnMinecraftInfoPlayerStats stats) {
   var count = 0;
   for (final Map<String, int> values in stats.values.values) {
     count += values.length;
+  }
+  return count;
+}
+
+int _completedAdvancementCount(
+  MtnMinecraftInfoPlayerAdvancements advancements,
+) {
+  var count = 0;
+  for (final MtnMinecraftInfoPlayerAdvancement advancement
+      in advancements.advancements.values) {
+    if (advancement.done) count++;
+  }
+  return count;
+}
+
+int _advancementCriterionCount(
+  MtnMinecraftInfoPlayerAdvancements advancements,
+) {
+  var count = 0;
+  for (final MtnMinecraftInfoPlayerAdvancement advancement
+      in advancements.advancements.values) {
+    count += advancement.criteria.length;
   }
   return count;
 }

@@ -29,6 +29,8 @@ launcher runtime, package-management or UI code.
 - Immutable core player metadata with modern-over-legacy UUID precedence
 - On-demand Java Edition player statistics for legacy `stats/` and 26.1+ `players/stats/`
 - Generic immutable statistics maps that preserve unknown vanilla, future and modded keys
+- On-demand Java Edition player advancement progress for legacy `advancements/` and 26.1+ `players/advancements/`
+- Immutable advancement progress with authoritative `done` state and UTC criterion timestamps
 
 ## Usage
 
@@ -54,6 +56,16 @@ if (worlds.isNotEmpty && worlds.first.players.isNotEmpty) {
     worlds.first.players.first,
   );
   print(stats?.values['minecraft:custom']?['minecraft:jump']);
+
+  final advancements = await info.readPlayerAdvancements(
+    worlds.first,
+    worlds.first.players.first,
+  );
+  print(
+    advancements
+        ?.advancements['minecraft:story/root']
+        ?.done,
+  );
 }
 
 await info.addServer(
@@ -184,8 +196,8 @@ directory and must still exist as a directory. Invalid storage-directory shapes
 remain provider-level path errors.
 
 This foundation intentionally does not expose inventory, ender chest, health,
-food, XP, game mode, abilities, effects, spawn state, advancements or the
-singleplayer-player relationship yet.
+food, XP, game mode, abilities, effects, spawn state or the singleplayer-player
+relationship yet.
 
 ## Java player statistics
 
@@ -240,6 +252,59 @@ a stats JSON file alone never creates a new player identity.
 
 Statistics writing, aggregation/leaderboards and semantic unit conversion are
 outside this foundation.
+
+## Java player advancements
+
+`MtnMinecraftInfoProvider.readPlayerAdvancements(world, player)` reads one
+player-owned advancement progress snapshot on demand. Advancement progress is
+not eagerly parsed by `readWorlds()`.
+
+Supported layouts:
+
+```text
+pre-26.1:
+<world>/advancements/<uuid>.json
+
+26.1+:
+<world>/players/advancements/<uuid>.json
+```
+
+Advancement storage is resolved independently from the player's data-file
+layout. When both generations contain the same canonical UUID, the modern
+`players/advancements` entry is authoritative. A corrupt modern file does
+not silently fall back to the legacy copy.
+
+Missing advancement progress returns `null`. A present file produces
+`MtnMinecraftInfoPlayerAdvancements` with:
+
+- canonical player UUID
+- exact discovered JSON file
+- `legacy` / `modern` storage layout
+- nullable root `DataVersion`
+- `available` / `invalid` state
+- `readFailed`, `invalidJson` or `invalidData` error classification
+- immutable advancement entries keyed by external resource ID
+
+Each `MtnMinecraftInfoPlayerAdvancement` exposes:
+
+- its external advancement resource ID
+- the authoritative stored `done` boolean
+- completed criterion names mapped to UTC `DateTime` values
+
+Advancement and criterion identifiers are intentionally preserved as external
+strings so vanilla, future and modded namespaces remain available.
+
+The provider does not derive completion from the number of criteria. Progress
+requirements belong to advancement definitions, not the player-progress file,
+so the stored `done` value remains authoritative.
+
+Player statistics and advancement progress share one internal player-owned JSON
+resource reader for UUID/path validation, modern-first storage resolution and
+JSON file decoding. Their public models and schema validation remain separate.
+
+Advancement-definition parsing, titles/descriptions/icons, rewards,
+requirements, completion percentages, remaining-criteria calculation and
+writing are outside this foundation.
 
 ## Java server status
 
@@ -541,7 +606,7 @@ The validator copies the source to a temporary directory, reads it through the
 public provider, appends a validation server to the copy, re-reads it and
 verifies preservation of every pre-existing server compound.
 
-Real world/player/icon/stats smoke inspection is available through:
+Real world/player/icon/stats/advancements smoke inspection is available through:
 
 ```powershell
 dart run tool/query_minecraft_worlds.dart `
@@ -556,10 +621,12 @@ dart run tool/query_minecraft_worlds.dart `
   --world "New World"
 ```
 
-The tool also reads player stats on demand and prints the stats layout,
-state/error, DataVersion, category count and total counter count for each
-discovered player. Supplying `--set-icon <png>` atomically replaces that
-world's icon and re-reads it to verify the persisted bytes.
+The tool also reads player stats and advancement progress on demand. Stats
+output includes layout, state/error, DataVersion, category count and total
+counter count. Advancement output includes layout, state/error, DataVersion,
+advancement/completion/criterion counts and a bounded preview of advancement
+IDs. Supplying `--set-icon <png>` atomically replaces that world's icon and
+re-reads it to verify the persisted bytes.
 
 ## Validation status
 
@@ -580,7 +647,7 @@ Validated on Windows with Dart:
 - richer player gameplay state
 - singleplayer UUID relationship
 - statistics aggregation / semantic unit conversion / writing
-- advancements
+- advancement definitions / semantic progress calculation / writing
 - installed-content information
 - client-mod activity discovery
 

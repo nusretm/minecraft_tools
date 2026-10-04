@@ -19,11 +19,11 @@ Feature branch base:
 
 ```text
 main
-7bb833bc73ebac023f5919d46781c8f79df6849d
-Ignore Dart package generated files
+371668da6565b9fb41d9a12dd1e4b51a57fc6eb9
+Add Minecraft player stats foundation
 ```
 
-This baseline includes the COMPLETE / VALIDATED / MERGED foundations for:
+This baseline includes COMPLETE / VALIDATED / MERGED foundations for:
 
 - Java NBT codec
 - `servers.dat` read/append with unknown-tag preservation
@@ -36,34 +36,28 @@ This baseline includes the COMPLETE / VALIDATED / MERGED foundations for:
 - Java Edition player discovery
 - world-owned player snapshots
 - world icon read/write
-
-The immediately preceding merged feature checkpoint is:
-
-```text
-f315fda3842a33816c53ae6203d36e58b2bccb32
-Add Minecraft world aggregate and icon IO
-```
+- Java Edition player statistics
 
 ## Active checkpoint
 
-Java Edition player statistics foundation.
+Java Edition player advancements foundation.
 
 Current branch:
 
 ```text
-feature/minecraft-player-stats-foundation
+feature/minecraft-player-advancements-foundation
 ```
 
 Implementation/tool HEAD before this metadata pass:
 
 ```text
-2607cb4a4019da3cf92433147641f64412c91965
+d367f7e652223bd451666c3c8322e4330755aaad
 ```
 
 Package version for this checkpoint:
 
 ```text
-1.0.0-dev.10
+1.0.0-dev.11
 ```
 
 ## Public API
@@ -71,80 +65,93 @@ Package version for this checkpoint:
 Provider addition:
 
 ```dart
-Future<MtnMinecraftInfoPlayerStats?> readPlayerStats(
+Future<MtnMinecraftInfoPlayerAdvancements?> readPlayerAdvancements(
   MtnMinecraftInfoWorld world,
   MtnMinecraftInfoPlayer player,
 );
 ```
 
-Public stats types:
+Public types:
 
 ```text
-MtnMinecraftInfoPlayerStats
-MtnMinecraftInfoPlayerStatsStorageLayout
-MtnMinecraftInfoPlayerStatsState
-MtnMinecraftInfoPlayerStatsError
+MtnMinecraftInfoPlayerAdvancements
+MtnMinecraftInfoPlayerAdvancement
+MtnMinecraftInfoPlayerAdvancementsStorageLayout
+MtnMinecraftInfoPlayerAdvancementsState
+MtnMinecraftInfoPlayerAdvancementsError
 ```
 
-Stats remain player-owned information and do not create a second player-list
-authority. `world.players` remains the player identity source.
+Advancement progress remains player-owned information. It does not discover
+players or create a second player-list authority.
 
 ## Storage layouts
 
-Explicitly supported:
+Supported:
 
 ```text
 legacy / pre-26.1:
-<world>/stats/<uuid>.json
+<world>/advancements/<uuid>.json
 
 modern / 26.1+:
-<world>/players/stats/<uuid>.json
+<world>/players/advancements/<uuid>.json
 ```
 
-The user explicitly approved legacy stats support for this checkpoint.
+Advancement storage layout is independent from
+`MtnMinecraftInfoPlayer.storageLayout`.
 
-Stats layout is independent from `MtnMinecraftInfoPlayer.storageLayout`.
+Resolution semantics:
 
-When the same canonical UUID exists in both stats locations:
+- modern is checked first
+- modern wins when both files exist
+- corrupt modern does not fall back to legacy
+- malformed unrelated legacy storage does not block valid modern data
 
-- modern `players/stats` wins
-- modern is resolved first
-- corrupt modern does not silently fall back to legacy
-- a malformed unrelated legacy storage path does not block valid modern data
+## Shared player-owned JSON resource boundary
 
-A stats file never creates a new player. The caller supplies a world-owned
-`MtnMinecraftInfoPlayer`, and the provider validates its UUID, data-file
-layout and data-file path against that world.
+Stats and advancements now share one internal filesystem/JSON reader for:
 
-## Stats JSON boundary
+- validating world/player ownership
+- canonical UUID filename matching
+- resolving modern-first legacy/modern paths
+- reading UTF-8 JSON
+- classifying read vs JSON-decode failures
 
-Missing stats:
+Stats and advancement schema parsing remain separate. The shared internal
+reader does not introduce a public abstraction.
+
+## Advancement JSON boundary
+
+Missing file:
 
 ```text
 null
 ```
 
-Present stats:
+Present root:
 
 ```text
-JSON object
-  -> optional integer DataVersion
-  -> required object stats
-  -> category key
-  -> statistic/resource key
-  -> integer counter
+{
+  "DataVersion": <optional int>,
+  "<advancement resource id>": {
+    "criteria": {
+      "<criterion name>": "<yyyy-MM-dd HH:mm:ss Z>"
+    },
+    "done": <bool>
+  }
+}
 ```
 
-Public values:
+The public model keeps:
 
-```dart
-Map<String, Map<String, int>>
-```
+- optional root `DataVersion`
+- arbitrary advancement resource IDs
+- authoritative `done` boolean
+- arbitrary criterion names
+- UTC `DateTime` completion timestamps
 
-Both map levels are immutable.
-
-Unknown vanilla, future and modded category/statistic keys are preserved as
-external wire/domain keys rather than converted to a closed enum.
+The provider does not derive `done` from criterion count because advancement
+requirements are definition data and are not contained in the player progress
+snapshot.
 
 State/error semantics:
 
@@ -157,35 +164,32 @@ invalidJson
 invalidData
 ```
 
-Raw counters are exposed as stored. No tick/time, distance, damage or other
-unit conversion is performed.
+Advancement and criterion maps are immutable.
 
 ## Loading policy
 
-Stats are deliberately on demand.
+Advancements are on demand.
 
-`readWorlds()` continues to load world/player identity snapshots without
-parsing every stats JSON file. Callers request one player's stats explicitly
-through `readPlayerStats(world, player)`.
-
-This keeps the core world/player discovery path bounded and avoids unnecessary
-I/O for UI surfaces that do not need statistics.
+`readWorlds()` continues to discover world/player identity without parsing
+all stats and advancement JSON files. Callers explicitly use
+`readPlayerAdvancements(world, player)`.
 
 ## Tool smoke validation
 
-`tool/query_minecraft_worlds.dart` now reports for every discovered player:
+`tool/query_minecraft_worlds.dart` now reports:
 
-- stats missing/present
-- stats state/error
-- legacy/modern stats layout
-- stats DataVersion
+- advancement missing/present
+- state/error
+- legacy/modern layout
+- DataVersion
 - exact file path
-- category count
-- total counter count
-- per-category counter count
+- total advancement count
+- completed advancement count
+- total completed criterion count
+- an alphabetical preview of up to 10 advancement IDs
+- remaining preview count through `ADVANCEMENT_MORE`
 
-The tool does not dump every individual counter, keeping the smoke output
-readable while still validating the full JSON parser.
+The bounded preview avoids dumping very large modded advancement files.
 
 ## Validation status
 
@@ -196,7 +200,7 @@ dart analyze
 No issues found!
 
 dart test
-00:02 +84: All tests passed!
+00:04 +104: All tests passed!
 
 git diff --check origin/main...HEAD
 PASS
@@ -207,19 +211,20 @@ clean
 
 No `dart format` was run.
 
-Real Java Edition 1.20.1 validation:
+Real Java Edition 1.20.1 legacy validation:
 
 - 3 worlds discovered
 - 8 player snapshots total
-- all 8 corresponding legacy stats files read as `available`
-- all reported `layout=legacy`
+- 8/8 advancement files parsed as `available`
+- all real files used legacy `<world>/advancements/<uuid>.json`
 - all reported `DataVersion=3465`
-- real category sets ranged from 1 to 9 categories
-- real counter sets ranged from 5 to 668 counters
-- categories observed include `minecraft:broken`, `minecraft:crafted`,
-  `minecraft:custom`, `minecraft:dropped`, `minecraft:killed`,
-  `minecraft:killed_by`, `minecraft:mined`, `minecraft:picked_up` and
-  `minecraft:used`
+- advancement-entry counts ranged from 2 to 1363
+- completed counts ranged from 1 to 1333
+- completed-criterion counts ranged from 2 to 1430
+- both `done=false` and `done=true` were observed
+- vanilla and modded namespaces were preserved, including
+  `minecraft`, `alekiships`, `alexscaves`, `alexsmobs`,
+  `aquaculture` and `additionaladditions`
 
 Current checkpoint state:
 
@@ -227,17 +232,19 @@ Current checkpoint state:
 IMPLEMENTED / AUTOMATED VALIDATED / REAL-WORLD LEGACY VALIDATED
 ```
 
-Modern 26.1+ storage behavior is deterministic-test validated; a real 26.1+
-save was not used in this checkpoint.
+Modern 26.1+ storage behavior is deterministic-test validated; no real 26.1+
+save was used in this checkpoint.
 
 ## Explicitly deferred
 
-- statistics writing
-- statistics aggregation / leaderboard APIs
-- semantic/unit conversion helpers
-- advancements
+- advancement definitions
+- title/description/icon/reward extraction
+- requirements evaluation
+- percentage / remaining-criteria calculation
+- advancement writing
 - richer player gameplay state
 - singleplayer UUID relationship
+- installed-content discovery
 
 ## Locked foundations
 
@@ -246,6 +253,7 @@ This checkpoint does not redesign:
 - world/player discovery ownership
 - player UUID identity
 - player NBT parsing
+- player statistics public API/schema
 - world icon I/O
 - server/status/SRV/address behavior
 - raw NBT codec
@@ -263,7 +271,7 @@ Notably:
 - no implementation without explicit user approval
 - small, independently reviewable steps
 - no `dart format` for Pure Dart unless explicitly requested
-- `.dart_tool/` and `pubspec.lock` are ignored for this Dart library package
+- `.dart_tool/` and `pubspec.lock` stay ignored for this Dart library package
 - GitHub repository changes are preferred over patch files
 - architecture/naming/dependency boundaries are part of the acceptance bar
 - backward/legacy support is only added when explicitly requested
@@ -274,10 +282,10 @@ Notably:
 2. Run final `dart analyze`, `dart test`, `git diff --check` and
    `git status`.
 3. Squash the feature branch to one clean commit against
-   `7bb833bc73ebac023f5919d46781c8f79df6849d`.
+   `371668da6565b9fb41d9a12dd1e4b51a57fc6eb9`.
 4. Force-push only with `--force-with-lease`.
 5. Merge to `main` only after the squashed tree is locally verified.
 
 Likely next domain after this checkpoint:
 
-- Java Edition player advancements
+- richer player gameplay state
