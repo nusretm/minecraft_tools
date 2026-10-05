@@ -4,6 +4,12 @@ import 'package:test/test.dart';
 void main() {
   group('Minecraft text core', () {
     test('exposes classic named colors and serialization', () {
+      expect(
+        MtnMinecraftTextColor.darkGray.type,
+        MtnMinecraftTextColorType.named,
+      );
+      expect(MtnMinecraftTextColor.darkGray.isNamed, isTrue);
+      expect(MtnMinecraftTextColor.darkGray.isRgb, isFalse);
       expect(MtnMinecraftTextColor.darkGray.code, '8');
       expect(MtnMinecraftTextColor.darkGray.name, 'dark_gray');
       expect(MtnMinecraftTextColor.darkGray.rgb, 0x555555);
@@ -34,12 +40,22 @@ void main() {
       final MtnMinecraftTextColor color =
           MtnMinecraftTextColor.rgb(18, 171, 239);
 
+      expect(color.type, MtnMinecraftTextColorType.rgbColor);
+      expect(color.isNamed, isFalse);
+      expect(color.isRgb, isTrue);
       expect(color.code, isNull);
       expect(color.name, isNull);
       expect(color.rgb, 0x12ABEF);
       expect(color.hex, '#12ABEF');
-      expect(color.toString(), '&x&1&2&A&B&E&F');
+      expect(color.toString(), '&#12ABEF');
       expect(color.toServerString(), '§x§1§2§A§B§E§F');
+
+      expect(MtnMinecraftTextColor.fromCode('#12ABEF'), color);
+      expect(MtnMinecraftTextColor.fromCode('&#12ABEF'), color);
+      expect(
+        MtnMinecraftTextColor.fromCode('&x&1&2&A&B&E&F'),
+        color,
+      );
       expect(
         MtnMinecraftTextColor.fromCode('§x§1§2§A§B§E§F'),
         color,

@@ -1,3 +1,9 @@
+/// Semantic kind of a Minecraft text color.
+enum MtnMinecraftTextColorType {
+  named,
+  rgbColor,
+}
+
 /// Minecraft Java text color.
 ///
 /// The sixteen classic colors are exposed as named static constants while
@@ -13,7 +19,8 @@ final class MtnMinecraftTextColor {
   }
 
   MtnMinecraftTextColor.rgb(this.colorR, this.colorG, this.colorB)
-      : code = null,
+      : type = MtnMinecraftTextColorType.rgbColor,
+        code = null,
         name = null {
     _checkChannel(colorR, 'red');
     _checkChannel(colorG, 'green');
@@ -25,7 +32,7 @@ final class MtnMinecraftTextColor {
     required this.colorR,
     required this.colorG,
     required this.colorB,
-  });
+  }) : type = MtnMinecraftTextColorType.named;
 
   static const MtnMinecraftTextColor black = MtnMinecraftTextColor._named(
     code: '0',
@@ -160,6 +167,8 @@ final class MtnMinecraftTextColor {
     white,
   ];
 
+  final MtnMinecraftTextColorType type;
+
   /// Classic formatting code, or null for an arbitrary RGB color.
   final String? code;
 
@@ -175,23 +184,64 @@ final class MtnMinecraftTextColor {
   String get hex =>
       '#${rgb.toRadixString(16).padLeft(6, '0').toUpperCase()}';
 
-  bool get isNamed => code != null;
+  bool get isNamed => type == MtnMinecraftTextColorType.named;
+
+  bool get isRgb => type == MtnMinecraftTextColorType.rgbColor;
 
   static MtnMinecraftTextColor? tryFromCode(String code) {
-    final String clean =
-        code.trim().replaceAll('§', '').replaceAll('&', '');
-    if (clean.length == 1) {
-      final String normalized = clean.toLowerCase();
-      for (final MtnMinecraftTextColor color in namedValues) {
-        if (color.code == normalized) return color;
-      }
-      return null;
+    final String value = code.trim();
+    if (value.isEmpty) return null;
+
+    if (value.length == 1) {
+      return _tryFromNamedCode(value);
     }
 
-    if (clean.length == 7 && clean[0].toLowerCase() == 'x') {
-      return _tryFromHexDigits(clean.substring(1));
+    if (value.length == 2 &&
+        (value.codeUnitAt(0) == 0x00a7 || value[0] == '&')) {
+      return _tryFromNamedCode(value[1]);
+    }
+
+    if (value.startsWith('#') && value.length == 7) {
+      return _tryFromHexDigits(value.substring(1));
+    }
+
+    if (value.startsWith('&#') && value.length == 8) {
+      return _tryFromHexDigits(value.substring(2));
+    }
+
+    final String? expandedHex = _expandedRgbHex(value);
+    if (expandedHex != null) {
+      return _tryFromHexDigits(expandedHex);
+    }
+
+    return null;
+  }
+
+  static MtnMinecraftTextColor? _tryFromNamedCode(String code) {
+    final String normalized = code.toLowerCase();
+    for (final MtnMinecraftTextColor color in namedValues) {
+      if (color.code == normalized) return color;
     }
     return null;
+  }
+
+  static String? _expandedRgbHex(String value) {
+    if (value.length != 14) return null;
+    final String marker = value[0];
+    if (marker != '&' && value.codeUnitAt(0) != 0x00a7) return null;
+    if (value[1].toLowerCase() != 'x') return null;
+
+    final StringBuffer digits = StringBuffer();
+    var index = 2;
+    for (var part = 0; part < 6; part++) {
+      if (index + 1 >= value.length) return null;
+      if (value[index] != marker) return null;
+      final String digit = value[index + 1];
+      if (int.tryParse(digit, radix: 16) == null) return null;
+      digits.write(digit);
+      index += 2;
+    }
+    return digits.toString();
   }
 
   static MtnMinecraftTextColor? tryFromMinecraftValue(String value) {
@@ -217,21 +267,21 @@ final class MtnMinecraftTextColor {
   }
 
   @override
-  String toString() => _format('&');
-
-  String toServerString() => _format('§');
-
-  String _format(String marker) {
+  String toString() {
     final String? code = this.code;
-    if (code != null) return '$marker$code';
+    if (code != null) return '&$code';
+    return '&$hex';
+  }
+
+  String toServerString() {
+    final String? code = this.code;
+    if (code != null) return '§$code';
 
     final String digits = hex.substring(1);
-    final StringBuffer result = StringBuffer()
-      ..write(marker)
-      ..write('x');
+    final StringBuffer result = StringBuffer('§x');
     for (final int unit in digits.codeUnits) {
       result
-        ..write(marker)
+        ..write('§')
         ..writeCharCode(unit);
     }
     return result.toString();
