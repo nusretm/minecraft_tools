@@ -10,256 +10,47 @@ Last updated: 2026-10-05
 - `hypixel_api/` is unrelated and must not be modified for these checkpoints.
 - `docs/WORKING_RULES.md` is authoritative.
 
-## Completed checkpoint
+## Active checkpoint
 
-Minecraft Text / Item Display Properties Foundation.
+Java Edition 26.1+ Singleplayer UUID Relationship Foundation.
 
 Feature branch:
 
 ```text
-feature/minecraft-text-item-display-foundation
+feature/minecraft-singleplayer-uuid-foundation
 ```
 
-Implementation HEAD before finalization:
-
-```text
-a6e8e6fa91b2c923eb4d53c6e7d618dcbd5010c1
-```
-
-Feature branch base:
+Base:
 
 ```text
 main
-0e6ae8b9250f4207dbeed431c356380709204506
-Add Minecraft item core properties
+4887a13138ecb7dfa87c44061e968d513e731a65
+Add Minecraft text and item display foundation
 ```
 
 Package version:
 
 ```text
-1.0.0-dev.15
+1.0.0-dev.16
 ```
 
 Checkpoint state:
 
 ```text
-COMPLETED / AUTOMATED VALIDATED / MERGE APPROVED
+COMPLETED / AUTOMATED VALIDATED
 ```
 
-## Global Minecraft text core
-
-Public text API:
-
-```text
-MtnMinecraftText
-MtnMinecraftTextItem
-MtnMinecraftTextStyle
-MtnMinecraftTextColor
-MtnMinecraftTextColorType
-MtnMinecraftTextFormat
-```
-
-`MtnMinecraftText.text` is the authoritative mutable source. `plainText`,
-`items`, `toJson()` and `toNbt()` derive from the current text/semantic
-state.
-
-The setter is state-aware:
-
-```text
-same text assigned
-  -> semantic metadata retained
-
-different text assigned
-  -> imported semantic metadata invalidated
-  -> subsequent items/serialization derive from the new text
-```
-
-## Text rendering model
-
-`items` exposes immutable render-ready spans split only when effective style
-or semantic component identity changes.
-
-Supported style state:
-
-```text
-named color
-RGB color
-bold
-italic
-underlined
-strikethrough
-obfuscated
-reset
-```
-
-Classic section-sign parsing supports named colors and Java RGB sequences.
-Malformed RGB/unknown formatting is preserved literally instead of being
-partially consumed.
-
-Color semantics distinguish named colors from arbitrary RGB even when the
-rendered RGB value is identical.
-
-## JSON / NBT Text Components
-
-Supported conversion APIs:
-
-```dart
-MtnMinecraftText.fromJson(...)
-MtnMinecraftText.fromNbt(...)
-text.toJson()
-text.toNbt()
-```
-
-The provider accepts:
-
-```text
-JSON Text Component sources
-1.20.5-era NBT TAG_String containing JSON text
-direct inline NBT Text Component values
-```
-
-Serialization is generated from the current semantic/text state. The original
-input document is not retained as a second authority.
-
-## Translate semantics
-
-Translated components preserve:
-
-```text
-translate
-fallback
-with
-```
-
-Public item fields:
-
-```text
-MtnMinecraftTextItem.translate
-MtnMinecraftTextItem.translateFallback
-MtnMinecraftTextItem.translateWith
-MtnMinecraftTextItem.isTranslated
-```
-
-`translateWith` is an immutable snapshot. Nested translation arguments remain
-`MtnMinecraftText` values and explicit inherited-style overrides survive
-round-trip serialization.
-
-Visible fallback behavior:
-
-```text
-translate with fallback
-  -> item.text/plainText uses fallback
-
-translate without fallback
-  -> item.text/plainText uses translation key as a safe unresolved fallback
-```
-
-This does not claim that a locale-specific translation has been resolved.
-
-## Other dynamic component types
-
-The provider deliberately does not implement runtime resolution for:
-
-```text
-keybind
-selector
-nbt
-unresolved score
-```
-
-These require client/server/world/command context and are not converted into
-fake visible values.
-
-Current behavior:
-
-```text
-keybind / selector / nbt
-  -> no fabricated plainText
-
-score without explicit value
-  -> no fabricated plainText
-
-score with explicit string value
-  -> value may be exposed as visible text
-
-extra children
-  -> still parsed normally
-```
-
-Runtime resolver machinery remains outside this foundation.
-
-## Server status integration
-
-`MtnMinecraftInfoServerStatus.motd` is now:
-
-```dart
-MtnMinecraftText?
-```
-
-Modern status description JSON is parsed through the shared text component
-codec. Legacy ping MOTDs use the same text model from their section-sign source.
-
-`MtnMinecraftInfoServerStatus.toMap()` intentionally keeps:
-
-```text
-motd -> motd.plainText
-```
-
-so the existing plain output surface remains simple.
-
-## Item display text integration
-
-`MtnMinecraftInfoItemStackComponents` now includes:
-
-```dart
-MtnMinecraftText? customName
-MtnMinecraftText? itemName
-List<MtnMinecraftText>? lore
-```
-
-Legacy normalization:
-
-```text
-tag.display.Name -> customName
-tag.display.Lore -> lore
-```
-
-Modern normalization:
-
-```text
-minecraft:custom_name -> customName
-minecraft:item_name   -> itemName
-minecraft:lore        -> lore
-```
-
-Modern `components` remains authoritative over legacy `tag`.
-
-Lore semantics:
-
-```text
-property absent
-  -> lore == null
-
-property explicitly empty
-  -> immutable empty list
-```
-
-Recognized display component conflicts with explicit modern removals remain
-invalid data. Unknown modern components remain tolerated.
-
-## Validation
-
-Authoritative local validation after the final behavior changes:
+Authoritative local validation:
 
 ```text
 dart analyze
 No issues found!
 
-dart test test/minecraft_text_test.dart
-+19: All tests passed!
+dart test test/minecraft_world_discovery_test.dart
++20: All tests passed!
 
 dart test
-+176: All tests passed!
++179: All tests passed!
 
 git diff --check origin/main...HEAD
 PASS
@@ -270,23 +61,204 @@ clean
 
 No `dart format` was run.
 
-## Locked decisions
+No merge approval has been given for this checkpoint.
 
-- `MtnMinecraftText.text` remains the canonical mutable authority.
-- Original JSON/NBT source is not cached as a parallel authority.
-- Text items remain render-ready spans rather than a full Minecraft runtime
-  component evaluator.
-- `translate` metadata is preserved because it is useful for persisted text
-  and serialization.
-- `keybind`, `selector`, `nbt` and unresolved `score` are not resolved by
-  this provider.
-- Item display properties reuse the global text model; item parsing does not
-  own a second text-component implementation.
-- Server MOTD and item display text share the same text core.
-- Backward-compatibility shims are not added before the first release unless
-  explicitly approved.
+## Scope
+
+Minecraft Java Edition 26.1 replaced the embedded singleplayer `Player` tag
+in `level.dat` with:
+
+```text
+Data.singleplayer_uuid
+```
+
+This checkpoint handles only that modern relationship.
+
+It does not add pre-26.1 embedded `Data.Player` parsing or any compatibility
+shim.
+
+## World singleplayer identity
+
+`MtnMinecraftInfoWorld` now exposes:
+
+```dart
+String? singleplayerUuid
+MtnMinecraftInfoPlayer? get singleplayerPlayer
+```
+
+Authority rule:
+
+```text
+singleplayerUuid
+  -> canonical persisted authority from level.dat
+
+singleplayerPlayer
+  -> derived lookup over world.players
+```
+
+The player object is deliberately not stored as a second authority.
+
+## UUID normalization
+
+The recognized modern storage shape is:
+
+```text
+Data.singleplayer_uuid
+  -> TAG_Int_Array
+  -> exactly four signed 32-bit integers
+```
+
+The four integers are interpreted as the standard 128-bit Minecraft UUID
+representation and normalized to canonical lowercase hyphenated text:
+
+```text
+00112233-4455-6677-8899-aabbccddeeff
+```
+
+A present recognized tag with the wrong NBT type or wrong array length is
+world-local invalid data.
+
+## Relationship semantics
+
+When `singleplayerUuid` is absent:
+
+```text
+singleplayerUuid   == null
+singleplayerPlayer == null
+```
+
+When the UUID is present and its player snapshot is discovered:
+
+```text
+singleplayerUuid
+  -> retained canonical UUID
+
+singleplayerPlayer
+  -> the same MtnMinecraftInfoPlayer instance contained by world.players
+```
+
+When the UUID is present but the referenced player snapshot is unavailable:
+
+```text
+singleplayerUuid
+  -> still retained
+
+singleplayerPlayer
+  -> null
+```
+
+The provider does not fabricate a player and does not invalidate an otherwise
+valid world merely because the referenced player file is missing.
+
+Existing player-discovery authority remains unchanged:
+
+```text
+pre-26.1  playerdata/<uuid>.dat
+26.1+     players/data/<uuid>.dat
+modern duplicate UUID candidate wins
+```
+
+The derived relationship is UUID-based and therefore reuses the existing player
+snapshot/discovery model rather than adding another player reader.
+
+## Parser boundary
+
+World parsing remains in the existing world schema path inside
+`info_provider.dart`.
+
+The checkpoint adds only the UUID field normalization required by the existing
+world model. It does not introduce a new provider, registry or parallel world
+parser.
+
+## Query tool
+
+`tool/query_minecraft_worlds.dart` now reports:
+
+```text
+singleplayerUuid=<uuid|null>
+singleplayerPlayer=<resolved uuid|null>
+```
+
+This allows real 26.1+ saves to verify both the persisted reference and player
+snapshot resolution.
+
+## Deterministic coverage added
+
+`minecraft_world_discovery_test.dart` now covers:
+
+- absent singleplayer UUID
+- valid four-int UUID normalization
+- resolution to the exact discovered player snapshot
+- persisted UUID with missing player snapshot
+- wrong NBT type
+- wrong UUID array length
+- world-local `invalidData` behavior for malformed recognized values
+
+## Validation
+
+Authoritative local validation completed from
+`D:\development\cross-platform\minecraft_tools\minecraft_info_provider`:
+
+```text
+dart analyze
+No issues found!
+
+dart test test/minecraft_world_discovery_test.dart
+00:00 +20: All tests passed!
+
+dart test
+00:02 +179: All tests passed!
+```
+
+Repository-root validation:
+
+```text
+git diff --check origin/main...HEAD
+PASS
+
+git status
+clean
+```
+
+No `dart format` was run.
+
+## Previous completed checkpoint
+
+Minecraft Text / Item Display Properties Foundation was completed and squash
+merged through PR #7.
+
+Merged main HEAD:
+
+```text
+4887a13138ecb7dfa87c44061e968d513e731a65
+```
+
+Package version at that checkpoint:
+
+```text
+1.0.0-dev.15
+```
+
+Its authoritative handoff remains:
+
+```text
+docs/continuity/HANDOFF_2026-10-05_MINECRAFT_INFO_PROVIDER_TEXT_ITEM_DISPLAY.md
+```
+
+Locked text decisions remain unchanged:
+
+- `MtnMinecraftText.text` is the canonical mutable authority.
+- `plainText` is the static visible projection.
+- `items` is immutable render-ready semantic span data.
+- JSON/NBT conversion does not retain a second original-document authority.
+- `translate/fallback/with` semantics are preserved.
+- runtime `keybind`, selector, NBT-path and unresolved-score evaluation are
+  still outside the provider foundation.
+- item custom-name/item-name/lore reuse the global text model.
 
 ## Explicitly deferred
+
+Text/runtime:
 
 - runtime localization/language resolver
 - keybind resolver
@@ -298,6 +270,9 @@ No `dart format` was run.
 - clickEvent
 - hoverEvent
 - richer interactive text semantics
+
+Item/player/provider:
+
 - custom model data
 - attribute modifiers
 - potion-specific properties
@@ -305,7 +280,7 @@ No `dart format` was run.
 - custom data
 - item writing
 - player active effects
-- singleplayer player identity / UUID relationship
+- pre-26.1 embedded `Data.Player` singleplayer identity handling
 - installed-content discovery
 
 ## Development rules
@@ -318,15 +293,14 @@ In particular:
 - keep checkpoints small and independently reviewable
 - do not run `dart format` for Pure Dart unless explicitly requested
 - use `dart analyze`, `dart test`, `git diff --check`, `git status`
-- keep `.dart_tool/` and library `pubspec.lock` ignored
 - architecture/naming/dependency boundaries are acceptance criteria
-- do not modify `hypixel_api/` for this work
+- do not modify `hypixel_api/`
 - do not add backward compatibility unless explicitly approved
 
 ## Next action
 
-Continue from `main` in a new chat after this checkpoint is merged.
+Checkpoint implementation and automated validation are complete.
 
-The next checkpoint has not been selected yet. Start by auditing the remaining
-Minecraft information-provider gaps and choose one small foundation before any
-implementation.
+Create/finalize the checkpoint handoff, then prepare the feature branch for
+review/squash/PR/merge only after explicit user approval. Do not begin another
+feature before this checkpoint is closed.
