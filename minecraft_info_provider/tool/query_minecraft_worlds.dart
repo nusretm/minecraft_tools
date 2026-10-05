@@ -474,7 +474,8 @@ String _itemProperties(MtnMinecraftInfoItemStack item) {
         'potionCustomName=null potionDurationScale=null '
         'attributeModifiers=null customModelData=null '
         'containerContents=null bundleContents=null '
-        'chargedProjectiles=null useRemainder=null removedComponents=null';
+        'chargedProjectiles=null useRemainder=null '
+        'customData=null legacyTag=null removedComponents=null';
   }
 
   return 'damage=${components.damage} '
@@ -493,7 +494,24 @@ String _itemProperties(MtnMinecraftInfoItemStack item) {
       'bundleContents=${_nestedItemListPreview(components.bundleContents)} '
       'chargedProjectiles=${_nestedItemListPreview(components.chargedProjectiles)} '
       'useRemainder=${_nestedItemPreview(components.useRemainder)} '
+      'customData=${_nbtCompoundPreview(components.customData)} '
+      'legacyTag=${_nbtCompoundPreview(components.legacyTag)} '
       'removedComponents=${_setPreview(components.removedComponentIds)}';
+}
+
+String _nbtCompoundPreview(
+  Map<String, MtnMinecraftNbtValue>? values,
+) {
+  if (values == null) return 'null';
+  if (values.isEmpty) return '{0:[]}';
+  const int previewLimit = 5;
+  final List<String> keys = values.keys.toList()..sort();
+  final List<String> preview =
+      keys.take(previewLimit).toList(growable: true);
+  if (keys.length > previewLimit) {
+    preview.add('+${keys.length - previewLimit}');
+  }
+  return '{${keys.length}:[${preview.join(',')}]}';
 }
 
 String _containerContentsPreview(
@@ -531,6 +549,7 @@ String _nestedItemListPreview(
 
 String _nestedItemPreview(MtnMinecraftInfoItemStack? item) =>
     item == null ? 'null' : '${item.id}*${item.count}';
+
 String _customModelDataPreview(
   MtnMinecraftInfoItemCustomModelData? data,
 ) {

@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.0.0-dev.22
+
+Item custom data foundation.
+
+- Added nullable immutable `MtnMinecraftInfoItemStackComponents.customData`
+  for explicit 1.20.5+ `minecraft:custom_data` compounds.
+- Added nullable immutable `MtnMinecraftInfoItemStackComponents.legacyTag`
+  for exact pre-1.20.5 raw item-tag preservation.
+- Deliberately kept legacy `tag` distinct from modern `custom_data` instead
+  of guessing Minecraft data-fixer migration rules.
+- Preserved semantic parsing of known legacy fields while retaining the full
+  original legacy tag, including unknown and modded fields.
+- Preserved full NBT type fidelity for modern custom data, including numeric
+  tag types, arrays, lists, compounds and strings.
+- Preserved absent-versus-explicitly-empty semantics for modern custom data
+  and legacy tags.
+- Kept modern `components` authoritative over legacy `tag`.
+- Added `minecraft:custom_data` component-removal conflict handling.
+- Kept malformed recognized modern custom-data storage strict while unknown
+  modern component IDs remain tolerant.
+- Extended world query output with bounded custom-data and legacy-tag key
+  previews instead of recursively dumping raw NBT.
+- Added focused deterministic custom-data coverage.
+- Kept data-fixer emulation, legacy-tag migration, custom-data matching/path
+  queries, mutation, SNBT utilities and item writing outside this checkpoint.
+
 ## 1.0.0-dev.21
 
 Nested item stacks foundation.

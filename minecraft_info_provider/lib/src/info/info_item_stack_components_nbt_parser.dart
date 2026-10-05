@@ -69,22 +69,7 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
         _optionalLegacyBundleContents(tag);
     final List<MtnMinecraftInfoItemStack>? chargedProjectiles =
         _optionalLegacyChargedProjectiles(tag);
-
-    if (damage == null &&
-        repairCost == null &&
-        unbreakable == null &&
-        enchantments == null &&
-        storedEnchantments == null &&
-        display.customName == null &&
-        display.lore == null &&
-        potionContents == null &&
-        attributeModifiers == null &&
-        customModelData == null &&
-        containerContents == null &&
-        bundleContents == null &&
-        chargedProjectiles == null) {
-      return null;
-    }
+    final Map<String, MtnMinecraftNbtValue> legacyTag = tag;
 
     return MtnMinecraftInfoItemStackComponents(
       damage: damage,
@@ -100,6 +85,7 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
       containerContents: containerContents,
       bundleContents: bundleContents,
       chargedProjectiles: chargedProjectiles,
+      legacyTag: legacyTag,
     );
   }
 
@@ -133,6 +119,7 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
       'minecraft:bundle_contents',
       'minecraft:charged_projectiles',
       'minecraft:use_remainder',
+      'minecraft:custom_data',
     ];
     for (final String id in recognizedIds) {
       if (components.containsKey(id) && removedComponentIds.contains(id)) {
@@ -197,6 +184,11 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
       components,
       'minecraft:use_remainder',
     );
+    final Map<String, MtnMinecraftNbtValue>? customData =
+        _optionalModernCustomData(
+      components,
+      'minecraft:custom_data',
+    );
 
     if (damage == null &&
         repairCost == null &&
@@ -214,6 +206,7 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
         bundleContents == null &&
         chargedProjectiles == null &&
         useRemainder == null &&
+        customData == null &&
         removedComponentIds.isEmpty) {
       return null;
     }
@@ -235,10 +228,24 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
       bundleContents: bundleContents,
       chargedProjectiles: chargedProjectiles,
       useRemainder: useRemainder,
+      customData: customData,
       removedComponentIds: removedComponentIds,
     );
   }
 
+  Map<String, MtnMinecraftNbtValue>? _optionalModernCustomData(
+    Map<String, MtnMinecraftNbtValue> components,
+    String name,
+  ) {
+    final MtnMinecraftNbtValue? value = components[name];
+    if (value == null) return null;
+    if (value.type != MtnMinecraftNbtType.compound) {
+      throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+    }
+    return Map<String, MtnMinecraftNbtValue>.unmodifiable(
+      value.asCompound,
+    );
+  }
   Map<int, MtnMinecraftInfoItemStack>? _optionalLegacyContainerContents(
     Map<String, MtnMinecraftNbtValue> tag,
   ) {

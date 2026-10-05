@@ -189,7 +189,7 @@ void main() {
       expect(components.repairCost, isNull);
     });
 
-    test('unknown legacy and modern metadata do not invalidate item',
+    test('unknown legacy metadata is preserved and modern metadata remains tolerant',
         () async {
       await _writeInventoryItem(
         worldDirectory,
@@ -200,7 +200,13 @@ void main() {
         ),
       );
       MtnMinecraftInfoItemStack item = await _readItem(provider, world);
-      expect(item.components, isNull);
+      expect(item.components, isNotNull);
+      expect(item.components!.legacyTag, isNotNull);
+      expect(
+        item.components!.legacyTag!['ExampleModData']!.asString,
+        'value',
+      );
+      expect(item.components!.customData, isNull);
 
       await _writeInventoryItem(
         worldDirectory,
