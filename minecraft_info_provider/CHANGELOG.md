@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.0.0-dev.17
+
+Player active effects and shared mob-effect foundation.
+
+- Added public `MtnMinecraftInfoMobEffect` and
+  `MtnMinecraftInfoMobEffectId` as a reusable persisted mob-effect model
+  rather than a player-only effect representation.
+- Preserved modern resource-location IDs and pre-1.20.2 numeric IDs without
+  guessing registry mappings for legacy or modded data.
+- Added one shared internal mob-effect NBT parser for legacy
+  `ActiveEffects` and modern `active_effects` storage.
+- Normalized 1.20.2 field renames, recursive hidden effects and 1.20.5 omitted
+  defaults into one semantic model.
+- Added nullable immutable `MtnMinecraftInfoPlayer.activeEffects` with
+  absent-versus-explicitly-empty list semantics.
+- Made modern `active_effects` authoritative when both storage forms are
+  present; malformed modern data does not fall back to legacy data.
+- Kept unknown effect metadata tolerant while recognized effect fields remain
+  schema-strict.
+- Extended the world query tool with bounded player-effect smoke output.
+- Kept potion component parsing, effect registry lookup, localization,
+  duration formatting, runtime calculations and effect writing outside this
+  checkpoint.
+
 ## 1.0.0-dev.16
 
 Java Edition 26.1+ singleplayer player relationship foundation.

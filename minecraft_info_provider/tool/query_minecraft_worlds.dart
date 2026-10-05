@@ -112,6 +112,7 @@ Future<void> main(List<String> arguments) async {
         'value=${_lastDeath(player.lastDeath)}',
       );
 
+      _writePlayerEffects(world, player);
       _writePlayerInventory(world, player);
       _writePlayerEnderChest(world, player);
       stdout.writeln(
@@ -287,6 +288,47 @@ String _lastDeath(MtnMinecraftInfoPlayerLastDeath? lastDeath) {
   if (lastDeath == null) return 'null';
   return 'position=${_blockPosition(lastDeath.position)},'
       'dimension=${lastDeath.dimension}';
+}
+
+void _writePlayerEffects(
+  MtnMinecraftInfoWorld world,
+  MtnMinecraftInfoPlayer player,
+) {
+  final List<MtnMinecraftInfoMobEffect>? effects = player.activeEffects;
+  if (effects == null) {
+    stdout.writeln(
+      'PLAYER_EFFECTS world=${world.directoryName} '
+      'uuid=${player.uuid} missing=true',
+    );
+    return;
+  }
+
+  stdout.writeln(
+    'PLAYER_EFFECTS world=${world.directoryName} '
+    'uuid=${player.uuid} count=${effects.length}',
+  );
+
+  const int previewLimit = 10;
+  for (final MtnMinecraftInfoMobEffect effect in effects.take(previewLimit)) {
+    stdout.writeln(
+      'PLAYER_EFFECT world=${world.directoryName} '
+      'uuid=${player.uuid} '
+      'id=${effect.id} '
+      'amplifier=${effect.amplifier} '
+      'duration=${effect.duration} '
+      'ambient=${effect.ambient} '
+      'showParticles=${effect.showParticles} '
+      'showIcon=${effect.showIcon} '
+      'hidden=${effect.hiddenEffect != null}',
+    );
+  }
+  if (effects.length > previewLimit) {
+    stdout.writeln(
+      'PLAYER_EFFECT_MORE world=${world.directoryName} '
+      'uuid=${player.uuid} '
+      'count=${effects.length - previewLimit}',
+    );
+  }
 }
 
 void _writePlayerInventory(

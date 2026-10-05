@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'info_item_stack.dart';
+import 'info_mob_effect.dart';
 
 /// On-disk Java Edition player-data layout used by the discovered file.
 enum MtnMinecraftInfoPlayerStorageLayout {
@@ -190,6 +191,7 @@ final class MtnMinecraftInfoPlayer {
     this.selectedItemSlot,
     this.respawn,
     this.lastDeath,
+    this.activeEffects,
     this.inventory,
     this.enderChest,
     this.equipment,
@@ -213,6 +215,7 @@ final class MtnMinecraftInfoPlayer {
     int? selectedItemSlot,
     MtnMinecraftInfoPlayerRespawn? respawn,
     MtnMinecraftInfoPlayerLastDeath? lastDeath,
+    List<MtnMinecraftInfoMobEffect>? activeEffects,
     List<MtnMinecraftInfoItemStack?>? inventory,
     List<MtnMinecraftInfoItemStack?>? enderChest,
     MtnMinecraftInfoPlayerEquipment? equipment,
@@ -237,6 +240,9 @@ final class MtnMinecraftInfoPlayer {
         selectedItemSlot: selectedItemSlot,
         respawn: respawn,
         lastDeath: lastDeath,
+        activeEffects: activeEffects == null
+            ? null
+            : List<MtnMinecraftInfoMobEffect>.unmodifiable(activeEffects),
         inventory: inventory == null
             ? null
             : List<MtnMinecraftInfoItemStack?>.unmodifiable(inventory),
@@ -315,6 +321,13 @@ final class MtnMinecraftInfoPlayer {
 
   /// Root `LastDeathLocation`, when present.
   final MtnMinecraftInfoPlayerLastDeath? lastDeath;
+
+  /// Active mob effects normalized from legacy `ActiveEffects` or modern
+  /// `active_effects` storage.
+  ///
+  /// Null means the effect-list field is absent. An explicitly persisted empty
+  /// list remains an immutable empty list.
+  final List<MtnMinecraftInfoMobEffect>? activeEffects;
 
   /// Semantic 36-slot player inventory, or null when `Inventory` is absent.
   ///
