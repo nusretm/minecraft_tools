@@ -43,7 +43,7 @@ Package version:
 Checkpoint state:
 
 ```text
-IMPLEMENTED / AUTOMATED VALIDATED / READY FOR SQUASH MERGE
+COMPLETED / AUTOMATED VALIDATED / MERGE APPROVED
 ```
 
 ## Global Minecraft text core
@@ -325,7 +325,7 @@ In particular:
 
 ## Next action
 
-After this checkpoint is squash-merged into `main`, continue in a new chat.
+Continue from `main` in a new chat after this checkpoint is merged.
 
 The next checkpoint has not been selected yet. Start by auditing the remaining
 Minecraft information-provider gaps and choose one small foundation before any
