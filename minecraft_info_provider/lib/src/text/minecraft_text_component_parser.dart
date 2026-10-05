@@ -13,8 +13,9 @@ final class MtnMinecraftTextComponentParser {
     MtnMinecraftTextStyle baseStyle = MtnMinecraftTextStyle.defaults,
   }) {
     try {
+      final Object? decoded = jsonDecode(source) as Object?;
       return parseJsonValue(
-        jsonDecode(source),
+        decoded,
         baseStyle: baseStyle,
       );
     } on FormatException {
@@ -65,7 +66,7 @@ final class MtnMinecraftTextComponentParser {
       }
       return;
     }
-    if (value is Map) {
+    if (value is Map<Object?, Object?>) {
       final Map<String, Object?> object = <String, Object?>{};
       for (final MapEntry<Object?, Object?> entry in value.entries) {
         if (entry.key is! String) {
@@ -193,7 +194,7 @@ final class MtnMinecraftTextComponentParser {
 
     final Object? score = object['score'];
     if (score != null) {
-      if (score is! Map) {
+      if (score is! Map<Object?, Object?>) {
         throw const MtnMinecraftTextComponentParserException();
       }
       final Object? value = score['value'];
