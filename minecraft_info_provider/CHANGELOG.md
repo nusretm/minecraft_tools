@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.0.0-dev.20
+
+Custom model data item foundation.
+
+- Added public `MtnMinecraftInfoItemCustomModelData` with immutable
+  `floats`, `flags`, `strings` and `colors` lists plus nullable
+  pre-1.21.4 numeric `legacyValue`.
+- Added nullable `MtnMinecraftInfoItemStackComponents.customModelData` with
+  absent-versus-explicitly-empty semantics.
+- Normalized legacy `CustomModelData` integer item tags.
+- Normalized 1.20.5 through 1.21.3 integer
+  `minecraft:custom_model_data` components without rewriting them into the
+  later float-list representation.
+- Added 1.21.4+ expanded custom-model-data parsing for floats, booleans,
+  arbitrary strings and packed integer RGB colors.
+- Preserved negative packed color integers and raw string values without
+  coupling custom-model data to the Minecraft text-color model.
+- Kept all current custom-model-data lists immutable and treated absent
+  compound fields as empty lists.
+- Preserved modern item-component authority and component-removal conflict
+  handling for `minecraft:custom_model_data`.
+- Kept unknown current custom-model-data fields tolerant while recognized
+  fields remain schema-strict.
+- Extended the world query tool with bounded custom-model-data output.
+- Added focused deterministic custom-model-data coverage.
+- Kept resource-pack model resolution, `minecraft:item_model`, effective
+  rendered-model selection and item writing outside this checkpoint.
+
 ## 1.0.0-dev.19
 
 Item attribute modifiers foundation.

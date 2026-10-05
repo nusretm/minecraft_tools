@@ -12,26 +12,26 @@ Last updated: 2026-10-05
 
 ## Active checkpoint
 
-Item Attribute Modifiers Foundation.
+Custom Model Data Foundation.
 
 Feature branch:
 
 ```text
-feature/minecraft-item-attribute-modifiers-foundation
+feature/minecraft-item-custom-model-data-foundation
 ```
 
 Base:
 
 ```text
 main
-bcef38d20670e4265f26b1295bcadd1148ad28c9
-Add item potion properties foundation
+4bdecaeaaa84eb1f92f07b6568814cbd347bf30a
+Add item attribute modifiers foundation
 ```
 
 Package version:
 
 ```text
-1.0.0-dev.19
+1.0.0-dev.20
 ```
 
 Checkpoint state:
@@ -46,14 +46,14 @@ Authoritative local validation:
 dart analyze
 No issues found!
 
-dart test test/minecraft_item_attribute_modifiers_test.dart
-00:01 +14: All tests passed!
+dart test test/minecraft_item_custom_model_data_test.dart
+00:01 +11: All tests passed!
 
-dart test test/minecraft_world_discovery_test.dart
-00:01 +20: All tests passed!
+dart test test/minecraft_item_attribute_modifiers_test.dart
+00:00 +14: All tests passed!
 
 dart test
-00:03 +215: All tests passed!
+00:03 +226: All tests passed!
 
 git diff --check origin/main...HEAD
 PASS
@@ -64,267 +64,153 @@ clean
 
 No `dart format` was run.
 
-Real-file smoke inspection against the local modded Java Edition game directory
+Real-file smoke inspection against the local Java Edition game directory
 completed without parser/runtime failure, but no persisted item with explicit
-`AttributeModifiers` was found in the discovered inventory/equipment data.
-Therefore real legacy attribute-modifier payloads remain deterministic-test
-validated rather than real-file validated.
+`CustomModelData` was found in the discovered inventory/equipment data.
+Therefore real custom-model-data payloads remain deterministic-test validated
+rather than real-file validated.
 
 No merge approval has been given for this checkpoint.
 
-## Public API
+## Public model
 
-New public item modifier model:
-
-```text
-MtnMinecraftInfoItemAttributeModifier
-```
-
-Shared operation enum:
+New public API:
 
 ```text
-MtnMinecraftInfoAttributeModifierOperation
-  addValue
-  addMultipliedBase
-  addMultipliedTotal
+MtnMinecraftInfoItemCustomModelData
 ```
 
-Item-specific slot enum:
+Fields:
 
 ```text
-MtnMinecraftInfoItemAttributeModifierSlot
-  any
-  hand
-  armor
-  mainHand
-  offHand
-  head
-  chest
-  legs
-  feet
-  body
-  saddle
+legacyValue
+floats
+flags
+strings
+colors
 ```
 
-Display API:
+`floats`, `flags`, `strings` and `colors` are immutable lists.
+
+`legacyValue` represents the numeric custom-model-data storage used before the
+1.21.4 expanded component. It deliberately covers both:
 
 ```text
-MtnMinecraftInfoItemAttributeModifierDisplay
-MtnMinecraftInfoItemAttributeModifierDisplayType
-  defaultDisplay
-  hidden
-  override
+pre-1.20.5 tag.CustomModelData
+1.20.5 through 1.21.3 minecraft:custom_model_data integer component
 ```
 
-`override` requires an `MtnMinecraftText` value. Default/hidden displays do
-not carry replacement text.
+The provider does not rewrite that persisted numeric value into `floats[0]`.
 
 ## Item integration
 
 `MtnMinecraftInfoItemStackComponents` now exposes:
 
 ```dart
-List<MtnMinecraftInfoItemAttributeModifier>? attributeModifiers
+MtnMinecraftInfoItemCustomModelData? customModelData
 ```
 
 Semantics:
 
 ```text
-attribute modifier property absent
-  -> attributeModifiers == null
+property absent
+  -> customModelData == null
 
-explicit empty AttributeModifiers / minecraft:attribute_modifiers
-  -> immutable []
+numeric zero
+  -> customModelData != null
+  -> legacyValue == 0
+
+current empty compound {}
+  -> customModelData != null
+  -> legacyValue == null
+  -> floats/flags/strings/colors == []
 ```
 
-The provider still models explicitly persisted item overrides only. It does not
-synthesize implicit item-registry attribute defaults such as weapon attack
-damage/speed.
-
-## Modifier identity
-
-Modern and legacy identity remain distinct.
-
-1.21+:
-
-```text
-id
-  -> MtnMinecraftInfoItemAttributeModifier.id
-```
-
-Pre-1.21:
-
-```text
-UUID / uuid
-  -> legacyUuid
-
-Name / name
-  -> legacyName
-```
-
-Legacy UUIDs are normalized to canonical lowercase hyphenated text.
-
-The provider deliberately does not convert a legacy UUID into a modern
-namespaced modifier ID. Minecraft's data-fixer upgrade rules are not reproduced
-as provider-side guesses.
-
-A semantic modifier instance must carry exactly one identity form:
-
-```text
-modern:
-  id != null
-  legacyUuid == null
-  legacyName == null
-
-legacy:
-  id == null
-  legacyUuid != null
-  legacyName != null
-```
-
-Legacy human-readable names are preserved as strings, including an explicitly
-empty string.
-
-## Attribute identity
-
-`attributeId` remains a raw non-empty external string.
-
-No closed vanilla attribute enum or registry lookup is introduced. This
-preserves vanilla, historical, future and modded attribute IDs without guessing
-renames or data-fixer behavior.
+As with the other item foundations, this is persisted stack data only. No
+resource-pack or effective rendered-model state is synthesized.
 
 ## Legacy storage
 
-Legacy item tag:
+Pre-1.20.5 item tag:
 
 ```text
-AttributeModifiers
+CustomModelData: TAG_Int
 ```
 
-Recognized entry fields:
+The integer is preserved as `legacyValue` without registry/model lookup.
+
+## 1.20.5 through 1.21.3 component storage
+
+Component:
 
 ```text
-AttributeName
-Name
-UUID
-Amount
-Operation
-Slot
+minecraft:custom_model_data: TAG_Int
 ```
 
-`UUID` uses Minecraft's four-int UUID representation.
+This is also preserved as `legacyValue` instead of being converted to the
+later list representation.
 
-`Amount` is persisted as NBT double.
+## 1.21.4+ expanded component
 
-Legacy operation values normalize as:
+Current component compound:
 
 ```text
-0 -> addValue
-1 -> addMultipliedBase
-2 -> addMultipliedTotal
+minecraft:custom_model_data = {
+  floats:  [...],
+  flags:   [...],
+  strings: [...],
+  colors:  [...]
+}
 ```
 
-Both byte and integer numeric operation representations are accepted.
-
-Missing legacy `Slot` normalizes to `any`.
-
-## Modern 1.20.5 component storage
-
-Recognized component:
+Normalized public types:
 
 ```text
-minecraft:attribute_modifiers
+floats  -> List<double>
+flags   -> List<bool>
+strings -> List<String>
+colors  -> List<int>
 ```
 
-The parser accepts both 1.20.5 representations:
+Persisted NBT expectations:
 
 ```text
-full:
-  {modifiers:[...]}
-
-direct:
-  [...]
+floats  -> TAG_List<TAG_Float>
+flags   -> TAG_List<TAG_Byte>, values 0 or 1
+strings -> TAG_List<TAG_String>
+colors  -> TAG_List<TAG_Int>
 ```
 
-Pre-1.21 modern entries use:
+Missing fields inside a present current compound normalize to immutable empty
+lists. Explicit empty lists are also preserved as empty lists.
+
+Unknown fields inside the current compound are tolerated.
+
+Packed color integers are preserved verbatim, including negative signed NBT
+integers such as `-1`. They are not routed through `MtnMinecraftTextColor`.
+
+## Parser boundary
+
+New internal parser:
 
 ```text
-type
-uuid
-name
-amount
-operation
-slot
+MtnMinecraftInfoItemCustomModelDataNbtParser
 ```
 
-The historical `show_in_tooltip` wrapper field is intentionally not exposed
-as a public attribute-modifier API. Tooltip policy later belongs to the general
-`minecraft:tooltip_display` foundation.
-
-Unknown wrapper/entry metadata remains tolerated.
-
-## Current modifier storage
-
-1.21+ entries replace `uuid + name` with:
+Dependency:
 
 ```text
-id
+MtnMinecraftInfoItemStackComponentsNbtParser
+        |
+        +-- MtnMinecraftInfoItemCustomModelDataNbtParser
 ```
 
-If a current `id` is present it is authoritative for modifier identity;
-legacy `uuid` / `name` fields are not used as fallback.
+Recognized malformed custom-model-data storage is translated to the existing
+item/player invalid-data path.
 
-Modern operation tokens normalize as:
+## Item authority and removals
 
-```text
-add_value
-add_multiplied_base
-add_multiplied_total
-```
-
-Supported slots include single equipment slots and modern slot groups,
-including `body` and `saddle`.
-
-## 1.21.6+ display
-
-Optional entry field:
-
-```text
-display
-```
-
-Supported display compounds:
-
-```text
-{type:"default"}
-{type:"hidden"}
-{type:"override", value:<Minecraft text component>}
-```
-
-Override text uses the existing shared `MtnMinecraftText.fromNbt` path.
-
-Missing display metadata remains null rather than synthesizing the effective
-default display behavior.
-
-## UUID parser reuse
-
-New internal shared parser:
-
-```text
-MtnMinecraftInfoNbtUuidParser
-```
-
-It normalizes Minecraft's four-int UUID representation once for:
-
-- world `Data.singleplayer_uuid`
-- legacy item attribute modifier `UUID` / `uuid`
-
-The previous world-local four-int UUID conversion was replaced with this
-shared parser so UUID normalization has one implementation authority.
-
-## Item metadata authority
-
-Existing authority remains unchanged:
+Existing item authority remains unchanged:
 
 ```text
 components present
@@ -335,86 +221,58 @@ components present
 Recognized removal conflict:
 
 ```text
-minecraft:attribute_modifiers
-!minecraft:attribute_modifiers
+minecraft:custom_model_data
+!minecraft:custom_model_data
 ```
 
 Both cannot be present simultaneously.
 
-Removal-only patches remain represented by the existing
-`removedComponentIds` set.
-
-## Parser boundary
-
-New internal parser:
-
-```text
-MtnMinecraftInfoItemAttributeModifierNbtParser
-```
-
-Dependency direction:
-
-```text
-MtnMinecraftInfoItemStackComponentsNbtParser
-        |
-        +-- MtnMinecraftInfoItemAttributeModifierNbtParser
-                    |
-                    +-- MtnMinecraftInfoNbtUuidParser
-                    +-- MtnMinecraftText
-```
-
-Recognized malformed modifier data is translated through the existing
-item/player invalid-data path.
-
-Unknown modifier metadata remains tolerated.
+Removal-only patches remain represented through `removedComponentIds`.
 
 ## Query tool
 
-Existing item-property output now includes bounded modifier previews:
+The shared item-property formatter now reports bounded custom-model data.
+
+Numeric form:
 
 ```text
-attributeModifiers=[
-  attributeId:modifierIdentity:amount:operation:slot:displayType,
-  ...
-]
+customModelData={legacy:42}
 ```
 
-The preview is capped at three modifier entries and is shared by inventory,
-ender-chest and equipment item output.
+Current form:
+
+```text
+customModelData={floats:[...] flags:[...] strings:[...] colors:[...]}
+```
+
+Each current list preview is capped at three values.
 
 ## Deterministic coverage added
 
-New focused file:
+New focused test:
 
 ```text
-test/minecraft_item_attribute_modifiers_test.dart
+test/minecraft_item_custom_model_data_test.dart
 ```
 
 Coverage includes:
 
-- legacy attribute ID/name/UUID/amount/operation/slot
-- canonical UUID normalization including signed int-array words
-- byte and integer legacy operation storage
-- missing slot -> `any`
-- 1.20.5 full wrapper form
-- 1.20.5 direct-list form
-- legacy identity inside modern component storage
-- 1.21+ namespaced modifier IDs
-- arbitrary modded attribute/modifier IDs
-- group/body/saddle slots
-- current-ID authority over legacy identity fields
-- 1.21.6 default/hidden/override display metadata
-- shared Minecraft text for display override
-- absent-versus-explicitly-empty semantics
-- immutable modifier lists
-- modern item-component authority
-- component removals and removal conflicts
-- unknown metadata tolerance
-- malformed recognized legacy data
-- malformed recognized modern data
-
-Existing singleplayer UUID tests also exercise the shared UUID parser after the
-internal refactor.
+- legacy `CustomModelData` integer
+- 1.20.5-1.21.3 numeric component
+- numeric zero
+- current floats/flags/strings/colors together
+- arbitrary and empty strings
+- negative packed color integer preservation
+- present empty compound versus absent component
+- explicit empty lists
+- immutable current lists
+- modern-over-legacy authority
+- removal-only behavior
+- component/removal conflict
+- unknown current metadata tolerance
+- malformed legacy type
+- malformed modern component/list types
+- invalid boolean byte values
 
 ## Validation
 
@@ -425,14 +283,14 @@ Authoritative local validation completed from
 dart analyze
 No issues found!
 
-dart test test/minecraft_item_attribute_modifiers_test.dart
-00:01 +14: All tests passed!
+dart test test/minecraft_item_custom_model_data_test.dart
+00:01 +11: All tests passed!
 
-dart test test/minecraft_world_discovery_test.dart
-00:01 +20: All tests passed!
+dart test test/minecraft_item_attribute_modifiers_test.dart
+00:00 +14: All tests passed!
 
 dart test
-00:03 +215: All tests passed!
+00:03 +226: All tests passed!
 ```
 
 Repository-root validation:
@@ -451,74 +309,69 @@ Real-file smoke command:
 
 ```powershell
 dart run tool/query_minecraft_worlds.dart --game-directory "$env:APPDATA\.minecraft" |
-    Select-String 'attributeModifiers=\['
+    Select-String 'customModelData=\{'
 ```
 
-The command completed with no matching output. The discovered real items did not
-persist explicit attribute modifiers, so no real legacy modifier payload was
-available to inspect. This is not a parser failure; automated deterministic
-coverage remains the authority for the attribute-modifier formats in this
+The command completed with no matching output. The discovered real
+inventory/equipment items did not persist explicit custom-model data, so no
+real legacy/current payload was available to inspect. This is not a parser
+failure; deterministic coverage remains the validation authority for this
 checkpoint.
 
 ## Previous completed checkpoint
 
-Potion Item Properties Foundation was validated, squash merged through PR #10,
-and cleaned up.
+Item Attribute Modifiers Foundation was validated, squash merged through PR
+#11, and cleaned up.
 
 Merged main HEAD:
 
 ```text
-bcef38d20670e4265f26b1295bcadd1148ad28c9
+4bdecaeaaa84eb1f92f07b6568814cbd347bf30a
 ```
 
 Package version at that checkpoint:
 
 ```text
-1.0.0-dev.18
+1.0.0-dev.19
 ```
 
 Authoritative handoff:
 
 ```text
-docs/continuity/HANDOFF_2026-10-05_MINECRAFT_INFO_PROVIDER_ITEM_POTION_PROPERTIES.md
+docs/continuity/HANDOFF_2026-10-05_MINECRAFT_INFO_PROVIDER_ITEM_ATTRIBUTE_MODIFIERS.md
 ```
 
 Locked decisions retained:
 
-- `MtnMinecraftInfoPotionContents` is reusable rather than item-specific
-- item components represent persisted overrides rather than registry defaults
-- modern components remain authoritative over legacy item tags
-- shared mob-effect parsing is reused for potion custom effects
-- current integer and older byte amplifier storage remain supported
-- registry/effective potion semantics remain outside the provider foundation
+- item components represent explicitly persisted overrides
+- modern `components` remains authoritative over legacy `tag`
+- removal-only component patches remain explicit
+- unknown external IDs/metadata are tolerated where not schema-recognized
+- recognized malformed component data remains strict
+- no item-registry default synthesis
 
 ## Explicitly deferred
 
-Attribute semantics:
+Custom model/rendering semantics:
 
-- effective item-registry default attribute modifiers
-- final/effective attribute-value calculations
-- attribute registry/catalog lookup
-- modifier-ID data-fixer emulation
-- tooltip formatting/calculated modifier text
-- general `minecraft:tooltip_display` parsing
-- attribute modifier writing
+- resource-pack model discovery and parsing
+- `minecraft:item_model`
+- effective rendered-model selection
+- model-property evaluation against resource-pack definitions
+- custom-model-data writing
 
 Other item properties:
 
-- custom model data
 - nested containers / bundle-like contents
 - custom data
 - item writing
 
-Potion/effect semantics:
+Attribute/potion/effect semantics:
 
-- potion/effect registries
-- effective base-effect resolution
-- brewing recipes
-- effective potion color/name/duration calculation
-- runtime potion/effect behavior
-- potion/effect writing
+- effective item-registry attribute defaults and calculations
+- attribute/potion/effect registry lookup
+- brewing/runtime effect calculations
+- general `minecraft:tooltip_display` support
 
 Provider/player:
 
