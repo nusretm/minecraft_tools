@@ -258,10 +258,14 @@ final class _MtnMinecraftTextComponentCodec {
     result.add(item);
   }
 
-  Object _itemsToComponentValue(Iterable<MtnMinecraftTextItem> items) {
+  Object _itemsToComponentValue(
+    Iterable<MtnMinecraftTextItem> items, {
+    bool explicitStyle = false,
+  }) {
     final List<Map<String, Object?>> components = <Map<String, Object?>>[
       for (final MtnMinecraftTextItem item in items)
-        if (item.text.isNotEmpty) _itemToComponentObject(item),
+        if (item.text.isNotEmpty)
+          _itemToComponentObject(item, explicitStyle: explicitStyle),
     ];
     if (components.isEmpty) return <String, Object?>{'text': ''};
     if (components.length == 1) return components.single;
@@ -271,7 +275,10 @@ final class _MtnMinecraftTextComponentCodec {
     };
   }
 
-  Map<String, Object?> _itemToComponentObject(MtnMinecraftTextItem item) {
+  Map<String, Object?> _itemToComponentObject(
+    MtnMinecraftTextItem item, {
+    bool explicitStyle = false,
+  }) {
     final String? translate = item.translate;
     final Map<String, Object?> result;
     if (translate == null) {
@@ -285,19 +292,28 @@ final class _MtnMinecraftTextComponentCodec {
       if (item.translateWith.isNotEmpty) {
         result['with'] = <Object?>[
           for (final MtnMinecraftText value in item.translateWith)
-            _itemsToComponentValue(value.items),
+            _itemsToComponentValue(
+              value.items,
+              explicitStyle: true,
+            ),
         ];
       }
     }
 
-    if (item.color != MtnMinecraftTextColor.white) {
+    if (explicitStyle || item.color != MtnMinecraftTextColor.white) {
       result['color'] = item.color.isNamed ? item.color.name! : item.color.hex;
     }
-    if (item.bold) result['bold'] = true;
-    if (item.italic) result['italic'] = true;
-    if (item.underlined) result['underlined'] = true;
-    if (item.strikethrough) result['strikethrough'] = true;
-    if (item.obfuscated) result['obfuscated'] = true;
+    if (explicitStyle || item.bold) result['bold'] = item.bold;
+    if (explicitStyle || item.italic) result['italic'] = item.italic;
+    if (explicitStyle || item.underlined) {
+      result['underlined'] = item.underlined;
+    }
+    if (explicitStyle || item.strikethrough) {
+      result['strikethrough'] = item.strikethrough;
+    }
+    if (explicitStyle || item.obfuscated) {
+      result['obfuscated'] = item.obfuscated;
+    }
     return result;
   }
 
