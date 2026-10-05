@@ -469,7 +469,10 @@ String _itemProperties(MtnMinecraftInfoItemStack item) {
   final MtnMinecraftInfoItemStackComponents? components = item.components;
   if (components == null) {
     return 'damage=null repairCost=null unbreakable=null '
-        'enchantments=null storedEnchantments=null removedComponents=null';
+        'enchantments=null storedEnchantments=null '
+        'potion=null potionColor=null potionCustomEffects=null '
+        'potionCustomName=null potionDurationScale=null '
+        'removedComponents=null';
   }
 
   return 'damage=${components.damage} '
@@ -477,6 +480,11 @@ String _itemProperties(MtnMinecraftInfoItemStack item) {
       'unbreakable=${components.unbreakable} '
       'enchantments=${_mapPreview(components.enchantments)} '
       'storedEnchantments=${_mapPreview(components.storedEnchantments)} '
+      'potion=${components.potionContents?.potion} '
+      'potionColor=${components.potionContents?.customColor} '
+      'potionCustomEffects=${components.potionContents?.customEffects.length} '
+      'potionCustomName=${components.potionContents?.customName} '
+      'potionDurationScale=${components.potionDurationScale} '
       'removedComponents=${_setPreview(components.removedComponentIds)}';
 }
 

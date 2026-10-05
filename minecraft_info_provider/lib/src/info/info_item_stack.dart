@@ -1,4 +1,5 @@
 import '../text/minecraft_text.dart';
+import 'info_potion_contents.dart';
 
 /// Normalized persisted item-stack component overrides.
 ///
@@ -14,6 +15,8 @@ final class MtnMinecraftInfoItemStackComponents {
     this.customName,
     this.itemName,
     Iterable<MtnMinecraftText>? lore,
+    this.potionContents,
+    this.potionDurationScale,
     Iterable<String> removedComponentIds = const <String>[],
   })  : enchantments = enchantments == null
             ? null
@@ -56,6 +59,19 @@ final class MtnMinecraftInfoItemStackComponents {
   /// Null means no lore property was persisted. An empty immutable list means
   /// lore was explicitly persisted as empty.
   final List<MtnMinecraftText>? lore;
+
+  /// Explicit persisted potion contents.
+  ///
+  /// Null means this stack did not persist potion-content metadata. An
+  /// explicitly persisted empty potion-contents value remains a non-null
+  /// [MtnMinecraftInfoPotionContents] with an empty custom-effect list.
+  final MtnMinecraftInfoPotionContents? potionContents;
+
+  /// Explicit duration scale applied to potion contents, when persisted.
+  ///
+  /// Null means the component was absent and the provider does not synthesize
+  /// Minecraft's registry/default value.
+  final double? potionDurationScale;
 
   /// Component IDs explicitly removed by a modern item component patch.
   ///

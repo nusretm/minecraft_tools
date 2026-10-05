@@ -59,7 +59,7 @@ final class MtnMinecraftInfoMobEffectNbtParser {
 
     return MtnMinecraftInfoMobEffect(
       id: id,
-      amplifier: _optionalByte(data, amplifierName) ?? 0,
+      amplifier: _optionalAmplifier(data, amplifierName) ?? 0,
       duration: _optionalInt(data, durationName) ?? 0,
       ambient: _optionalBoolean(data, ambientName) ?? false,
       showParticles: _optionalBoolean(data, showParticlesName) ?? true,
@@ -98,16 +98,25 @@ final class MtnMinecraftInfoMobEffectNbtParser {
     return MtnMinecraftInfoMobEffectId.legacyNumeric(id);
   }
 
-  int? _optionalByte(
+  int? _optionalAmplifier(
     Map<String, MtnMinecraftNbtValue> data,
     String name,
   ) {
     final MtnMinecraftNbtValue? value = data[name];
     if (value == null) return null;
-    if (value.type != MtnMinecraftNbtType.byte) {
-      throw const MtnMinecraftInfoMobEffectNbtParserException();
+
+    if (value.type == MtnMinecraftNbtType.byte) {
+      return value.asByte & 0xff;
     }
-    return value.asByte;
+    if (value.type == MtnMinecraftNbtType.intValue) {
+      final int amplifier = value.asInt;
+      if (amplifier < 0 || amplifier > 127) {
+        throw const MtnMinecraftInfoMobEffectNbtParserException();
+      }
+      return amplifier;
+    }
+
+    throw const MtnMinecraftInfoMobEffectNbtParserException();
   }
 
   int? _optionalInt(

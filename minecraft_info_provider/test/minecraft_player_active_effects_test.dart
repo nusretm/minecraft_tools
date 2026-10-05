@@ -260,6 +260,46 @@ void main() {
       expect(player.error, MtnMinecraftInfoPlayerError.invalidData);
     });
 
+    test('reads modern integer amplifier representation', () async {
+      await _writePlayer(
+        worldDirectory,
+        <String, MtnMinecraftNbtValue>{
+          'active_effects': _effectList(
+            <Map<String, MtnMinecraftNbtValue>>[
+              <String, MtnMinecraftNbtValue>{
+                'id': MtnMinecraftNbtValue.string('minecraft:strength'),
+                'amplifier': MtnMinecraftNbtValue.intValue(7),
+              },
+            ],
+          ),
+        },
+      );
+
+      final MtnMinecraftInfoMobEffect effect =
+          (await provider.readPlayers(world)).single.activeEffects!.single;
+
+      expect(effect.amplifier, 7);
+
+      await _writePlayer(
+        worldDirectory,
+        <String, MtnMinecraftNbtValue>{
+          'active_effects': _effectList(
+            <Map<String, MtnMinecraftNbtValue>>[
+              <String, MtnMinecraftNbtValue>{
+                'id': MtnMinecraftNbtValue.string('minecraft:strength'),
+                'amplifier': MtnMinecraftNbtValue.intValue(128),
+              },
+            ],
+          ),
+        },
+      );
+
+      final MtnMinecraftInfoPlayer invalid =
+          (await provider.readPlayers(world)).single;
+      expect(invalid.state, MtnMinecraftInfoPlayerState.invalid);
+      expect(invalid.error, MtnMinecraftInfoPlayerError.invalidData);
+    });
+
     test('malformed recognized effect fields are invalid data', () async {
       final List<Map<String, MtnMinecraftNbtValue>> invalidEffects =
           <Map<String, MtnMinecraftNbtValue>>[
@@ -268,7 +308,7 @@ void main() {
         },
         <String, MtnMinecraftNbtValue>{
           'id': MtnMinecraftNbtValue.string('minecraft:speed'),
-          'amplifier': MtnMinecraftNbtValue.intValue(1),
+          'amplifier': MtnMinecraftNbtValue.short(1),
         },
         <String, MtnMinecraftNbtValue>{
           'id': MtnMinecraftNbtValue.string('minecraft:speed'),
