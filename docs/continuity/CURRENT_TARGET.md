@@ -12,26 +12,26 @@ Last updated: 2026-10-05
 
 ## Active checkpoint
 
-Nested Item Stacks Foundation.
+Custom Data Foundation.
 
 Feature branch:
 
 ```text
-feature/minecraft-item-nested-stacks-foundation
+feature/minecraft-item-custom-data-foundation
 ```
 
 Base:
 
 ```text
 main
-b5b85b61bcbba0513515008bfba03ac775aff12e
-Add item custom model data foundation
+dd592be8b44711936c52128a7a13461a79e6005c
+Add item nested stacks foundation
 ```
 
 Package version:
 
 ```text
-1.0.0-dev.21
+1.0.0-dev.22
 ```
 
 Checkpoint state:
@@ -47,221 +47,193 @@ No merge approval has been given for this checkpoint.
 `MtnMinecraftInfoItemStackComponents` now exposes:
 
 ```dart
-Map<int, MtnMinecraftInfoItemStack>? containerContents
-List<MtnMinecraftInfoItemStack>? bundleContents
-List<MtnMinecraftInfoItemStack>? chargedProjectiles
-MtnMinecraftInfoItemStack? useRemainder
+Map<String, MtnMinecraftNbtValue>? customData
+Map<String, MtnMinecraftNbtValue>? legacyTag
 ```
 
-No second nested-item public model was introduced. Nested values recursively
-reuse `MtnMinecraftInfoItemStack` and therefore automatically reuse the same
-item/component parsing semantics at every depth.
+Both maps are immutable snapshots and retain `MtnMinecraftNbtValue` values
+so persisted NBT type fidelity is preserved.
 
-## Semantics
+## Core design decision
 
-Persisted-data policy remains unchanged:
+Legacy item `tag` and modern `minecraft:custom_data` are intentionally kept
+as separate public concepts.
 
 ```text
-property absent
-  -> null
+pre-1.20.5 tag
+  -> legacyTag
+  -> customData == null
 
-explicit empty container/list
-  -> immutable empty collection
-
-persisted nested item
-  -> recursive MtnMinecraftInfoItemStack
+1.20.5+ minecraft:custom_data
+  -> customData
+  -> legacyTag == null
 ```
 
-Registry-derived/default content is not synthesized.
+The provider does not guess Minecraft data-fixer migration rules.
 
-`containerContents` is a sparse immutable map keyed by persisted slot number.
-The provider does not create a fixed-size list because effective container
-capacity depends on item/block registry semantics outside this foundation.
+Known legacy fields continue to be parsed semantically while the full raw
+legacy tag is also preserved. Unknown/modded and not-yet-modeled vanilla
+fields therefore remain available without falsely classifying them as modern
+custom data.
 
-## Legacy storage
-
-Recognized legacy container storage:
+Example:
 
 ```text
-tag.BlockEntityTag.Items = [
-  {
-    Slot: <byte>,
-    id: ...,
-    Count: ...,
-    tag: ...
-  }
-]
+legacy tag:
+{
+  Damage: 7,
+  examplemod:value: 42
+}
+
+result:
+damage == 7
+legacyTag['Damage'] == 7
+legacyTag['examplemod:value'] == 42
+customData == null
 ```
 
-Legacy slot bytes normalize to integer map keys.
+## Modern custom data
 
-Recognized legacy Bundle storage:
+Recognized component:
 
 ```text
-tag.Items = [<item stack>, ...]
+minecraft:custom_data
 ```
 
-Recognized legacy Crossbow storage:
+Persisted item NBT must store it as a `TAG_Compound`.
+
+Any field names and any normal nested NBT values are preserved, including:
+
+- byte
+- short
+- int
+- long
+- float
+- double
+- byte array
+- string
+- list
+- compound
+- int array
+- long array
+
+Recognized non-compound `minecraft:custom_data` storage is invalid.
+
+## Absent / explicit empty semantics
+
+Modern:
 
 ```text
-tag.ChargedProjectiles = [<item stack>, ...]
+minecraft:custom_data absent
+  -> customData == null
+
+minecraft:custom_data = {}
+  -> customData != null
+  -> customData.isEmpty
 ```
 
-The legacy `Charged` boolean is not exposed as a separate public property.
-This checkpoint preserves persisted projectile contents and does not compute
-Crossbow runtime state.
-
-## Modern storage
-
-Recognized components:
+Legacy:
 
 ```text
-minecraft:container
-minecraft:bundle_contents
-minecraft:charged_projectiles
-minecraft:use_remainder
+tag absent
+  -> components may remain null when no other recognized source exists
+  -> legacyTag == null
+
+tag = {}
+  -> components != null
+  -> legacyTag != null
+  -> legacyTag.isEmpty
 ```
 
-`minecraft:container` format:
+The explicit empty legacy-tag distinction is preserved because raw persisted
+storage is now part of the public item snapshot.
 
-```text
-[
-  {
-    slot: <int 0..255>,
-    item: <item stack>
-  }
-]
-```
+## Modern authority
 
-Duplicate recognized container slots are invalid.
-
-`minecraft:bundle_contents` and `minecraft:charged_projectiles` are direct
-lists of item stacks.
-
-`minecraft:use_remainder` is one item stack.
-
-Empty/air/count-zero nested stacks are not accepted as persisted nested
-contents for these recognized modern components.
-
-## Recursion architecture
-
-New internal parser:
-
-```text
-MtnMinecraftInfoItemNestedStackNbtParser
-```
-
-Recursion authority remains:
-
-```text
-MtnMinecraftInfoItemStackNbtParser
-```
-
-Dependency/callback flow:
-
-```text
-MtnMinecraftInfoItemStackNbtParser
-        |
-        +-- MtnMinecraftInfoItemStackComponentsNbtParser
-                    |
-                    +-- MtnMinecraftInfoItemNestedStackNbtParser
-                                |
-                                +-- parseItem callback
-                                      -> same ItemStack parser
-```
-
-This avoids a source/class dependency cycle and prevents a second copy of
-item-stack parsing logic.
-
-Recursive examples such as container -> bundle -> item components use the
-same parser path all the way down.
-
-## Authority and removal semantics
-
-Existing item authority remains:
+Existing authority rule is unchanged:
 
 ```text
 components present
   -> modern components authoritative
-  -> legacy tag not consulted
+  -> legacy tag ignored
 ```
 
-Recognized removal IDs now include:
+A legacy `tag` beside a modern `components` compound is not surfaced through
+`legacyTag` and is not used as fallback.
+
+## Removal semantics
+
+`minecraft:custom_data` is a recognized component ID for conflict checking.
 
 ```text
-minecraft:container
-minecraft:bundle_contents
-minecraft:charged_projectiles
-minecraft:use_remainder
+minecraft:custom_data
+!minecraft:custom_data
 ```
 
-A component and its `!component` removal marker cannot coexist.
+cannot coexist.
 
-Removal-only patches remain represented by `removedComponentIds`; no effective
-default content is synthesized.
+Removal-only patches preserve the ID in `removedComponentIds` while
+`customData` remains null.
 
-## Strictness
+## Parser architecture
 
-Recognized malformed nested data maps to the existing player `invalidData`
-path.
+No dedicated custom-data parser class was added.
 
-Strict recognized conditions include:
+`minecraft:custom_data` is deliberately generic compound NBT, so the existing
+`MtnMinecraftInfoItemStackComponentsNbtParser` only validates that the
+recognized modern component is a compound and retains its NBT tree.
 
-- malformed list/item shapes
-- missing required modern `slot` or `item`
-- modern container slot outside 0..255
-- duplicate container slot
-- malformed nested item stack
-- empty/air/count-zero required nested item
+Likewise legacy `tag` is already available at the component parser boundary
+and is snapshotted directly.
 
-Unknown extra metadata on recognized modern container entries remains
-tolerated.
+This avoids unnecessary abstractions and keeps schema-specific parsers only
+for properties that actually have their own schema.
 
-Legacy `BlockEntityTag` data outside recognized `Items` content remains
-outside this foundation.
+## Immutability
+
+`customData` and `legacyTag` use immutable top-level maps.
+
+`MtnMinecraftNbtValue` already preserves immutable compound/list snapshots and
+defensive array access, so nested custom/legacy data remains protected from
+mutation through the public API.
 
 ## Query tool
 
-Shared item-property output now includes bounded nested previews:
+Item-property output now includes bounded key previews:
 
 ```text
-containerContents=[0:minecraft:diamond_pickaxe*1,5:minecraft:apple*3]
-bundleContents=[minecraft:stone*32,minecraft:apple*2]
-chargedProjectiles=[minecraft:arrow*1]
-useRemainder=minecraft:bowl*1
+customData={3:[examplemod:id,examplemod:level,owner]}
+legacyTag={8:[AttributeModifiers,Damage,RepairCost,...]}
 ```
 
-Nested previews are capped at three entries and do not recursively dump child
-component properties.
+Keys are sorted, previews are capped at five entries, and raw NBT values are
+not recursively dumped.
 
 ## Deterministic coverage added
 
 Focused test:
 
 ```text
-test/minecraft_item_nested_stacks_test.dart
+test/minecraft_item_custom_data_test.dart
 ```
 
 Coverage includes:
 
-- legacy `BlockEntityTag.Items`
-- modern `minecraft:container`
-- sparse container slots
-- modern slot 0 and 255
-- duplicate and out-of-range slot rejection
-- explicit empty versus absent container
-- legacy Bundle `Items`
-- legacy `ChargedProjectiles`
-- modern `bundle_contents`
-- modern `charged_projectiles`
-- modern `use_remainder`
-- recursive container -> bundle -> custom-model-data parsing
-- immutable nested maps/lists
-- modern component authority over legacy nested tags
-- removal-only behavior
-- removal conflicts for all four modern components
-- unknown nested-entry metadata tolerance
-- malformed nested item handling
+- arbitrary modern custom data
+- NBT numeric type fidelity
+- strings, arrays, lists and nested compounds
+- absent versus explicit empty modern custom data
+- raw legacy tag preservation
+- no legacy-tag-to-custom-data guessing
+- explicit empty legacy tag versus absent tag
+- semantic known-field parsing alongside raw legacy preservation
+- modern components authoritative over legacy tag
+- immutable custom-data maps and nested NBT collections
+- constructor snapshot behavior
+- custom-data removal-only behavior
+- custom-data/removal conflict
+- malformed modern custom-data type invalidation
+- unknown modern component tolerance regression
 
 ## Validation
 
@@ -275,14 +247,17 @@ D:\development\cross-platform\minecraft_tools\minecraft_info_provider
 dart analyze
 No issues found!
 
-dart test test/minecraft_item_nested_stacks_test.dart
-00:01 +13: All tests passed!
-
-dart test test/minecraft_item_custom_model_data_test.dart
+dart test test/minecraft_item_custom_data_test.dart
 00:00 +11: All tests passed!
 
+dart test test/minecraft_item_core_properties_test.dart
+00:00 +14: All tests passed!
+
+dart test test/minecraft_item_nested_stacks_test.dart
+00:00 +13: All tests passed!
+
 dart test
-00:03 +239: All tests passed!
+00:03 +250: All tests passed!
 ```
 
 Repository-root validation:
@@ -297,83 +272,105 @@ clean
 
 No `dart format` was run.
 
-Real-file smoke inspection against the local Java Edition game directory completed without parser/runtime failure, but no persisted nested container, Bundle, or charged-projectile contents were found in the discovered inventory/equipment data.
+## Real-file smoke validation
 
-Smoke command:
+Real Java Edition 1.20.1 modded player inventory/equipment smoke validation completed successfully.
+
+Command:
 
 ```powershell
 dart run tool/query_minecraft_worlds.dart --game-directory "$env:APPDATA\.minecraft" |
-    Select-String 'containerContents=\[|bundleContents=\[|chargedProjectiles=\['
+    Select-String 'legacyTag=\{[1-9]|customData=\{[1-9]'
 ```
 
-Result:
+Observed real legacy tags included both vanilla/game-owned and mod-specific fields, for example:
 
 ```text
-(no matching output)
+minecraft:diamond_sword
+  legacyTag={1:[Damage]}
+
+minecraft:firework_rocket
+  legacyTag={1:[Fireworks]}
+
+simplyswords:diamond_greataxe
+  legacyTag={3:[Damage,Enchantments,RepairCost]}
+
+cataclysm:cursed_bow
+  legacyTag={3:[Enchantments,PrevUseTime,UseTime]}
+
+sophisticatedbackpacks:gold_backpack
+  legacyTag={7:[borderColor,clothColor,contentsUuid,inventorySlots,renderInfo,+2]}
+
+simplyswords:magiscythe
+  legacyTag={3:[Damage,nether_power,runic_power]}
 ```
 
-Therefore this checkpoint does not claim real-file validation of an actual nested-item payload; deterministic tests remain authoritative for the supported schemas.
+This validates exact real-file legacy raw-tag preservation alongside semantic parsing of supported known fields.
+
+No real `customData={...}` payload was observed in this 1.20.1 dataset; every matching real example had `customData=null`. Therefore modern `minecraft:custom_data` remains deterministic-test validated only.
+
+The smoke result deliberately does not classify arbitrary legacy-tag fields as modern custom data and does not claim Minecraft data-fixer migration equivalence.
 
 ## Previous completed checkpoint
 
-Custom Model Data Foundation was validated, squash merged through PR #12,
+Nested Item Stacks Foundation was validated, squash merged through PR #13,
 and cleaned up.
 
 Merged main HEAD:
 
 ```text
-b5b85b61bcbba0513515008bfba03ac775aff12e
+dd592be8b44711936c52128a7a13461a79e6005c
 ```
 
 Package version at that checkpoint:
 
 ```text
-1.0.0-dev.20
+1.0.0-dev.21
 ```
 
 Authoritative handoff:
 
 ```text
-docs/continuity/HANDOFF_2026-10-05_MINECRAFT_INFO_PROVIDER_ITEM_CUSTOM_MODEL_DATA.md
+docs/continuity/HANDOFF_2026-10-05_MINECRAFT_INFO_PROVIDER_ITEM_NESTED_STACKS.md
 ```
 
 Locked decisions retained:
 
-- item components represent explicitly persisted overrides
+- item components represent explicitly persisted values/overrides
 - modern `components` remains authoritative over legacy `tag`
 - component removals remain explicit
 - unknown external IDs/metadata are tolerated where not schema-recognized
 - recognized malformed component data remains strict
 - no item-registry default synthesis
 - recursive nested items reuse the same item model/parser
+- no Minecraft data-fixer guessing
 
 ## Explicitly deferred
+
+Custom-data tooling:
+
+- legacy tag -> modern custom-data migration
+- Minecraft data-fixer emulation
+- NBT path query API
+- custom-data partial/predicate matching
+- custom-data mutation
+- SNBT parser/writer utilities
+- mod-specific custom-data interpretation
+
+General item work:
+
+- item writing
+- registry-derived effective values
+- general `minecraft:tooltip_display` support
 
 Nested/runtime semantics:
 
 - `minecraft:container_loot`
 - registry-derived container sizes/capacities
-- Bundle weight/capacity calculations
-- Bundle UI selection/rendering behavior
+- Bundle weight/capacity/runtime UI behavior
 - Crossbow charged/firing runtime mechanics
 - use-remainder runtime behavior
 - block-entity inventory discovery
-- nested item writing
-
-Remaining item-read checkpoint:
-
-- Custom Data Foundation
-
-General item work:
-
-- item writing
-
-Attribute/potion/effect semantics:
-
-- effective item-registry attribute defaults and calculations
-- attribute/potion/effect registry lookup
-- brewing/runtime effect calculations
-- general `minecraft:tooltip_display` support
 
 Provider/player:
 
@@ -393,6 +390,14 @@ Text/runtime:
 - hoverEvent
 - richer interactive text semantics
 
+## Item-read foundation status
+
+This is the final planned core item-read checkpoint.
+
+Once implementation is locally validated, smoke inspected, documented,
+squashed and merged, the planned `MtnMinecraftInfoItemStack` read foundation
+is considered complete.
+
 ## Development rules
 
 Always follow `docs/WORKING_RULES.md`.
@@ -409,6 +414,6 @@ In particular:
 
 ## Next action
 
-Checkpoint implementation, automated validation, and available real-file smoke inspection are complete.
+Checkpoint implementation, automated validation, and real-file legacy-tag smoke validation are complete.
 
-Finalize the checkpoint handoff, then prepare squash/PR/merge only after explicit user approval. Do not begin the next feature before this checkpoint is closed.
+Finalize the checkpoint handoff, then prepare squash/PR/merge only after explicit user approval. Do not begin another item feature before this checkpoint is closed.

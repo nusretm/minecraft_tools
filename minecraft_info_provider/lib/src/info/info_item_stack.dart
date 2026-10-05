@@ -1,3 +1,4 @@
+import '../nbt/minecraft_nbt.dart';
 import '../text/minecraft_text.dart';
 import 'info_item_attribute_modifier.dart';
 import 'info_item_custom_model_data.dart';
@@ -25,6 +26,8 @@ final class MtnMinecraftInfoItemStackComponents {
     Iterable<MtnMinecraftInfoItemStack>? bundleContents,
     Iterable<MtnMinecraftInfoItemStack>? chargedProjectiles,
     this.useRemainder,
+    Map<String, MtnMinecraftNbtValue>? customData,
+    Map<String, MtnMinecraftNbtValue>? legacyTag,
     Iterable<String> removedComponentIds = const <String>[],
   })  : enchantments = enchantments == null
             ? null
@@ -49,6 +52,12 @@ final class MtnMinecraftInfoItemStackComponents {
         chargedProjectiles = chargedProjectiles == null
             ? null
             : List<MtnMinecraftInfoItemStack>.unmodifiable(chargedProjectiles),
+        customData = customData == null
+            ? null
+            : Map<String, MtnMinecraftNbtValue>.unmodifiable(customData),
+        legacyTag = legacyTag == null
+            ? null
+            : Map<String, MtnMinecraftNbtValue>.unmodifiable(legacyTag),
         removedComponentIds =
             Set<String>.unmodifiable(removedComponentIds);
 
@@ -124,6 +133,19 @@ final class MtnMinecraftInfoItemStackComponents {
 
   /// Explicit item produced/returned after using this stack, when persisted.
   final MtnMinecraftInfoItemStack? useRemainder;
+
+  /// Explicit 1.20.5+ `minecraft:custom_data` NBT compound.
+  ///
+  /// Null means the component was absent. An empty immutable map means an
+  /// explicit empty custom-data compound was persisted.
+  final Map<String, MtnMinecraftNbtValue>? customData;
+
+  /// Raw pre-1.20.5 item `tag` compound, preserved without data-fixer guesses.
+  ///
+  /// This is intentionally not interpreted as modern custom data. It retains
+  /// both known Minecraft fields and unknown/modded fields exactly as they
+  /// were persisted while semantic fields are parsed separately as usual.
+  final Map<String, MtnMinecraftNbtValue>? legacyTag;
 
   /// Component IDs explicitly removed by a modern item component patch.
   ///
