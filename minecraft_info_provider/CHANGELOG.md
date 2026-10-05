@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.0.0-dev.16
+
+Java Edition 26.1+ singleplayer player relationship foundation.
+
+- Added nullable `MtnMinecraftInfoWorld.singleplayerUuid` as the canonical
+  persisted singleplayer-player reference.
+- Added derived `MtnMinecraftInfoWorld.singleplayerPlayer` lookup over the
+  world's immutable discovered player snapshots instead of storing a second
+  relationship authority.
+- Parsed 26.1+ `Data.singleplayer_uuid` from Minecraft's four-int UUID NBT
+  representation into canonical lowercase hyphenated UUID text.
+- Preserved the UUID when the referenced player file is missing or unavailable;
+  the derived player relationship remains null in that case.
+- Kept malformed recognized `singleplayer_uuid` values schema-strict so they
+  produce world-local `invalidData` instead of a guessed identity.
+- Kept pre-26.1 embedded `Data.Player` handling outside this checkpoint.
+- Extended the world query tool with singleplayer UUID and resolved-player
+  output.
+- Added deterministic world-discovery coverage for resolved, unresolved and
+  malformed singleplayer UUID relationships.
+
 ## 1.0.0-dev.15
 
 Minecraft text and item display properties foundation.

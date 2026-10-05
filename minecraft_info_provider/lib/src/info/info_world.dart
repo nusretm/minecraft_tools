@@ -73,6 +73,7 @@ final class MtnMinecraftInfoWorld {
     this.dataVersion,
     this.version,
     this.lastPlayed,
+    this.singleplayerUuid,
   })  : players = List<MtnMinecraftInfoPlayer>.unmodifiable(players),
         _icon = icon == null ? null : Uint8List.fromList(icon);
 
@@ -83,6 +84,7 @@ final class MtnMinecraftInfoWorld {
     int? dataVersion,
     MtnMinecraftInfoWorldVersion? version,
     DateTime? lastPlayed,
+    String? singleplayerUuid,
     List<MtnMinecraftInfoPlayer> players = const <MtnMinecraftInfoPlayer>[],
     MtnMinecraftInfoWorldPlayersState playersState = MtnMinecraftInfoWorldPlayersState.available,
     MtnMinecraftInfoWorldPlayersError? playersError,
@@ -101,6 +103,7 @@ final class MtnMinecraftInfoWorld {
         dataVersion: dataVersion,
         version: version,
         lastPlayed: lastPlayed,
+        singleplayerUuid: singleplayerUuid,
       );
 
   factory MtnMinecraftInfoWorld.invalid({
@@ -148,6 +151,25 @@ final class MtnMinecraftInfoWorld {
   ///
   /// Null when [playersState] is [MtnMinecraftInfoWorldPlayersState.available].
   final MtnMinecraftInfoWorldPlayersError? playersError;
+
+  /// Canonical lowercase UUID referenced by 26.1+ `Data.singleplayer_uuid`.
+  ///
+  /// Null means the world does not persist a singleplayer player reference.
+  final String? singleplayerUuid;
+
+  /// Discovered player snapshot referenced by [singleplayerUuid], when present.
+  ///
+  /// The UUID remains authoritative. This derived relationship is null when
+  /// the referenced player file is missing or aggregate player discovery
+  /// could not make that snapshot available.
+  MtnMinecraftInfoPlayer? get singleplayerPlayer {
+    final String? uuid = singleplayerUuid;
+    if (uuid == null) return null;
+    for (final MtnMinecraftInfoPlayer player in players) {
+      if (player.uuid == uuid) return player;
+    }
+    return null;
+  }
 
   final Uint8List? _icon;
 

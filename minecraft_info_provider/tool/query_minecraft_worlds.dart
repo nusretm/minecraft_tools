@@ -39,6 +39,8 @@ Future<void> main(List<String> arguments) async {
       'dataVersion=${world.dataVersion} '
       'version=${world.version?.name} '
       'lastPlayed=${world.lastPlayed?.toIso8601String()} '
+      'singleplayerUuid=${world.singleplayerUuid} '
+      'singleplayerPlayer=${world.singleplayerPlayer?.uuid} '
       'playersState=${world.playersState.name} '
       'playersError=${world.playersError?.name} '
       'players=${world.players.length} '

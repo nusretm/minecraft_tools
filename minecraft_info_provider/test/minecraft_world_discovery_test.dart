@@ -136,6 +136,8 @@ void main() {
       expect(world.dataVersion, isNull);
       expect(world.version, isNull);
       expect(world.lastPlayed, isNull);
+      expect(world.singleplayerUuid, isNull);
+      expect(world.singleplayerPlayer, isNull);
     });
 
     test('corrupt world is isolated from valid siblings', () async {
@@ -251,6 +253,83 @@ void main() {
         ),
         throwsUnsupportedError,
       );
+    });
+
+    test('reads 26.1 singleplayer UUID and resolves its player snapshot',
+        () async {
+      const String uuid = '00112233-4455-6677-8899-aabbccddeeff';
+      final Directory worldDirectory = await _writeWorld(
+        gameDirectory,
+        directoryName: 'Singleplayer World',
+        data: <String, MtnMinecraftNbtValue>{
+          'singleplayer_uuid': MtnMinecraftNbtValue.intArray(
+            <int>[1122867, 1146447479, -2003195205, -857870593],
+          ),
+        },
+      );
+      await _writeWorldPlayer(
+        worldDirectory,
+        uuid: uuid,
+        dataVersion: 6000,
+      );
+
+      final MtnMinecraftInfoWorld world = (await provider.readWorlds()).single;
+
+      expect(world.singleplayerUuid, uuid);
+      expect(world.singleplayerPlayer, same(world.players.single));
+      expect(world.singleplayerPlayer?.uuid, uuid);
+      expect(world.singleplayerPlayer?.dataVersion, 6000);
+    });
+
+    test('keeps singleplayer UUID when its player snapshot is unavailable',
+        () async {
+      const String uuid = '00112233-4455-6677-8899-aabbccddeeff';
+      await _writeWorld(
+        gameDirectory,
+        directoryName: 'Missing Singleplayer',
+        data: <String, MtnMinecraftNbtValue>{
+          'singleplayer_uuid': MtnMinecraftNbtValue.intArray(
+            <int>[1122867, 1146447479, -2003195205, -857870593],
+          ),
+        },
+      );
+
+      final MtnMinecraftInfoWorld world = (await provider.readWorlds()).single;
+
+      expect(world.singleplayerUuid, uuid);
+      expect(world.players, isEmpty);
+      expect(world.singleplayerPlayer, isNull);
+    });
+
+    test('malformed singleplayer UUID is invalid world data', () async {
+      await _writeWorld(
+        gameDirectory,
+        directoryName: 'A-wrong-type',
+        data: <String, MtnMinecraftNbtValue>{
+          'singleplayer_uuid': MtnMinecraftNbtValue.string(
+            '00112233-4455-6677-8899-aabbccddeeff',
+          ),
+        },
+      );
+      await _writeWorld(
+        gameDirectory,
+        directoryName: 'B-wrong-length',
+        data: <String, MtnMinecraftNbtValue>{
+          'singleplayer_uuid': MtnMinecraftNbtValue.intArray(
+            <int>[1, 2, 3],
+          ),
+        },
+      );
+
+      final List<MtnMinecraftInfoWorld> worlds = await provider.readWorlds();
+
+      expect(worlds, hasLength(2));
+      for (final MtnMinecraftInfoWorld world in worlds) {
+        expect(world.state, MtnMinecraftInfoWorldState.invalid);
+        expect(world.error, MtnMinecraftInfoWorldError.invalidData);
+        expect(world.singleplayerUuid, isNull);
+        expect(world.singleplayerPlayer, isNull);
+      }
     });
 
     test('invalid player storage does not fail world discovery', () async {

@@ -1202,6 +1202,8 @@ MtnMinecraftInfoWorld _worldFromNbt({
   final int? dataVersion = _optionalWorldInt(data, 'DataVersion');
   final int? lastPlayedMilliseconds = _optionalWorldLong(data, 'LastPlayed');
   final MtnMinecraftInfoWorldVersion? version = _optionalWorldVersion(data);
+  final String? singleplayerUuid =
+      _optionalWorldUuid(data, 'singleplayer_uuid');
 
   DateTime? lastPlayed;
   if (lastPlayedMilliseconds != null) {
@@ -1223,6 +1225,7 @@ MtnMinecraftInfoWorld _worldFromNbt({
     dataVersion: dataVersion,
     version: version,
     lastPlayed: lastPlayed,
+    singleplayerUuid: singleplayerUuid,
     players: players,
     playersState: playersState,
     playersError: playersError,
@@ -1264,6 +1267,30 @@ int? _optionalWorldLong(
     throw const _InvalidWorldData();
   }
   return value.asLong;
+}
+
+String? _optionalWorldUuid(
+  Map<String, MtnMinecraftNbtValue> data,
+  String name,
+) {
+  final MtnMinecraftNbtValue? value = data[name];
+  if (value == null) return null;
+  if (value.type != MtnMinecraftNbtType.intArray ||
+      value.asIntArray.length != 4) {
+    throw const _InvalidWorldData();
+  }
+
+  final String digits = value.asIntArray
+      .map(
+        (int part) =>
+            (part & 0xffffffff).toRadixString(16).padLeft(8, '0'),
+      )
+      .join();
+  return '${digits.substring(0, 8)}-'
+      '${digits.substring(8, 12)}-'
+      '${digits.substring(12, 16)}-'
+      '${digits.substring(16, 20)}-'
+      '${digits.substring(20)}';
 }
 
 MtnMinecraftInfoWorldVersion? _optionalWorldVersion(
