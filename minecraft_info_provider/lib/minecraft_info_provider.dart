@@ -6,6 +6,7 @@ export 'src/info/info_mob_effect.dart';
 export 'src/info/info_player.dart';
 export 'src/info/info_player_advancements.dart';
 export 'src/info/info_player_stats.dart';
+export 'src/info/info_potion_contents.dart';
 export 'src/info/info_provider.dart';
 export 'src/info/info_server.dart';
 export 'src/info/info_server_address.dart';

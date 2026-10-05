@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.0.0-dev.18
+
+Potion item properties foundation.
+
+- Added public `MtnMinecraftInfoPotionContents` as a reusable persisted
+  potion-contents model instead of an item-only potion representation.
+- Added `MtnMinecraftInfoItemStackComponents.potionContents` and nullable
+  persisted `potionDurationScale`.
+- Normalized pre-1.20.2 `Potion`, `CustomPotionColor` and
+  `CustomPotionEffects` item tags.
+- Normalized 1.20.2 through 1.20.4 `custom_potion_effects` with modern
+  resource-location mob-effect IDs.
+- Added 1.20.5+ `minecraft:potion_contents` compound and string-shorthand
+  parsing, including `potion`, `custom_color`, `custom_effects` and the
+  later `custom_name` field.
+- Added 1.21.5+ `minecraft:potion_duration_scale` as an explicit
+  non-negative float override without synthesizing the implicit default.
+- Reused the shared mob-effect model/parser for potion custom effects and kept
+  custom-effect lists immutable.
+- Corrected the shared mob-effect parser to accept both the older byte
+  amplifier representation and the newer integer representation, rejecting
+  integer amplifiers outside Minecraft's 0..127 range.
+- Preserved modern item-component authority and modern snake-case
+  `custom_potion_effects` authority without malformed-data fallback.
+- Added potion component-removal conflict handling and bounded potion metadata
+  output to the world query tool.
+- Added focused deterministic potion-property coverage and a player
+  active-effect regression for integer amplifiers.
+- Kept potion registry lookup, effective base effects, brewing recipes,
+  computed colors/names/durations and writing outside this checkpoint.
+
 ## 1.0.0-dev.17
 
 Player active effects and shared mob-effect foundation.
