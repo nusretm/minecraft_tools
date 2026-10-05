@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import '../nbt/minecraft_nbt.dart';
 import 'info_player.dart';
 import 'info_player_advancements.dart';
+import 'info_player_nbt_parser.dart';
 import 'info_player_stats.dart';
 import 'info_server.dart';
 import 'info_world.dart';
@@ -736,8 +737,13 @@ final class MtnMinecraftInfoProvider {
     }
 
     try {
-      return _playerFromNbt(candidate: candidate, document: document);
-    } on _InvalidPlayerData {
+      return const MtnMinecraftInfoPlayerNbtParser().parse(
+        uuid: candidate.uuid,
+        dataFile: candidate.file,
+        storageLayout: candidate.storageLayout,
+        document: document,
+      );
+    } on MtnMinecraftInfoPlayerNbtParserException {
       return candidate.invalid(MtnMinecraftInfoPlayerError.invalidData);
     }
   }
@@ -947,10 +953,6 @@ final class _PlayerDataCandidate {
         storageLayout: storageLayout,
         error: error,
       );
-}
-
-final class _InvalidPlayerData implements Exception {
-  const _InvalidPlayerData();
 }
 
 enum _PlayerJsonResourceStorageLayout {
@@ -1172,71 +1174,6 @@ DateTime _parseAdvancementTimestamp(String source) {
   return match.group(7) == '+'
       ? local.subtract(offset)
       : local.add(offset);
-}
-
-MtnMinecraftInfoPlayer _playerFromNbt({
-  required _PlayerDataCandidate candidate,
-  required MtnMinecraftNbtDocument document,
-}) {
-  if (document.root.type != MtnMinecraftNbtType.compound) {
-    throw const _InvalidPlayerData();
-  }
-
-  final Map<String, MtnMinecraftNbtValue> data = document.root.asCompound;
-  return MtnMinecraftInfoPlayer.available(
-    uuid: candidate.uuid,
-    dataFile: candidate.file,
-    storageLayout: candidate.storageLayout,
-    dataVersion: _optionalPlayerInt(data, 'DataVersion'),
-    dimension: _optionalPlayerString(data, 'Dimension'),
-    position: _optionalPlayerPosition(data),
-  );
-}
-
-String? _optionalPlayerString(
-  Map<String, MtnMinecraftNbtValue> data,
-  String name,
-) {
-  final MtnMinecraftNbtValue? value = data[name];
-  if (value == null) return null;
-  if (value.type != MtnMinecraftNbtType.string) {
-    throw const _InvalidPlayerData();
-  }
-  return value.asString;
-}
-
-int? _optionalPlayerInt(
-  Map<String, MtnMinecraftNbtValue> data,
-  String name,
-) {
-  final MtnMinecraftNbtValue? value = data[name];
-  if (value == null) return null;
-  if (value.type != MtnMinecraftNbtType.intValue) {
-    throw const _InvalidPlayerData();
-  }
-  return value.asInt;
-}
-
-MtnMinecraftInfoPlayerPosition? _optionalPlayerPosition(
-  Map<String, MtnMinecraftNbtValue> data,
-) {
-  final MtnMinecraftNbtValue? value = data['Pos'];
-  if (value == null) return null;
-  if (value.type != MtnMinecraftNbtType.list) {
-    throw const _InvalidPlayerData();
-  }
-
-  final MtnMinecraftNbtList list = value.asList;
-  if (list.elementType != MtnMinecraftNbtType.doubleValue ||
-      list.values.length != 3) {
-    throw const _InvalidPlayerData();
-  }
-
-  return MtnMinecraftInfoPlayerPosition(
-    x: list.values[0].asDouble,
-    y: list.values[1].asDouble,
-    z: list.values[2].asDouble,
-  );
 }
 
 final class _InvalidWorldData implements Exception {

@@ -38,6 +38,117 @@ final class MtnMinecraftInfoPlayerPosition {
   final double z;
 }
 
+/// Java Edition player game mode.
+enum MtnMinecraftInfoPlayerGameMode {
+  survival,
+  creative,
+  adventure,
+  spectator,
+}
+
+/// Immutable player look rotation.
+final class MtnMinecraftInfoPlayerRotation {
+  const MtnMinecraftInfoPlayerRotation({
+    required this.yaw,
+    required this.pitch,
+  });
+
+  final double yaw;
+  final double pitch;
+}
+
+/// Immutable block position used by player-owned location metadata.
+final class MtnMinecraftInfoPlayerBlockPosition {
+  const MtnMinecraftInfoPlayerBlockPosition({
+    required this.x,
+    required this.y,
+    required this.z,
+  });
+
+  final int x;
+  final int y;
+  final int z;
+}
+
+/// Immutable player food-state snapshot.
+final class MtnMinecraftInfoPlayerFood {
+  const MtnMinecraftInfoPlayerFood({
+    this.level,
+    this.saturation,
+    this.exhaustion,
+    this.tickTimer,
+  });
+
+  final int? level;
+  final double? saturation;
+  final double? exhaustion;
+  final int? tickTimer;
+}
+
+/// Immutable player experience-state snapshot.
+final class MtnMinecraftInfoPlayerExperience {
+  const MtnMinecraftInfoPlayerExperience({
+    this.level,
+    this.progress,
+    this.total,
+    this.seed,
+  });
+
+  final int? level;
+  final double? progress;
+  final int? total;
+  final int? seed;
+}
+
+/// Immutable player abilities snapshot.
+final class MtnMinecraftInfoPlayerAbilities {
+  const MtnMinecraftInfoPlayerAbilities({
+    this.flying,
+    this.mayFly,
+    this.instantBuild,
+    this.invulnerable,
+    this.mayBuild,
+    this.flySpeed,
+    this.walkSpeed,
+  });
+
+  final bool? flying;
+  final bool? mayFly;
+  final bool? instantBuild;
+  final bool? invulnerable;
+  final bool? mayBuild;
+  final double? flySpeed;
+  final double? walkSpeed;
+}
+
+/// Immutable player respawn-point snapshot normalized across storage versions.
+final class MtnMinecraftInfoPlayerRespawn {
+  const MtnMinecraftInfoPlayerRespawn({
+    required this.position,
+    this.dimension,
+    this.yaw,
+    this.pitch,
+    this.forced,
+  });
+
+  final MtnMinecraftInfoPlayerBlockPosition position;
+  final String? dimension;
+  final double? yaw;
+  final double? pitch;
+  final bool? forced;
+}
+
+/// Immutable player last-death location.
+final class MtnMinecraftInfoPlayerLastDeath {
+  const MtnMinecraftInfoPlayerLastDeath({
+    required this.position,
+    required this.dimension,
+  });
+
+  final MtnMinecraftInfoPlayerBlockPosition position;
+  final String dimension;
+}
+
 /// Immutable snapshot of one Java Edition player-data file.
 final class MtnMinecraftInfoPlayer {
   MtnMinecraftInfoPlayer._({
@@ -49,6 +160,17 @@ final class MtnMinecraftInfoPlayer {
     this.dataVersion,
     this.dimension,
     this.position,
+    this.rotation,
+    this.gameMode,
+    this.previousGameMode,
+    this.health,
+    this.absorptionAmount,
+    this.food,
+    this.experience,
+    this.abilities,
+    this.selectedItemSlot,
+    this.respawn,
+    this.lastDeath,
   });
 
   factory MtnMinecraftInfoPlayer.available({
@@ -58,6 +180,17 @@ final class MtnMinecraftInfoPlayer {
     int? dataVersion,
     String? dimension,
     MtnMinecraftInfoPlayerPosition? position,
+    MtnMinecraftInfoPlayerRotation? rotation,
+    MtnMinecraftInfoPlayerGameMode? gameMode,
+    MtnMinecraftInfoPlayerGameMode? previousGameMode,
+    double? health,
+    double? absorptionAmount,
+    MtnMinecraftInfoPlayerFood? food,
+    MtnMinecraftInfoPlayerExperience? experience,
+    MtnMinecraftInfoPlayerAbilities? abilities,
+    int? selectedItemSlot,
+    MtnMinecraftInfoPlayerRespawn? respawn,
+    MtnMinecraftInfoPlayerLastDeath? lastDeath,
   }) =>
       MtnMinecraftInfoPlayer._(
         uuid: uuid,
@@ -68,6 +201,17 @@ final class MtnMinecraftInfoPlayer {
         dataVersion: dataVersion,
         dimension: dimension,
         position: position,
+        rotation: rotation,
+        gameMode: gameMode,
+        previousGameMode: previousGameMode,
+        health: health,
+        absorptionAmount: absorptionAmount,
+        food: food,
+        experience: experience,
+        abilities: abilities,
+        selectedItemSlot: selectedItemSlot,
+        respawn: respawn,
+        lastDeath: lastDeath,
       );
 
   factory MtnMinecraftInfoPlayer.invalid({
@@ -105,4 +249,38 @@ final class MtnMinecraftInfoPlayer {
 
   /// Root `Pos` coordinates, when present.
   final MtnMinecraftInfoPlayerPosition? position;
+
+  /// Root `Rotation` yaw/pitch, when present.
+  final MtnMinecraftInfoPlayerRotation? rotation;
+
+  /// Current player game mode, when persisted.
+  final MtnMinecraftInfoPlayerGameMode? gameMode;
+
+  /// Previous player game mode, when persisted and set.
+  final MtnMinecraftInfoPlayerGameMode? previousGameMode;
+
+  /// Current health points from root `Health`, when present.
+  final double? health;
+
+  /// Current absorption amount from root `AbsorptionAmount`, when present.
+  final double? absorptionAmount;
+
+  /// Food-state fields, when at least one is persisted.
+  final MtnMinecraftInfoPlayerFood? food;
+
+  /// Experience-state fields, when at least one is persisted.
+  final MtnMinecraftInfoPlayerExperience? experience;
+
+  /// Root `abilities` compound, when present.
+  final MtnMinecraftInfoPlayerAbilities? abilities;
+
+  /// Selected hotbar slot, when present.
+  final int? selectedItemSlot;
+
+  /// Semantic respawn point normalized from legacy `Spawn*` or modern
+  /// `respawn` storage.
+  final MtnMinecraftInfoPlayerRespawn? respawn;
+
+  /// Root `LastDeathLocation`, when present.
+  final MtnMinecraftInfoPlayerLastDeath? lastDeath;
 }

@@ -31,6 +31,10 @@ launcher runtime, package-management or UI code.
 - Generic immutable statistics maps that preserve unknown vanilla, future and modded keys
 - On-demand Java Edition player advancement progress for legacy `advancements/` and 26.1+ `players/advancements/`
 - Immutable advancement progress with authoritative `done` state and UTC criterion timestamps
+- Player gameplay-core metadata including rotation, game modes, health,
+  absorption, food, XP, abilities, selected hotbar slot, respawn and last-death
+- Cross-version respawn normalization from legacy `Spawn*`, 1.21.5
+  `respawn.angle`, and 1.21.9+ `respawn.yaw` / `respawn.pitch`
 
 ## Usage
 
@@ -195,9 +199,78 @@ The supplied world must be a direct child of this provider's `saves`
 directory and must still exist as a directory. Invalid storage-directory shapes
 remain provider-level path errors.
 
-This foundation intentionally does not expose inventory, ender chest, health,
-food, XP, game mode, abilities, effects, spawn state or the singleplayer-player
-relationship yet.
+The player snapshot now also exposes gameplay-core metadata. Inventory,
+ender-chest contents, equipment, active effects and the singleplayer-player
+relationship remain separate follow-up foundations.
+
+## Java player gameplay core
+
+Gameplay-core state is parsed from the same player `.dat` snapshot as
+`DataVersion`, `Dimension` and `Pos`. No additional player identity or
+storage authority is introduced.
+
+The public snapshot can expose:
+
+- `MtnMinecraftInfoPlayerRotation` from root `Rotation`
+- current and previous `MtnMinecraftInfoPlayerGameMode`
+- nullable `health` and `absorptionAmount`
+- grouped `MtnMinecraftInfoPlayerFood`
+- grouped `MtnMinecraftInfoPlayerExperience`
+- grouped `MtnMinecraftInfoPlayerAbilities`
+- nullable selected hotbar slot
+- normalized `MtnMinecraftInfoPlayerRespawn`
+- nullable `MtnMinecraftInfoPlayerLastDeath`
+
+Persisted values are reported as stored. Missing values remain null; the
+provider does not synthesize vanilla defaults.
+
+Player NBT schema parsing is separated from provider filesystem/compression
+orchestration through the internal `MtnMinecraftInfoPlayerNbtParser`.
+The provider discovers files, reads gzip payloads and decodes raw NBT; the
+player parser validates the semantic player schema and produces the immutable
+public snapshot.
+
+Game modes are normalized from persisted integer values:
+
+```text
+0 -> survival
+1 -> creative
+2 -> adventure
+3 -> spectator
+```
+
+A persisted `previousPlayerGameType=-1` is normalized to null. Other unknown
+game-mode values are treated as invalid player data.
+
+Respawn storage is normalized into one semantic model across generations:
+
+```text
+legacy / 1.20.1-style:
+SpawnX / SpawnY / SpawnZ
+SpawnAngle
+SpawnDimension
+SpawnForced
+
+1.21.5-style:
+respawn.pos
+respawn.angle
+respawn.dimension
+respawn.forced
+
+1.21.9+:
+respawn.pos
+respawn.yaw
+respawn.pitch
+respawn.dimension
+respawn.forced
+```
+
+When the modern `respawn` compound is present, it is authoritative. A
+malformed modern compound does not silently fall back to legacy `Spawn*`
+fields.
+
+Inventory, ender-chest contents, equipment/item components and active effects
+are intentionally outside this gameplay-core checkpoint.
 
 ## Java player statistics
 
@@ -606,7 +679,7 @@ The validator copies the source to a temporary directory, reads it through the
 public provider, appends a validation server to the copy, re-reads it and
 verifies preservation of every pre-existing server compound.
 
-Real world/player/icon/stats/advancements smoke inspection is available through:
+Real world/player/icon/gameplay/stats/advancements smoke inspection is available through:
 
 ```powershell
 dart run tool/query_minecraft_worlds.dart `
@@ -621,12 +694,14 @@ dart run tool/query_minecraft_worlds.dart `
   --world "New World"
 ```
 
-The tool also reads player stats and advancement progress on demand. Stats
-output includes layout, state/error, DataVersion, category count and total
-counter count. Advancement output includes layout, state/error, DataVersion,
-advancement/completion/criterion counts and a bounded preview of advancement
-IDs. Supplying `--set-icon <png>` atomically replaces that world's icon and
-re-reads it to verify the persisted bytes.
+The tool also prints player gameplay-core state, reads player stats and reads
+advancement progress on demand. Gameplay output covers rotation, game modes,
+health/absorption, food, XP, abilities, selected slot, respawn and last-death.
+Stats output includes layout, state/error, DataVersion, category count and
+total counter count. Advancement output includes layout, state/error,
+DataVersion, advancement/completion/criterion counts and a bounded preview of
+advancement IDs. Supplying `--set-icon <png>` atomically replaces that
+world's icon and re-reads it to verify the persisted bytes.
 
 ## Validation status
 
@@ -644,7 +719,8 @@ Validated on Windows with Dart:
 
 - address deduplication/write policy
 - richer world metadata and cross-version normalization
-- richer player gameplay state
+- player inventory / ender chest / equipment and item-component information
+- player active effects
 - singleplayer UUID relationship
 - statistics aggregation / semantic unit conversion / writing
 - advancement definitions / semantic progress calculation / writing

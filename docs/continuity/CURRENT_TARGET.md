@@ -1,6 +1,6 @@
 # Minecraft Tools — Current Target
 
-Last updated: 2026-10-04
+Last updated: 2026-10-05
 
 ## Repository
 
@@ -10,8 +10,7 @@ Last updated: 2026-10-04
   - `hypixel_api/` — unrelated to the current Minecraft info work
   - `minecraft_info_provider/` — current package
 - Do not modify `hypixel_api/` for `minecraft_info_provider` checkpoints.
-- `docs/WORKING_RULES.md` is the authoritative development and architecture
-  standard.
+- `docs/WORKING_RULES.md` is authoritative.
 
 ## Authoritative merged baseline
 
@@ -19,273 +18,290 @@ Feature branch base:
 
 ```text
 main
-371668da6565b9fb41d9a12dd1e4b51a57fc6eb9
-Add Minecraft player stats foundation
+32091e15224b91f78a92668e92b53439fc1c2578
+Add Minecraft player advancements foundation
 ```
 
 This baseline includes COMPLETE / VALIDATED / MERGED foundations for:
 
 - Java NBT codec
-- `servers.dat` read/append with unknown-tag preservation
+- `servers.dat` read/append
 - modern and legacy Java Server List Ping
-- server-owned online/offline/unavailable lifecycle
-- Forge/FML advertised metadata
-- Minecraft SRV discovery
+- server lifecycle / Forge-FML metadata / SRV
 - server address normalization and known-server matching
-- Java Edition world discovery / `level.dat`
+- Java Edition world discovery
 - Java Edition player discovery
-- world-owned player snapshots
-- world icon read/write
+- world-owned player snapshots and world icon I/O
 - Java Edition player statistics
+- Java Edition player advancements
 
 ## Active checkpoint
 
-Java Edition player advancements foundation.
+Java Edition Player Gameplay Core.
 
 Current branch:
 
 ```text
-feature/minecraft-player-advancements-foundation
+feature/minecraft-player-gameplay-core
 ```
 
 Implementation/tool HEAD before this metadata pass:
 
 ```text
-d367f7e652223bd451666c3c8322e4330755aaad
+029411e8eca2c697391f2c1f96ef49271fd57bd6
+Show player gameplay state in world query tool
 ```
 
 Package version for this checkpoint:
 
 ```text
-1.0.0-dev.11
+1.0.0-dev.12
 ```
 
-## Public API
+## Public player additions
 
-Provider addition:
-
-```dart
-Future<MtnMinecraftInfoPlayerAdvancements?> readPlayerAdvancements(
-  MtnMinecraftInfoWorld world,
-  MtnMinecraftInfoPlayer player,
-);
-```
-
-Public types:
+`MtnMinecraftInfoPlayer` now exposes nullable gameplay-core state:
 
 ```text
-MtnMinecraftInfoPlayerAdvancements
-MtnMinecraftInfoPlayerAdvancement
-MtnMinecraftInfoPlayerAdvancementsStorageLayout
-MtnMinecraftInfoPlayerAdvancementsState
-MtnMinecraftInfoPlayerAdvancementsError
+rotation
+gameMode
+previousGameMode
+health
+absorptionAmount
+food
+experience
+abilities
+selectedItemSlot
+respawn
+lastDeath
 ```
 
-Advancement progress remains player-owned information. It does not discover
-players or create a second player-list authority.
-
-## Storage layouts
-
-Supported:
+New semantic types:
 
 ```text
-legacy / pre-26.1:
-<world>/advancements/<uuid>.json
-
-modern / 26.1+:
-<world>/players/advancements/<uuid>.json
+MtnMinecraftInfoPlayerRotation
+MtnMinecraftInfoPlayerGameMode
+MtnMinecraftInfoPlayerBlockPosition
+MtnMinecraftInfoPlayerFood
+MtnMinecraftInfoPlayerExperience
+MtnMinecraftInfoPlayerAbilities
+MtnMinecraftInfoPlayerRespawn
+MtnMinecraftInfoPlayerLastDeath
 ```
 
-Advancement storage layout is independent from
-`MtnMinecraftInfoPlayer.storageLayout`.
+## Parsing architecture
 
-Resolution semantics:
-
-- modern is checked first
-- modern wins when both files exist
-- corrupt modern does not fall back to legacy
-- malformed unrelated legacy storage does not block valid modern data
-
-## Shared player-owned JSON resource boundary
-
-Stats and advancements now share one internal filesystem/JSON reader for:
-
-- validating world/player ownership
-- canonical UUID filename matching
-- resolving modern-first legacy/modern paths
-- reading UTF-8 JSON
-- classifying read vs JSON-decode failures
-
-Stats and advancement schema parsing remain separate. The shared internal
-reader does not introduce a public abstraction.
-
-## Advancement JSON boundary
-
-Missing file:
+Player NBT schema parsing is now physically separated from provider I/O:
 
 ```text
-null
+MtnMinecraftInfoProvider
+  -> player file discovery
+  -> gzip decode
+  -> raw MtnMinecraftNbtCodec decode
+  -> MtnMinecraftInfoPlayerNbtParser
+  -> semantic MtnMinecraftInfoPlayer
 ```
 
-Present root:
+The parser owns player NBT tag names/types and semantic normalization.
+The provider continues to own filesystem, storage-layout precedence,
+compression and player-local error classification.
+
+## Gameplay rules
+
+Missing persisted gameplay values remain null. No vanilla default values are
+invented.
+
+Game mode mapping:
 
 ```text
-{
-  "DataVersion": <optional int>,
-  "<advancement resource id>": {
-    "criteria": {
-      "<criterion name>": "<yyyy-MM-dd HH:mm:ss Z>"
-    },
-    "done": <bool>
-  }
-}
+0 -> survival
+1 -> creative
+2 -> adventure
+3 -> spectator
 ```
 
-The public model keeps:
+`previousPlayerGameType=-1` means no previous game mode and becomes null.
+Other unsupported game-mode integers are invalid player data.
 
-- optional root `DataVersion`
-- arbitrary advancement resource IDs
-- authoritative `done` boolean
-- arbitrary criterion names
-- UTC `DateTime` completion timestamps
+`SelectedItemSlot` is accepted only in the hotbar range 0 through 8.
 
-The provider does not derive `done` from criterion count because advancement
-requirements are definition data and are not contained in the player progress
-snapshot.
-
-State/error semantics:
+Abilities parse nullable persisted fields for:
 
 ```text
-available
-invalid
-
-readFailed
-invalidJson
-invalidData
+flying
+mayfly
+instabuild
+invulnerable
+mayBuild
+flySpeed
+walkSpeed
 ```
 
-Advancement and criterion maps are immutable.
+Public Dart names use `mayFly` and `instantBuild`; raw Minecraft tag names
+remain at the parser boundary.
 
-## Loading policy
+## Respawn normalization
 
-Advancements are on demand.
+Supported semantic sources:
 
-`readWorlds()` continues to discover world/player identity without parsing
-all stats and advancement JSON files. Callers explicitly use
-`readPlayerAdvancements(world, player)`.
+```text
+legacy / 1.20.1:
+SpawnX / SpawnY / SpawnZ
+SpawnAngle
+SpawnDimension
+SpawnForced
 
-## Tool smoke validation
+1.21.5:
+respawn.pos
+respawn.angle
+respawn.dimension
+respawn.forced
 
-`tool/query_minecraft_worlds.dart` now reports:
+1.21.9+:
+respawn.pos
+respawn.yaw
+respawn.pitch
+respawn.dimension
+respawn.forced
+```
 
-- advancement missing/present
-- state/error
-- legacy/modern layout
-- DataVersion
-- exact file path
-- total advancement count
-- completed advancement count
-- total completed criterion count
-- an alphabetical preview of up to 10 advancement IDs
-- remaining preview count through `ADVANCEMENT_MORE`
+All become one `MtnMinecraftInfoPlayerRespawn`.
 
-The bounded preview avoids dumping very large modded advancement files.
+When modern `respawn` exists, it is authoritative. A malformed modern
+compound does not fall back to legacy fields.
 
-## Validation status
+`LastDeathLocation` is normalized to a dimension plus
+`MtnMinecraftInfoPlayerBlockPosition`.
 
-Automated Windows validation:
+## Deterministic validation
+
+Sixteen focused gameplay tests cover:
+
+- complete gameplay-core parsing
+- legacy respawn fields
+- 1.21.5 respawn `angle`
+- 1.21.9+ respawn `yaw` / `pitch`
+- modern respawn precedence
+- null semantics for missing gameplay fields
+- previous game mode `-1`
+- partial food / XP groups
+- partial abilities
+- invalid game mode
+- selected-slot range validation
+- ability boolean validation
+- rotation schema validation
+- incomplete legacy respawn
+- malformed modern respawn with no legacy fallback
+- invalid last-death position
+- invalid scalar gameplay type
+
+Full package test result before metadata finalization:
+
+```text
+dart test
+00:02 +120: All tests passed!
+```
+
+Analyzer after the smoke-tool extension:
 
 ```text
 dart analyze
 No issues found!
+```
 
-dart test
-00:04 +104: All tests passed!
+Earlier checkpoint diff validation:
 
+```text
 git diff --check origin/main...HEAD
 PASS
-
-git status
-clean
 ```
+
+Final analyzer/test/diff/status validation must be rerun after this metadata
+pass.
 
 No `dart format` was run.
 
-Real Java Edition 1.20.1 legacy validation:
+## Real Java Edition 1.20.1 smoke validation
 
-- 3 worlds discovered
-- 8 player snapshots total
-- 8/8 advancement files parsed as `available`
-- all real files used legacy `<world>/advancements/<uuid>.json`
-- all reported `DataVersion=3465`
-- advancement-entry counts ranged from 2 to 1363
-- completed counts ranged from 1 to 1333
-- completed-criterion counts ranged from 2 to 1430
-- both `done=false` and `done=true` were observed
-- vanilla and modded namespaces were preserved, including
-  `minecraft`, `alekiships`, `alexscaves`, `alexsmobs`,
-  `aquaculture` and `additionaladditions`
+Three worlds and eight player snapshots were read from a real game directory.
+All player snapshots remained `state=available` with `DataVersion=3465`.
+
+Observed gameplay behavior included:
+
+- rotation values for all eight players
+- both creative and survival game modes
+- health values including 3.5 and 20.0
+- absorption values
+- food level/saturation/exhaustion/tick timer
+- XP level/progress/total/seed, including zero-XP and high-XP players
+- creative and survival ability combinations
+- selected hotbar slots
+- real `LastDeathLocation` values for multiple players
+- one real legacy respawn:
+  - position `1060,135,-243`
+  - dimension `minecraft:overworld`
+  - yaw `105.85567474365234`
+  - pitch null
+  - forced false
+
+The legacy respawn observation validates normalization from the real 1.20.1
+`Spawn*` representation.
+
+Modern respawn generations remain deterministic-test validated; a real
+1.21.5+ or 26.1 player file was not used in this checkpoint.
 
 Current checkpoint state:
 
 ```text
-IMPLEMENTED / AUTOMATED VALIDATED / REAL-WORLD LEGACY VALIDATED
+IMPLEMENTED / AUTOMATED VALIDATED / REAL-WORLD 1.20.1 VALIDATED
 ```
-
-Modern 26.1+ storage behavior is deterministic-test validated; no real 26.1+
-save was used in this checkpoint.
 
 ## Explicitly deferred
 
-- advancement definitions
-- title/description/icon/reward extraction
-- requirements evaluation
-- percentage / remaining-criteria calculation
-- advancement writing
-- richer player gameplay state
-- singleplayer UUID relationship
+- player inventory
+- ender chest
+- equipment
+- item components / richer item information
+- active effects
+- singleplayer player identity / UUID relationship
 - installed-content discovery
 
 ## Locked foundations
 
 This checkpoint does not redesign:
 
-- world/player discovery ownership
-- player UUID identity
-- player NBT parsing
-- player statistics public API/schema
+- player identity / UUID discovery
+- legacy vs modern player-data precedence
+- stats / advancements APIs
+- world ownership / player aggregate semantics
 - world icon I/O
 - server/status/SRV/address behavior
 - raw NBT codec
 
 ## Development rules
 
-Always read and follow:
+Always follow `docs/WORKING_RULES.md`.
 
-```text
-docs/WORKING_RULES.md
-```
-
-Notably:
+In particular:
 
 - no implementation without explicit user approval
-- small, independently reviewable steps
-- no `dart format` for Pure Dart unless explicitly requested
-- `.dart_tool/` and `pubspec.lock` stay ignored for this Dart library package
-- GitHub repository changes are preferred over patch files
-- architecture/naming/dependency boundaries are part of the acceptance bar
-- backward/legacy support is only added when explicitly requested
+- keep checkpoints small and reviewable
+- do not run `dart format` for Pure Dart unless explicitly requested
+- keep `.dart_tool/` and `pubspec.lock` ignored for this library package
+- architecture/naming/dependency boundaries are acceptance criteria
+- backward/legacy support is added only with explicit approval
 
 ## Next action
 
-1. Pull this metadata/continuity pass into the local feature branch.
+1. Pull the metadata/finalization commit into the local feature branch.
 2. Run final `dart analyze`, `dart test`, `git diff --check` and
    `git status`.
 3. Squash the feature branch to one clean commit against
-   `371668da6565b9fb41d9a12dd1e4b51a57fc6eb9`.
+   `32091e15224b91f78a92668e92b53439fc1c2578`.
 4. Force-push only with `--force-with-lease`.
-5. Merge to `main` only after the squashed tree is locally verified.
+5. Fast-forward merge to `main` only after the squashed tree is locally
+   verified.
 
-Likely next domain after this checkpoint:
+Likely next checkpoint:
 
-- richer player gameplay state
+- Player Inventory / Equipment Foundation

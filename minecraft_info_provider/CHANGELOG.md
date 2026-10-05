@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.0.0-dev.12
+
+Java Edition player gameplay core.
+
+- Added immutable gameplay-core models for rotation, block position, food,
+  experience, abilities, respawn and last-death state.
+- Added `MtnMinecraftInfoPlayerGameMode` and normalized persisted player game
+  mode integers to survival, creative, adventure and spectator.
+- Extended `MtnMinecraftInfoPlayer` with nullable rotation, current/previous
+  game mode, health, absorption, food, XP, abilities, selected hotbar slot,
+  respawn and last-death metadata.
+- Kept missing persisted values nullable instead of synthesizing vanilla
+  defaults.
+- Normalized `previousPlayerGameType=-1` to no previous game mode and rejected
+  other unknown game-mode values as invalid player data.
+- Added semantic respawn normalization for legacy `Spawn*` fields, 1.21.5
+  `respawn.angle`, and 1.21.9+ `respawn.yaw` / `respawn.pitch`.
+- Made a present modern `respawn` compound authoritative without silently
+  falling back to legacy fields when malformed.
+- Added `LastDeathLocation` parsing with dimension and three-int block
+  position.
+- Extracted player semantic NBT schema parsing into the internal
+  `MtnMinecraftInfoPlayerNbtParser`, leaving provider code responsible for
+  discovery, gzip and raw NBT decode orchestration.
+- Added 16 focused gameplay-core tests; full package validation reached 120/120
+  passing tests with clean analyzer output.
+- Extended `tool/query_minecraft_worlds.dart` with grouped gameplay-core smoke
+  output.
+- Real Java Edition 1.20.1 smoke validation read gameplay state for all 8
+  player snapshots across 3 worlds and validated legacy respawn plus
+  last-death data from real files.
+- Kept inventory, ender chest, equipment/item components, active effects and
+  singleplayer identity mapping outside this checkpoint.
+
 ## 1.0.0-dev.11
 
 Java Edition player advancements foundation.

@@ -57,6 +57,59 @@ Future<void> main(List<String> arguments) async {
         'position=${_position(player.position)}',
       );
 
+      stdout.writeln(
+        'PLAYER_GAMEPLAY world=${world.directoryName} '
+        'uuid=${player.uuid} '
+        'rotation=${_rotation(player.rotation)} '
+        'gameMode=${player.gameMode?.name} '
+        'previousGameMode=${player.previousGameMode?.name} '
+        'health=${player.health} '
+        'absorption=${player.absorptionAmount} '
+        'selectedItemSlot=${player.selectedItemSlot}',
+      );
+
+      stdout.writeln(
+        'PLAYER_FOOD world=${world.directoryName} '
+        'uuid=${player.uuid} '
+        'level=${player.food?.level} '
+        'saturation=${player.food?.saturation} '
+        'exhaustion=${player.food?.exhaustion} '
+        'tickTimer=${player.food?.tickTimer}',
+      );
+
+      stdout.writeln(
+        'PLAYER_XP world=${world.directoryName} '
+        'uuid=${player.uuid} '
+        'level=${player.experience?.level} '
+        'progress=${player.experience?.progress} '
+        'total=${player.experience?.total} '
+        'seed=${player.experience?.seed}',
+      );
+
+      stdout.writeln(
+        'PLAYER_ABILITIES world=${world.directoryName} '
+        'uuid=${player.uuid} '
+        'flying=${player.abilities?.flying} '
+        'mayFly=${player.abilities?.mayFly} '
+        'instantBuild=${player.abilities?.instantBuild} '
+        'invulnerable=${player.abilities?.invulnerable} '
+        'mayBuild=${player.abilities?.mayBuild} '
+        'flySpeed=${player.abilities?.flySpeed} '
+        'walkSpeed=${player.abilities?.walkSpeed}',
+      );
+
+      stdout.writeln(
+        'PLAYER_RESPAWN world=${world.directoryName} '
+        'uuid=${player.uuid} '
+        'value=${_respawn(player.respawn)}',
+      );
+
+      stdout.writeln(
+        'PLAYER_LAST_DEATH world=${world.directoryName} '
+        'uuid=${player.uuid} '
+        'value=${_lastDeath(player.lastDeath)}',
+      );
+
       final MtnMinecraftInfoPlayerStats? stats =
           await provider.readPlayerStats(world, player);
       if (stats == null) {
@@ -196,6 +249,29 @@ MtnMinecraftInfoWorld _worldByDirectoryName(
 String _position(MtnMinecraftInfoPlayerPosition? position) {
   if (position == null) return 'null';
   return '${position.x},${position.y},${position.z}';
+}
+
+String _rotation(MtnMinecraftInfoPlayerRotation? rotation) {
+  if (rotation == null) return 'null';
+  return '${rotation.yaw},${rotation.pitch}';
+}
+
+String _blockPosition(MtnMinecraftInfoPlayerBlockPosition position) =>
+    '${position.x},${position.y},${position.z}';
+
+String _respawn(MtnMinecraftInfoPlayerRespawn? respawn) {
+  if (respawn == null) return 'null';
+  return 'position=${_blockPosition(respawn.position)},'
+      'dimension=${respawn.dimension},'
+      'yaw=${respawn.yaw},'
+      'pitch=${respawn.pitch},'
+      'forced=${respawn.forced}';
+}
+
+String _lastDeath(MtnMinecraftInfoPlayerLastDeath? lastDeath) {
+  if (lastDeath == null) return 'null';
+  return 'position=${_blockPosition(lastDeath.position)},'
+      'dimension=${lastDeath.dimension}';
 }
 
 int _statsCounterCount(MtnMinecraftInfoPlayerStats stats) {
