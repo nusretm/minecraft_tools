@@ -472,7 +472,9 @@ String _itemProperties(MtnMinecraftInfoItemStack item) {
         'enchantments=null storedEnchantments=null '
         'potion=null potionColor=null potionCustomEffects=null '
         'potionCustomName=null potionDurationScale=null '
-        'attributeModifiers=null customModelData=null removedComponents=null';
+        'attributeModifiers=null customModelData=null '
+        'containerContents=null bundleContents=null '
+        'chargedProjectiles=null useRemainder=null removedComponents=null';
   }
 
   return 'damage=${components.damage} '
@@ -487,9 +489,48 @@ String _itemProperties(MtnMinecraftInfoItemStack item) {
       'potionDurationScale=${components.potionDurationScale} '
       'attributeModifiers=${_attributeModifierPreview(components.attributeModifiers)} '
       'customModelData=${_customModelDataPreview(components.customModelData)} '
+      'containerContents=${_containerContentsPreview(components.containerContents)} '
+      'bundleContents=${_nestedItemListPreview(components.bundleContents)} '
+      'chargedProjectiles=${_nestedItemListPreview(components.chargedProjectiles)} '
+      'useRemainder=${_nestedItemPreview(components.useRemainder)} '
       'removedComponents=${_setPreview(components.removedComponentIds)}';
 }
 
+String _containerContentsPreview(
+  Map<int, MtnMinecraftInfoItemStack>? contents,
+) {
+  if (contents == null) return 'null';
+  if (contents.isEmpty) return '[]';
+  const int previewLimit = 3;
+  final List<int> slots = contents.keys.toList()..sort();
+  final List<String> preview = <String>[
+    for (final int slot in slots.take(previewLimit))
+      '$slot:${_nestedItemPreview(contents[slot])}',
+  ];
+  if (slots.length > previewLimit) {
+    preview.add('+${slots.length - previewLimit}');
+  }
+  return '[${preview.join(',')}]';
+}
+
+String _nestedItemListPreview(
+  List<MtnMinecraftInfoItemStack>? items,
+) {
+  if (items == null) return 'null';
+  if (items.isEmpty) return '[]';
+  const int previewLimit = 3;
+  final List<String> preview = <String>[
+    for (final MtnMinecraftInfoItemStack item in items.take(previewLimit))
+      _nestedItemPreview(item),
+  ];
+  if (items.length > previewLimit) {
+    preview.add('+${items.length - previewLimit}');
+  }
+  return '[${preview.join(',')}]';
+}
+
+String _nestedItemPreview(MtnMinecraftInfoItemStack? item) =>
+    item == null ? 'null' : '${item.id}*${item.count}';
 String _customModelDataPreview(
   MtnMinecraftInfoItemCustomModelData? data,
 ) {

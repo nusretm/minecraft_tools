@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.0.0-dev.21
+
+Nested item stacks foundation.
+
+- Added persisted nested item-stack fields to
+  `MtnMinecraftInfoItemStackComponents`: sparse `containerContents`,
+  ordered `bundleContents`, ordered `chargedProjectiles`, and single
+  `useRemainder`.
+- Kept nested values recursive by reusing the existing
+  `MtnMinecraftInfoItemStack` model instead of adding a second nested-item
+  representation.
+- Added internal `MtnMinecraftInfoItemNestedStackNbtParser` and kept
+  `MtnMinecraftInfoItemStackNbtParser` as the single recursion authority.
+- Normalized legacy `BlockEntityTag.Items`, Bundle `Items`, and
+  `ChargedProjectiles` storage.
+- Added modern `minecraft:container`, `minecraft:bundle_contents`,
+  `minecraft:charged_projectiles`, and `minecraft:use_remainder` parsing.
+- Preserved sparse container slot numbers rather than synthesizing a
+  registry-dependent fixed container capacity.
+- Kept nested maps/lists immutable and preserved absent-versus-explicitly-empty
+  semantics.
+- Added nested component-removal conflict handling while preserving
+  modern-component authority over legacy item tags.
+- Kept unknown nested-entry metadata tolerant while recognized slot/item
+  structure remains strict.
+- Extended the world query tool with bounded nested-item previews.
+- Added focused deterministic nested-stack coverage including recursive
+  container -> bundle -> custom-model-data parsing.
+- Kept container loot metadata, bundle capacity/weight, Crossbow runtime
+  mechanics, use-remainder runtime behavior, block-entity inventory discovery
+  and item writing outside this checkpoint.
+
 ## 1.0.0-dev.20
 
 Custom model data item foundation.
