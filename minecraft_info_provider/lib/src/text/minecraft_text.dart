@@ -403,10 +403,24 @@ final class MtnMinecraftTextItem {
   const MtnMinecraftTextItem({
     required this.text,
     required this.style,
+    this.translate,
+    this.translateFallback,
+    this.translateWith = const <MtnMinecraftText>[],
   });
 
   final String text;
   final MtnMinecraftTextStyle style;
+
+  /// Translation key when this span originated from a translate component.
+  final String? translate;
+
+  /// Optional Minecraft translation fallback string.
+  final String? translateFallback;
+
+  /// Translation arguments preserved as semantic Minecraft text values.
+  final List<MtnMinecraftText> translateWith;
+
+  bool get isTranslated => translate != null;
 
   MtnMinecraftTextColor get color => style.color;
   bool get bold => style.bold;
@@ -425,12 +439,25 @@ final class MtnMinecraftText {
   MtnMinecraftText({
     required String text,
     this.baseStyle = MtnMinecraftTextStyle.defaults,
-  }) : _text = text;
+  }) : _text = text,
+       _semanticItems = null;
+
+  MtnMinecraftText._fromParsedItems({
+    required List<MtnMinecraftTextItem> items,
+    required this.baseStyle,
+  }) : _text = _encodeItems(items, initialStyle: baseStyle),
+       _semanticItems = List<MtnMinecraftTextItem>.unmodifiable(items);
 
   factory MtnMinecraftText.fromItems(
     Iterable<MtnMinecraftTextItem> items,
-  ) =>
-      MtnMinecraftText(text: _encodeItems(items));
+  ) {
+    final List<MtnMinecraftTextItem> values =
+        List<MtnMinecraftTextItem>.unmodifiable(items);
+    return MtnMinecraftText._fromParsedItems(
+      items: values,
+      baseStyle: MtnMinecraftTextStyle.defaults,
+    );
+  }
 
   factory MtnMinecraftText.fromJson(
     String source, {
@@ -441,8 +468,8 @@ final class MtnMinecraftText {
       source,
       baseStyle: baseStyle,
     );
-    return MtnMinecraftText(
-      text: _encodeItems(items, initialStyle: baseStyle),
+    return MtnMinecraftText._fromParsedItems(
+      items: items,
       baseStyle: baseStyle,
     );
   }
@@ -456,19 +483,21 @@ final class MtnMinecraftText {
       source,
       baseStyle: baseStyle,
     );
-    return MtnMinecraftText(
-      text: _encodeItems(items, initialStyle: baseStyle),
+    return MtnMinecraftText._fromParsedItems(
+      items: items,
       baseStyle: baseStyle,
     );
   }
 
   String _text;
+  List<MtnMinecraftTextItem>? _semanticItems;
 
   String get text => _text;
 
   set text(String value) {
     if (_text == value) return;
     _text = value;
+    _semanticItems = null;
   }
 
   /// Effective starting style for source text before any formatting code.
@@ -482,8 +511,11 @@ final class MtnMinecraftText {
     return result.toString();
   }
 
-  List<MtnMinecraftTextItem> get items =>
-      _MtnMinecraftLegacyTextParser(text, baseStyle).parse();
+  List<MtnMinecraftTextItem> get items {
+    final List<MtnMinecraftTextItem>? semanticItems = _semanticItems;
+    if (semanticItems != null) return semanticItems;
+    return _MtnMinecraftLegacyTextParser(text, baseStyle).parse();
+  }
 
   String toJson() =>
       const _MtnMinecraftTextComponentCodec().encodeJson(items);
