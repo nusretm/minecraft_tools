@@ -366,7 +366,10 @@ final class MtnMinecraftTextItem {
 /// lazily into [items], and changing [text] automatically changes subsequent
 /// [plainText] and [items] results.
 final class MtnMinecraftText {
-  MtnMinecraftText({required String text}) : _text = text;
+  MtnMinecraftText({
+    required String text,
+    this.baseStyle = MtnMinecraftTextStyle.defaults,
+  }) : _text = text;
 
   factory MtnMinecraftText.fromItems(
     Iterable<MtnMinecraftTextItem> items,
@@ -374,6 +377,9 @@ final class MtnMinecraftText {
       MtnMinecraftText(text: _encodeItems(items));
 
   String _text;
+
+  /// Effective starting style for source text before any formatting code.
+  final MtnMinecraftTextStyle baseStyle;
 
   String get text => _text;
 
@@ -390,21 +396,22 @@ final class MtnMinecraftText {
   }
 
   List<MtnMinecraftTextItem> get items =>
-      _MtnMinecraftLegacyTextParser(_text).parse();
+      _MtnMinecraftLegacyTextParser(_text, baseStyle).parse();
 
   @override
   String toString() => text;
 }
 
 final class _MtnMinecraftLegacyTextParser {
-  _MtnMinecraftLegacyTextParser(this.source);
+  _MtnMinecraftLegacyTextParser(this.source, this.baseStyle);
 
   final String source;
+  final MtnMinecraftTextStyle baseStyle;
 
   List<MtnMinecraftTextItem> parse() {
     final List<MtnMinecraftTextItem> result = <MtnMinecraftTextItem>[];
     final StringBuffer buffer = StringBuffer();
-    var style = MtnMinecraftTextStyle.defaults;
+    var style = baseStyle;
 
     void flush() {
       if (buffer.isEmpty) return;
@@ -466,7 +473,7 @@ final class _MtnMinecraftLegacyTextParser {
           MtnMinecraftTextFormat.underlined =>
             style.copyWith(underlined: true),
           MtnMinecraftTextFormat.italic => style.copyWith(italic: true),
-          MtnMinecraftTextFormat.reset => MtnMinecraftTextStyle.defaults,
+          MtnMinecraftTextFormat.reset => baseStyle,
         };
         index += 2;
         continue;

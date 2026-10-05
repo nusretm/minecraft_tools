@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import '../text/minecraft_text.dart';
 import 'info_server_status.dart';
 
 enum _LegacyPingVariant {
@@ -190,7 +191,7 @@ MtnMinecraftInfoServerStatus? _parseLegacyResponse(
       protocol: protocol,
       onlinePlayers: online,
       maxPlayers: max,
-      motd: fields[3],
+      motd: MtnMinecraftText(text: fields[3]),
       latency: latency,
     );
   }
@@ -216,7 +217,9 @@ MtnMinecraftInfoServerStatus? _parseLegacyResponse(
     format: MtnMinecraftInfoServerStatusFormat.legacyPre14,
     onlinePlayers: online,
     maxPlayers: max,
-    motd: response.substring(0, secondLastSeparator),
+    motd: MtnMinecraftText(
+      text: response.substring(0, secondLastSeparator),
+    ),
     latency: latency,
   );
 }
