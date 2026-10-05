@@ -354,6 +354,43 @@ void main() {
       expect(nbt['color']?.asString, 'green');
     });
 
+    test('does not fake visible text for unresolved dynamic components', () {
+      final MtnMinecraftText keybind = MtnMinecraftText.fromJson(
+        '{"keybind":"key.jump","extra":[{"text":" visible","color":"yellow"}]}',
+      );
+      expect(keybind.plainText, ' visible');
+      expect(keybind.items.single.text, ' visible');
+      expect(keybind.items.single.color, MtnMinecraftTextColor.yellow);
+
+      final MtnMinecraftText selector =
+          MtnMinecraftText.fromJson('{"selector":"@p"}');
+      expect(selector.plainText, isEmpty);
+      expect(selector.items, isEmpty);
+
+      final MtnMinecraftText nbt = MtnMinecraftText.fromJson(
+        '{"nbt":"Inventory[0].id","entity":"@s"}',
+      );
+      expect(nbt.plainText, isEmpty);
+      expect(nbt.items, isEmpty);
+
+      final MtnMinecraftText unresolvedScore = MtnMinecraftText.fromJson(
+        '{"score":{"name":"Steve","objective":"kills"}}',
+      );
+      expect(unresolvedScore.plainText, isEmpty);
+      expect(unresolvedScore.items, isEmpty);
+    });
+
+    test('uses only explicit resolved score value as visible text', () {
+      final MtnMinecraftText score = MtnMinecraftText.fromJson(
+        '{"score":{"name":"Steve","objective":"kills","value":"42"},'
+        '"color":"gold"}',
+      );
+
+      expect(score.plainText, '42');
+      expect(score.items.single.text, '42');
+      expect(score.items.single.color, MtnMinecraftTextColor.gold);
+    });
+
     test('fromJson is strict while fromNbt accepts inline string text', () {
       expect(() => MtnMinecraftText.fromJson('not json'), throwsFormatException);
 
