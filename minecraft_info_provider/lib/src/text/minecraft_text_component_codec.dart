@@ -91,6 +91,8 @@ final class _MtnMinecraftTextComponentCodec {
         throw const FormatException('Invalid Minecraft text component text');
       }
       _appendLiteral(textValue.toString(), style, result);
+    } else if (object['translate'] != null) {
+      _appendTranslation(object, style, result);
     } else {
       final String? fallback = _contentFallback(object);
       if (fallback != null) _appendLiteral(fallback, style, result);
@@ -105,6 +107,56 @@ final class _MtnMinecraftTextComponentCodec {
         _appendValue(child, style, result);
       }
     }
+  }
+
+  void _appendTranslation(
+    Map<String, Object?> object,
+    MtnMinecraftTextStyle style,
+    List<MtnMinecraftTextItem> result,
+  ) {
+    final Object? translateValue = object['translate'];
+    if (translateValue is! String || translateValue.isEmpty) {
+      throw const FormatException('Invalid Minecraft text component translation');
+    }
+
+    final Object? fallbackValue = object['fallback'];
+    if (fallbackValue != null && fallbackValue is! String) {
+      throw const FormatException(
+        'Invalid Minecraft text component translation fallback',
+      );
+    }
+    final String? fallback = fallbackValue as String?;
+
+    final List<MtnMinecraftText> withValues = <MtnMinecraftText>[];
+    final Object? withValue = object['with'];
+    if (withValue != null) {
+      if (withValue is! List<Object?>) {
+        throw const FormatException(
+          'Invalid Minecraft text component translation arguments',
+        );
+      }
+      for (final Object? value in withValue) {
+        final List<MtnMinecraftTextItem> items =
+            parseJsonValue(value, baseStyle: style);
+        withValues.add(
+          MtnMinecraftText._fromParsedItems(
+            items: items,
+            baseStyle: style,
+          ),
+        );
+      }
+    }
+
+    _appendItem(
+      MtnMinecraftTextItem(
+        text: fallback ?? translateValue,
+        style: style,
+        translate: translateValue,
+        translateFallback: fallback,
+        translateWith: List<MtnMinecraftText>.unmodifiable(withValues),
+      ),
+      result,
+    );
   }
 
   MtnMinecraftTextStyle _readStyle(
@@ -151,19 +203,6 @@ final class _MtnMinecraftTextComponentCodec {
   }
 
   String? _contentFallback(Map<String, Object?> object) {
-    final Object? translate = object['translate'];
-    if (translate != null) {
-      if (translate is! String || translate.isEmpty) {
-        throw const FormatException('Invalid Minecraft text component translation');
-      }
-      final Object? fallback = object['fallback'];
-      if (fallback == null) return translate;
-      if (fallback is! String) {
-        throw const FormatException('Invalid Minecraft text component translation fallback');
-      }
-      return fallback;
-    }
-
     for (final String key in <String>['keybind', 'selector', 'nbt']) {
       final Object? value = object[key];
       if (value == null) continue;
@@ -203,7 +242,10 @@ final class _MtnMinecraftTextComponentCodec {
     List<MtnMinecraftTextItem> result,
   ) {
     if (item.text.isEmpty) return;
-    if (result.isNotEmpty && result.last.style == item.style) {
+    if (result.isNotEmpty &&
+        result.last.style == item.style &&
+        !result.last.isTranslated &&
+        !item.isTranslated) {
       final MtnMinecraftTextItem previous = result.removeLast();
       result.add(
         MtnMinecraftTextItem(
@@ -230,7 +272,24 @@ final class _MtnMinecraftTextComponentCodec {
   }
 
   Map<String, Object?> _itemToComponentObject(MtnMinecraftTextItem item) {
-    final Map<String, Object?> result = <String, Object?>{'text': item.text};
+    final String? translate = item.translate;
+    final Map<String, Object?> result;
+    if (translate == null) {
+      result = <String, Object?>{'text': item.text};
+    } else {
+      result = <String, Object?>{'translate': translate};
+      final String? fallback = item.translateFallback;
+      if (fallback != null) {
+        result['fallback'] = fallback;
+      }
+      if (item.translateWith.isNotEmpty) {
+        result['with'] = <Object?>[
+          for (final MtnMinecraftText value in item.translateWith)
+            _itemsToComponentValue(value.items),
+        ];
+      }
+    }
+
     if (item.color != MtnMinecraftTextColor.white) {
       result['color'] = item.color.isNamed ? item.color.name! : item.color.hex;
     }
