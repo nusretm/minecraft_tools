@@ -39,10 +39,19 @@ Package version:
 Checkpoint state:
 
 ```text
-COMPLETED / AUTOMATED VALIDATED
+MERGED / CLOSED / VALIDATED
 ```
 
-No merge approval has been given.
+Final merge state:
+
+```text
+PR #14
+squash merged to main
+main HEAD: 97cc91ba6cc311d4872f9f9136d1dc6892ff1eb0
+feature head before merge: cc16798200facbbcbc5836ee650a94f6d704d9d7
+local feature branch: deleted
+remote feature branch: deleted
+```
 
 ## Public API
 
@@ -276,12 +285,12 @@ Existing nested/runtime, provider/player and text/runtime deferrals remain uncha
 
 ## Item-read foundation status
 
-This is the final planned core item-read checkpoint.
+This was the final planned core item-read checkpoint.
 
-Once this checkpoint is squashed and merged, the planned `MtnMinecraftInfoItemStack` read foundation is considered complete.
+After PR #14 was squash merged to `main@97cc91ba6cc311d4872f9f9136d1dc6892ff1eb0`, the planned core `MtnMinecraftInfoItemStack` read foundation became complete.
 
-## Next action
+## Final state
 
-Do not begin another item feature yet.
+This checkpoint is closed. Its feature branch was deleted locally and remotely after merge.
 
-After explicit user approval, prepare this feature branch for squash/PR/merge against `main`.
+The repository now has no active item-read feature checkpoint. Future work must start as a separately approved checkpoint from the remaining backlog documented in `docs/continuity/CURRENT_TARGET.md`.
