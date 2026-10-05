@@ -1,5 +1,7 @@
 import '../nbt/minecraft_nbt.dart';
 import '../text/minecraft_text.dart';
+import 'info_item_attribute_modifier.dart';
+import 'info_item_attribute_modifier_nbt_parser.dart';
 import 'info_item_stack.dart';
 import 'info_potion_contents.dart';
 import 'info_potion_contents_nbt_parser.dart';
@@ -47,6 +49,8 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
     }) display = _optionalLegacyDisplay(tag);
     final MtnMinecraftInfoPotionContents? potionContents =
         _optionalLegacyPotionContents(tag);
+    final List<MtnMinecraftInfoItemAttributeModifier>? attributeModifiers =
+        _optionalLegacyAttributeModifiers(tag);
 
     if (damage == null &&
         repairCost == null &&
@@ -55,7 +59,8 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
         storedEnchantments == null &&
         display.customName == null &&
         display.lore == null &&
-        potionContents == null) {
+        potionContents == null &&
+        attributeModifiers == null) {
       return null;
     }
 
@@ -68,6 +73,7 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
       customName: display.customName,
       lore: display.lore,
       potionContents: potionContents,
+      attributeModifiers: attributeModifiers,
     );
   }
 
@@ -95,6 +101,7 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
       'minecraft:lore',
       'minecraft:potion_contents',
       'minecraft:potion_duration_scale',
+      'minecraft:attribute_modifiers',
     ];
     for (final String id in recognizedIds) {
       if (components.containsKey(id) && removedComponentIds.contains(id)) {
@@ -130,6 +137,11 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
       components,
       'minecraft:potion_duration_scale',
     );
+    final List<MtnMinecraftInfoItemAttributeModifier>? attributeModifiers =
+        _optionalModernAttributeModifiers(
+      components,
+      'minecraft:attribute_modifiers',
+    );
 
     if (damage == null &&
         repairCost == null &&
@@ -141,6 +153,7 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
         lore == null &&
         potionContents == null &&
         potionDurationScale == null &&
+        attributeModifiers == null &&
         removedComponentIds.isEmpty) {
       return null;
     }
@@ -156,8 +169,36 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
       lore: lore,
       potionContents: potionContents,
       potionDurationScale: potionDurationScale,
+      attributeModifiers: attributeModifiers,
       removedComponentIds: removedComponentIds,
     );
+  }
+
+  List<MtnMinecraftInfoItemAttributeModifier>?
+      _optionalLegacyAttributeModifiers(
+    Map<String, MtnMinecraftNbtValue> tag,
+  ) {
+    try {
+      return const MtnMinecraftInfoItemAttributeModifierNbtParser()
+          .parseLegacy(tag);
+    } on MtnMinecraftInfoItemAttributeModifierNbtParserException {
+      throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+    }
+  }
+
+  List<MtnMinecraftInfoItemAttributeModifier>?
+      _optionalModernAttributeModifiers(
+    Map<String, MtnMinecraftNbtValue> components,
+    String name,
+  ) {
+    final MtnMinecraftNbtValue? value = components[name];
+    if (value == null) return null;
+    try {
+      return const MtnMinecraftInfoItemAttributeModifierNbtParser()
+          .parseModern(value);
+    } on MtnMinecraftInfoItemAttributeModifierNbtParserException {
+      throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+    }
   }
 
   MtnMinecraftInfoPotionContents? _optionalLegacyPotionContents(

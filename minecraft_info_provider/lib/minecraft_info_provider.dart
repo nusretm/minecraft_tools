@@ -1,5 +1,6 @@
 library;
 
+export 'src/info/info_item_attribute_modifier.dart';
 export 'src/info/info_item_stack.dart';
 export 'src/info/info_known_server.dart';
 export 'src/info/info_mob_effect.dart';

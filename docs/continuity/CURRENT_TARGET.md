@@ -12,26 +12,26 @@ Last updated: 2026-10-05
 
 ## Active checkpoint
 
-Potion Item Properties Foundation.
+Item Attribute Modifiers Foundation.
 
 Feature branch:
 
 ```text
-feature/minecraft-item-potion-properties-foundation
+feature/minecraft-item-attribute-modifiers-foundation
 ```
 
 Base:
 
 ```text
 main
-9b7464e71aa2acdb993943795354ec0916a052f4
-Add player active effects foundation
+bcef38d20670e4265f26b1295bcadd1148ad28c9
+Add item potion properties foundation
 ```
 
 Package version:
 
 ```text
-1.0.0-dev.18
+1.0.0-dev.19
 ```
 
 Checkpoint state:
@@ -46,14 +46,14 @@ Authoritative local validation:
 dart analyze
 No issues found!
 
-dart test test/minecraft_item_potion_properties_test.dart
-+12: All tests passed!
+dart test test/minecraft_item_attribute_modifiers_test.dart
+00:01 +14: All tests passed!
 
-dart test test/minecraft_player_active_effects_test.dart
-+10: All tests passed!
+dart test test/minecraft_world_discovery_test.dart
+00:01 +20: All tests passed!
 
 dart test
-+201: All tests passed!
+00:03 +215: All tests passed!
 
 git diff --check origin/main...HEAD
 PASS
@@ -64,200 +64,292 @@ clean
 
 No `dart format` was run.
 
+Real-file smoke inspection against the local modded Java Edition game directory
+completed without parser/runtime failure, but no persisted item with explicit
+`AttributeModifiers` was found in the discovered inventory/equipment data.
+Therefore real legacy attribute-modifier payloads remain deterministic-test
+validated rather than real-file validated.
+
 No merge approval has been given for this checkpoint.
 
-## Public potion model
+## Public API
 
-New public API:
-
-```text
-MtnMinecraftInfoPotionContents
-```
-
-The model is deliberately shared rather than item-specific because Minecraft
-also reuses the potion-contents structure outside item stacks.
-
-Fields:
+New public item modifier model:
 
 ```text
-potion
-customColor
-customEffects
-customName
+MtnMinecraftInfoItemAttributeModifier
 ```
 
-`customEffects` is always an immutable list.
+Shared operation enum:
 
-Within an existing potion-contents value, absence of the persisted custom-effect
-list normalizes to an empty list.
+```text
+MtnMinecraftInfoAttributeModifierOperation
+  addValue
+  addMultipliedBase
+  addMultipliedTotal
+```
+
+Item-specific slot enum:
+
+```text
+MtnMinecraftInfoItemAttributeModifierSlot
+  any
+  hand
+  armor
+  mainHand
+  offHand
+  head
+  chest
+  legs
+  feet
+  body
+  saddle
+```
+
+Display API:
+
+```text
+MtnMinecraftInfoItemAttributeModifierDisplay
+MtnMinecraftInfoItemAttributeModifierDisplayType
+  defaultDisplay
+  hidden
+  override
+```
+
+`override` requires an `MtnMinecraftText` value. Default/hidden displays do
+not carry replacement text.
 
 ## Item integration
 
 `MtnMinecraftInfoItemStackComponents` now exposes:
 
 ```dart
-MtnMinecraftInfoPotionContents? potionContents
-double? potionDurationScale
+List<MtnMinecraftInfoItemAttributeModifier>? attributeModifiers
 ```
 
-The item-component model continues to represent explicitly persisted overrides,
-not effective Minecraft item-registry defaults.
-
-Therefore:
+Semantics:
 
 ```text
-potion component absent
-  -> potionContents == null
+attribute modifier property absent
+  -> attributeModifiers == null
 
-explicit minecraft:potion_contents={}
-  -> potionContents != null
-  -> customEffects == []
-
-potion_duration_scale absent
-  -> potionDurationScale == null
+explicit empty AttributeModifiers / minecraft:attribute_modifiers
+  -> immutable []
 ```
 
-The provider does not synthesize the implicit potion-content or duration-scale
-defaults of potion item types.
+The provider still models explicitly persisted item overrides only. It does not
+synthesize implicit item-registry attribute defaults such as weapon attack
+damage/speed.
 
-## Legacy potion storage
+## Modifier identity
 
-Pre-1.20.2 item tags are normalized from:
+Modern and legacy identity remain distinct.
+
+1.21+:
 
 ```text
-Potion
-CustomPotionColor
-CustomPotionEffects
+id
+  -> MtnMinecraftInfoItemAttributeModifier.id
 ```
 
-Legacy `CustomPotionEffects` entries use the shared legacy mob-effect parser
-with numeric effect identity.
-
-Minecraft 1.20.2 through 1.20.4 changed custom effects to:
+Pre-1.21:
 
 ```text
-custom_potion_effects
+UUID / uuid
+  -> legacyUuid
+
+Name / name
+  -> legacyName
 ```
 
-with modern mob-effect-instance field names and resource-location effect IDs.
+Legacy UUIDs are normalized to canonical lowercase hyphenated text.
 
-When both custom-effect names exist in the same legacy item tag:
+The provider deliberately does not convert a legacy UUID into a modern
+namespaced modifier ID. Minecraft's data-fixer upgrade rules are not reproduced
+as provider-side guesses.
+
+A semantic modifier instance must carry exactly one identity form:
 
 ```text
-custom_potion_effects
-  -> authoritative
+modern:
+  id != null
+  legacyUuid == null
+  legacyName == null
 
-CustomPotionEffects
-  -> ignored
+legacy:
+  id == null
+  legacyUuid != null
+  legacyName != null
 ```
 
-Malformed authoritative snake-case data does not fall back to the older list.
+Legacy human-readable names are preserved as strings, including an explicitly
+empty string.
 
-## Modern potion contents
+## Attribute identity
 
-1.20.5+ item components are normalized from:
+`attributeId` remains a raw non-empty external string.
+
+No closed vanilla attribute enum or registry lookup is introduced. This
+preserves vanilla, historical, future and modded attribute IDs without guessing
+renames or data-fixer behavior.
+
+## Legacy storage
+
+Legacy item tag:
 
 ```text
-minecraft:potion_contents
+AttributeModifiers
 ```
 
-Supported full fields:
+Recognized entry fields:
 
 ```text
-potion
-custom_color
-custom_effects
-custom_name
+AttributeName
+Name
+UUID
+Amount
+Operation
+Slot
 ```
 
-The modern component may also be read from the supported single-string potion
-ID shorthand.
+`UUID` uses Minecraft's four-int UUID representation.
 
-Potion and effect IDs remain arbitrary external strings; vanilla/future/modded
-IDs do not require a closed registry inside the provider.
+`Amount` is persisted as NBT double.
 
-`custom_name` remains a plain string because Minecraft uses it as a potion
-name/translation suffix. It is not a Minecraft text component.
-
-`custom_color` remains the persisted integer value; the provider does not
-introduce rendering/color abstractions in this checkpoint.
-
-## Potion duration scale
-
-1.21.5+:
+Legacy operation values normalize as:
 
 ```text
-minecraft:potion_duration_scale
+0 -> addValue
+1 -> addMultipliedBase
+2 -> addMultipliedTotal
 ```
 
-is exposed as nullable persisted `double`.
+Both byte and integer numeric operation representations are accepted.
 
-Recognized storage is a non-negative NBT float.
+Missing legacy `Slot` normalizes to `any`.
 
-The provider does not synthesize Minecraft's implicit default of 1.0 and does
-not apply the scale to stored custom-effect durations.
+## Modern 1.20.5 component storage
 
-## Shared mob-effect amplifier correction
-
-The previous shared mob-effect checkpoint supported the older NBT byte
-amplifier representation.
-
-Minecraft later corrected mob-effect amplifier NBT storage to integer and
-restricted the integer value to 0..127.
-
-The shared parser now accepts:
+Recognized component:
 
 ```text
-TAG_Byte
-  -> older persisted representation
-  -> normalized as unsigned byte
-
-TAG_Int
-  -> corrected/current representation
-  -> required range 0..127
+minecraft:attribute_modifiers
 ```
 
-This correction applies equally to:
+The parser accepts both 1.20.5 representations:
 
-- player active effects
-- potion custom effects
-- future domains reusing the shared mob-effect parser
+```text
+full:
+  {modifiers:[...]}
 
-Existing player active-effect coverage retains the older byte form and now also
-includes an integer-amplifier regression.
+direct:
+  [...]
+```
 
-## Authority rules
+Pre-1.21 modern entries use:
 
-Existing item metadata authority is unchanged:
+```text
+type
+uuid
+name
+amount
+operation
+slot
+```
+
+The historical `show_in_tooltip` wrapper field is intentionally not exposed
+as a public attribute-modifier API. Tooltip policy later belongs to the general
+`minecraft:tooltip_display` foundation.
+
+Unknown wrapper/entry metadata remains tolerated.
+
+## Current modifier storage
+
+1.21+ entries replace `uuid + name` with:
+
+```text
+id
+```
+
+If a current `id` is present it is authoritative for modifier identity;
+legacy `uuid` / `name` fields are not used as fallback.
+
+Modern operation tokens normalize as:
+
+```text
+add_value
+add_multiplied_base
+add_multiplied_total
+```
+
+Supported slots include single equipment slots and modern slot groups,
+including `body` and `saddle`.
+
+## 1.21.6+ display
+
+Optional entry field:
+
+```text
+display
+```
+
+Supported display compounds:
+
+```text
+{type:"default"}
+{type:"hidden"}
+{type:"override", value:<Minecraft text component>}
+```
+
+Override text uses the existing shared `MtnMinecraftText.fromNbt` path.
+
+Missing display metadata remains null rather than synthesizing the effective
+default display behavior.
+
+## UUID parser reuse
+
+New internal shared parser:
+
+```text
+MtnMinecraftInfoNbtUuidParser
+```
+
+It normalizes Minecraft's four-int UUID representation once for:
+
+- world `Data.singleplayer_uuid`
+- legacy item attribute modifier `UUID` / `uuid`
+
+The previous world-local four-int UUID conversion was replaced with this
+shared parser so UUID normalization has one implementation authority.
+
+## Item metadata authority
+
+Existing authority remains unchanged:
 
 ```text
 components present
-  -> modern components are authoritative
-  -> legacy tag is not consulted
+  -> modern components authoritative
+  -> legacy tag not consulted
 ```
 
-Therefore a legacy `Potion` tag does not fill a missing
-`minecraft:potion_contents` field when a modern `components` container is
-present.
-
-Modern component removal conflicts are schema-strict for:
+Recognized removal conflict:
 
 ```text
-minecraft:potion_contents
-minecraft:potion_duration_scale
+minecraft:attribute_modifiers
+!minecraft:attribute_modifiers
 ```
 
-A component and its `!component` removal marker cannot both be persisted.
+Both cannot be present simultaneously.
 
-Removal-only patches remain represented through the existing
-`removedComponentIds` authority.
+Removal-only patches remain represented by the existing
+`removedComponentIds` set.
 
 ## Parser boundary
 
 New internal parser:
 
 ```text
-MtnMinecraftInfoPotionContentsNbtParser
+MtnMinecraftInfoItemAttributeModifierNbtParser
 ```
 
 Dependency direction:
@@ -265,60 +357,64 @@ Dependency direction:
 ```text
 MtnMinecraftInfoItemStackComponentsNbtParser
         |
-        +-- MtnMinecraftInfoPotionContentsNbtParser
+        +-- MtnMinecraftInfoItemAttributeModifierNbtParser
                     |
-                    +-- MtnMinecraftInfoMobEffectNbtParser
+                    +-- MtnMinecraftInfoNbtUuidParser
+                    +-- MtnMinecraftText
 ```
 
-Potion parsing contains nested mob-effect parse failures and exposes only its
-own parser exception to the item-component parser.
+Recognized malformed modifier data is translated through the existing
+item/player invalid-data path.
 
-The shared potion model/parser can therefore be reused by another persisted
-domain later without making that domain depend on item-stack parsing.
+Unknown modifier metadata remains tolerated.
 
 ## Query tool
 
-Existing item-property smoke output now also reports:
+Existing item-property output now includes bounded modifier previews:
 
 ```text
-potion=<id|null>
-potionColor=<int|null>
-potionCustomEffects=<count|null>
-potionCustomName=<string|null>
-potionDurationScale=<double|null>
+attributeModifiers=[
+  attributeId:modifierIdentity:amount:operation:slot:displayType,
+  ...
+]
 ```
 
-This applies to inventory, ender-chest and equipment item previews through the
-existing shared item-property formatter.
+The preview is capped at three modifier entries and is shared by inventory,
+ender-chest and equipment item output.
 
 ## Deterministic coverage added
 
 New focused file:
 
 ```text
-test/minecraft_item_potion_properties_test.dart
+test/minecraft_item_attribute_modifiers_test.dart
 ```
 
 Coverage includes:
 
-- pre-1.20.2 `Potion`, `CustomPotionColor`, `CustomPotionEffects`
-- 1.20.2 through 1.20.4 `custom_potion_effects`
-- modern potion-contents compound
-- modern string shorthand
-- modern `custom_name`
-- arbitrary modded potion/effect IDs
-- modern integer mob-effect amplifier
-- explicit empty potion contents
-- immutable custom-effect list
+- legacy attribute ID/name/UUID/amount/operation/slot
+- canonical UUID normalization including signed int-array words
+- byte and integer legacy operation storage
+- missing slot -> `any`
+- 1.20.5 full wrapper form
+- 1.20.5 direct-list form
+- legacy identity inside modern component storage
+- 1.21+ namespaced modifier IDs
+- arbitrary modded attribute/modifier IDs
+- group/body/saddle slots
+- current-ID authority over legacy identity fields
+- 1.21.6 default/hidden/override display metadata
+- shared Minecraft text for display override
+- absent-versus-explicitly-empty semantics
+- immutable modifier lists
 - modern item-component authority
-- snake-case custom-effect authority
-- malformed authoritative data without fallback
 - component removals and removal conflicts
-- non-negative potion duration scale
-- malformed recognized legacy/modern potion properties
+- unknown metadata tolerance
+- malformed recognized legacy data
+- malformed recognized modern data
 
-Existing player active-effect tests gain a regression for the corrected integer
-amplifier representation and reject integer amplifier values above 127.
+Existing singleplayer UUID tests also exercise the shared UUID parser after the
+internal refactor.
 
 ## Validation
 
@@ -329,14 +425,14 @@ Authoritative local validation completed from
 dart analyze
 No issues found!
 
-dart test test/minecraft_item_potion_properties_test.dart
-00:01 +12: All tests passed!
+dart test test/minecraft_item_attribute_modifiers_test.dart
+00:01 +14: All tests passed!
 
-dart test test/minecraft_player_active_effects_test.dart
-00:00 +10: All tests passed!
+dart test test/minecraft_world_discovery_test.dart
+00:01 +20: All tests passed!
 
 dart test
-00:03 +201: All tests passed!
+00:03 +215: All tests passed!
 ```
 
 Repository-root validation:
@@ -351,64 +447,83 @@ clean
 
 No `dart format` was run.
 
+Real-file smoke command:
+
+```powershell
+dart run tool/query_minecraft_worlds.dart --game-directory "$env:APPDATA\.minecraft" |
+    Select-String 'attributeModifiers=\['
+```
+
+The command completed with no matching output. The discovered real items did not
+persist explicit attribute modifiers, so no real legacy modifier payload was
+available to inspect. This is not a parser failure; automated deterministic
+coverage remains the authority for the attribute-modifier formats in this
+checkpoint.
+
 ## Previous completed checkpoint
 
-Player Active Effects / Shared Mob Effect Foundation was validated, squash
-merged through PR #9, and cleaned up.
+Potion Item Properties Foundation was validated, squash merged through PR #10,
+and cleaned up.
 
 Merged main HEAD:
 
 ```text
-9b7464e71aa2acdb993943795354ec0916a052f4
+bcef38d20670e4265f26b1295bcadd1148ad28c9
 ```
 
 Package version at that checkpoint:
 
 ```text
-1.0.0-dev.17
+1.0.0-dev.18
 ```
 
 Authoritative handoff:
 
 ```text
-docs/continuity/HANDOFF_2026-10-05_MINECRAFT_INFO_PROVIDER_PLAYER_ACTIVE_EFFECTS.md
+docs/continuity/HANDOFF_2026-10-05_MINECRAFT_INFO_PROVIDER_ITEM_POTION_PROPERTIES.md
 ```
 
 Locked decisions retained:
 
-- `MtnMinecraftInfoMobEffect` is shared rather than player-specific
-- modern resource-location and legacy numeric identities are preserved
-- no registry guessing for legacy IDs
-- recursive hidden effects share the same model
-- unknown effect metadata is tolerated
-- recognized malformed effect data remains strict
-- player active-effects modern storage remains authoritative
-
-The amplifier storage correction in this active checkpoint supersedes only the
-previous parser's byte-only amplifier assumption; the public model and other
-locked decisions remain unchanged.
+- `MtnMinecraftInfoPotionContents` is reusable rather than item-specific
+- item components represent persisted overrides rather than registry defaults
+- modern components remain authoritative over legacy item tags
+- shared mob-effect parsing is reused for potion custom effects
+- current integer and older byte amplifier storage remain supported
+- registry/effective potion semantics remain outside the provider foundation
 
 ## Explicitly deferred
 
-Potion/effect semantics:
+Attribute semantics:
 
-- potion ID -> effective vanilla/modded effect resolution
-- potion/effect registries
-- brewing recipes
-- effective potion color calculation
-- generated/localized potion display names
-- applying duration scale to effective durations
-- tipped-arrow or lingering-potion runtime duration behavior
-- runtime attribute/effect calculations
-- effect/potion writing
+- effective item-registry default attribute modifiers
+- final/effective attribute-value calculations
+- attribute registry/catalog lookup
+- modifier-ID data-fixer emulation
+- tooltip formatting/calculated modifier text
+- general `minecraft:tooltip_display` parsing
+- attribute modifier writing
 
 Other item properties:
 
 - custom model data
-- attribute modifiers
 - nested containers / bundle-like contents
 - custom data
 - item writing
+
+Potion/effect semantics:
+
+- potion/effect registries
+- effective base-effect resolution
+- brewing recipes
+- effective potion color/name/duration calculation
+- runtime potion/effect behavior
+- potion/effect writing
+
+Provider/player:
+
+- pre-26.1 embedded `Data.Player` singleplayer identity handling
+- installed-content discovery
 
 Text/runtime:
 
@@ -422,11 +537,6 @@ Text/runtime:
 - clickEvent
 - hoverEvent
 - richer interactive text semantics
-
-Provider/player:
-
-- pre-26.1 embedded `Data.Player` singleplayer identity handling
-- installed-content discovery
 
 ## Development rules
 
@@ -444,7 +554,8 @@ In particular:
 
 ## Next action
 
-Checkpoint implementation and automated validation are complete.
+Checkpoint implementation, automated validation and available real-file smoke
+inspection are complete.
 
 Create/finalize the checkpoint handoff, then prepare the feature branch for
 review/squash/PR/merge only after explicit user approval. Do not begin another

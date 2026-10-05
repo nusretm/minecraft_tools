@@ -472,7 +472,7 @@ String _itemProperties(MtnMinecraftInfoItemStack item) {
         'enchantments=null storedEnchantments=null '
         'potion=null potionColor=null potionCustomEffects=null '
         'potionCustomName=null potionDurationScale=null '
-        'removedComponents=null';
+        'attributeModifiers=null removedComponents=null';
   }
 
   return 'damage=${components.damage} '
@@ -485,7 +485,31 @@ String _itemProperties(MtnMinecraftInfoItemStack item) {
       'potionCustomEffects=${components.potionContents?.customEffects.length} '
       'potionCustomName=${components.potionContents?.customName} '
       'potionDurationScale=${components.potionDurationScale} '
+      'attributeModifiers=${_attributeModifierPreview(components.attributeModifiers)} '
       'removedComponents=${_setPreview(components.removedComponentIds)}';
+}
+
+String _attributeModifierPreview(
+  List<MtnMinecraftInfoItemAttributeModifier>? modifiers,
+) {
+  if (modifiers == null) return 'null';
+  if (modifiers.isEmpty) return '[]';
+
+  const int previewLimit = 3;
+  final List<String> preview = <String>[
+    for (final MtnMinecraftInfoItemAttributeModifier modifier
+        in modifiers.take(previewLimit))
+      '${modifier.attributeId}:'
+      '${modifier.id ?? modifier.legacyUuid}:'
+      '${modifier.amount}:'
+      '${modifier.operation.name}:'
+      '${modifier.slot.name}:'
+      '${modifier.display?.type.name}',
+  ];
+  if (modifiers.length > previewLimit) {
+    preview.add('+${modifiers.length - previewLimit}');
+  }
+  return '[${preview.join(',')}]';
 }
 
 String _mapPreview(Map<String, int>? values) {
