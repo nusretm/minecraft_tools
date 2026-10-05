@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import '../nbt/minecraft_nbt.dart';
+import 'info_mob_effect.dart';
+import 'info_mob_effect_nbt_parser.dart';
 import 'info_player.dart';
 import 'info_player_inventory_nbt_parser.dart';
 
@@ -23,10 +25,29 @@ final class MtnMinecraftInfoPlayerNbtParser {
 
     final Map<String, MtnMinecraftNbtValue> data = document.root.asCompound;
     late final MtnMinecraftInfoPlayerInventoryData inventoryData;
+    late final List<MtnMinecraftInfoMobEffect>? activeEffects;
     try {
       inventoryData =
           const MtnMinecraftInfoPlayerInventoryNbtParser().parse(data);
+
+      final MtnMinecraftNbtValue? modernEffects = data['active_effects'];
+      final MtnMinecraftNbtValue? legacyEffects = data['ActiveEffects'];
+      if (modernEffects != null) {
+        activeEffects = const MtnMinecraftInfoMobEffectNbtParser().parseList(
+          modernEffects,
+          modern: true,
+        );
+      } else if (legacyEffects != null) {
+        activeEffects = const MtnMinecraftInfoMobEffectNbtParser().parseList(
+          legacyEffects,
+          modern: false,
+        );
+      } else {
+        activeEffects = null;
+      }
     } on MtnMinecraftInfoPlayerInventoryNbtParserException {
+      throw const MtnMinecraftInfoPlayerNbtParserException();
+    } on MtnMinecraftInfoMobEffectNbtParserException {
       throw const MtnMinecraftInfoPlayerNbtParserException();
     }
 
@@ -52,6 +73,7 @@ final class MtnMinecraftInfoPlayerNbtParser {
       selectedItemSlot: _optionalSelectedItemSlot(data),
       respawn: _optionalRespawn(data),
       lastDeath: _optionalLastDeath(data),
+      activeEffects: activeEffects,
       inventory: inventoryData.inventory,
       enderChest: inventoryData.enderChest,
       equipment: inventoryData.equipment,

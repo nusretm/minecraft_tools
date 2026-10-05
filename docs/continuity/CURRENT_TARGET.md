@@ -12,26 +12,26 @@ Last updated: 2026-10-05
 
 ## Active checkpoint
 
-Java Edition 26.1+ Singleplayer UUID Relationship Foundation.
+Player Active Effects / Shared Mob Effect Foundation.
 
 Feature branch:
 
 ```text
-feature/minecraft-singleplayer-uuid-foundation
+feature/minecraft-player-active-effects-foundation
 ```
 
 Base:
 
 ```text
 main
-4887a13138ecb7dfa87c44061e968d513e731a65
-Add Minecraft text and item display foundation
+d6ba63614a10eb9a8266e8ed0d93895b1944f175
+Add Minecraft singleplayer UUID relationship foundation
 ```
 
 Package version:
 
 ```text
-1.0.0-dev.16
+1.0.0-dev.17
 ```
 
 Checkpoint state:
@@ -46,11 +46,11 @@ Authoritative local validation:
 dart analyze
 No issues found!
 
-dart test test/minecraft_world_discovery_test.dart
-+20: All tests passed!
+dart test test/minecraft_player_active_effects_test.dart
++9: All tests passed!
 
 dart test
-+179: All tests passed!
++188: All tests passed!
 
 git diff --check origin/main...HEAD
 PASS
@@ -63,136 +63,207 @@ No `dart format` was run.
 
 No merge approval has been given for this checkpoint.
 
-## Scope
+## Shared mob-effect model
 
-Minecraft Java Edition 26.1 replaced the embedded singleplayer `Player` tag
-in `level.dat` with:
+Public API:
 
 ```text
-Data.singleplayer_uuid
+MtnMinecraftInfoMobEffect
+MtnMinecraftInfoMobEffectId
 ```
 
-This checkpoint handles only that modern relationship.
+The model is deliberately shared rather than player-specific because the same
+persisted mob-effect-instance structure is also used by Minecraft item potion
+data.
 
-It does not add pre-26.1 embedded `Data.Player` parsing or any compatibility
-shim.
+`MtnMinecraftInfoMobEffect` contains:
 
-## World singleplayer identity
+```text
+id
+amplifier
+duration
+ambient
+showParticles
+showIcon
+hiddenEffect
+```
 
-`MtnMinecraftInfoWorld` now exposes:
+`hiddenEffect` is recursive and uses the same semantic model.
+
+## Mob-effect identity
+
+`MtnMinecraftInfoMobEffectId` preserves the actual persisted identity source:
+
+```text
+1.20.2+ resource-location ID
+  -> resourceLocation
+
+pre-1.20.2 numeric registry ID
+  -> legacyNumeric
+```
+
+The provider does not guess a resource-location string for numeric legacy IDs.
+This avoids falsely mapping modded legacy registry values without registry
+context.
+
+Legacy byte IDs are normalized as unsigned byte values. Legacy integer IDs are
+preserved as non-negative integers.
+
+## Shared NBT parser
+
+Internal parser:
+
+```text
+MtnMinecraftInfoMobEffectNbtParser
+```
+
+The parser is independent from the player model so later item potion parsing
+can reuse the same mob-effect-instance normalization.
+
+Supported legacy fields:
+
+```text
+Id
+Amplifier
+Duration
+Ambient
+ShowParticles
+ShowIcon
+HiddenEffect
+```
+
+Supported modern fields:
+
+```text
+id
+amplifier
+duration
+ambient
+show_particles
+show_icon
+hidden_effect
+```
+
+Modern resource IDs remain arbitrary non-empty external strings so vanilla,
+future and modded namespaces do not require a closed registry in the provider.
+
+## Default normalization
+
+Minecraft 1.20.5 stopped encoding several default mob-effect values. Missing
+effect fields therefore normalize semantically rather than becoming nullable:
+
+```text
+amplifier     -> 0
+duration      -> 0
+ambient       -> false
+showParticles -> true
+showIcon      -> true
+```
+
+Duration remains the persisted tick value and may be negative where Minecraft
+uses a special persisted meaning.
+
+The provider does not add convenience interpretation such as seconds,
+localized names or computed effect levels in this foundation.
+
+## Player integration
+
+`MtnMinecraftInfoPlayer` now exposes:
 
 ```dart
-String? singleplayerUuid
-MtnMinecraftInfoPlayer? get singleplayerPlayer
+List<MtnMinecraftInfoMobEffect>? activeEffects
 ```
 
-Authority rule:
+Semantics:
 
 ```text
-singleplayerUuid
-  -> canonical persisted authority from level.dat
+effect-list field absent
+  -> activeEffects == null
 
-singleplayerPlayer
-  -> derived lookup over world.players
+effect-list field explicitly empty
+  -> immutable empty list
 ```
 
-The player object is deliberately not stored as a second authority.
-
-## UUID normalization
-
-The recognized modern storage shape is:
+Storage normalization:
 
 ```text
-Data.singleplayer_uuid
-  -> TAG_Int_Array
-  -> exactly four signed 32-bit integers
+legacy:
+  ActiveEffects
+
+modern:
+  active_effects
 ```
 
-The four integers are interpreted as the standard 128-bit Minecraft UUID
-representation and normalized to canonical lowercase hyphenated text:
+When both forms exist, modern `active_effects` is authoritative.
+
+A malformed modern field does not silently fall back to otherwise valid legacy
+data.
+
+## Strictness and tolerance
+
+Recognized effect schema remains strict:
+
+- effect ID is required
+- modern ID must be a non-empty string
+- legacy ID must be a byte or integer numeric ID
+- amplifier must use the expected byte representation
+- duration must be an integer
+- booleans must be byte 0 or 1
+- hidden effect must be a compound
+- effect list must be a compound list
+
+Unknown effect metadata remains tolerated.
+
+Deprecated/removed metadata such as `factor_calculation_data` is not modeled
+but does not invalidate an otherwise valid effect instance.
+
+Malformed recognized active-effect data is normalized to the existing
+player-local:
 
 ```text
-00112233-4455-6677-8899-aabbccddeeff
+MtnMinecraftInfoPlayerError.invalidData
 ```
-
-A present recognized tag with the wrong NBT type or wrong array length is
-world-local invalid data.
-
-## Relationship semantics
-
-When `singleplayerUuid` is absent:
-
-```text
-singleplayerUuid   == null
-singleplayerPlayer == null
-```
-
-When the UUID is present and its player snapshot is discovered:
-
-```text
-singleplayerUuid
-  -> retained canonical UUID
-
-singleplayerPlayer
-  -> the same MtnMinecraftInfoPlayer instance contained by world.players
-```
-
-When the UUID is present but the referenced player snapshot is unavailable:
-
-```text
-singleplayerUuid
-  -> still retained
-
-singleplayerPlayer
-  -> null
-```
-
-The provider does not fabricate a player and does not invalidate an otherwise
-valid world merely because the referenced player file is missing.
-
-Existing player-discovery authority remains unchanged:
-
-```text
-pre-26.1  playerdata/<uuid>.dat
-26.1+     players/data/<uuid>.dat
-modern duplicate UUID candidate wins
-```
-
-The derived relationship is UUID-based and therefore reuses the existing player
-snapshot/discovery model rather than adding another player reader.
-
-## Parser boundary
-
-World parsing remains in the existing world schema path inside
-`info_provider.dart`.
-
-The checkpoint adds only the UUID field normalization required by the existing
-world model. It does not introduce a new provider, registry or parallel world
-parser.
 
 ## Query tool
 
 `tool/query_minecraft_worlds.dart` now reports:
 
 ```text
-singleplayerUuid=<uuid|null>
-singleplayerPlayer=<resolved uuid|null>
+PLAYER_EFFECTS ... missing=true
 ```
 
-This allows real 26.1+ saves to verify both the persisted reference and player
-snapshot resolution.
+or:
+
+```text
+PLAYER_EFFECTS ... count=<n>
+PLAYER_EFFECT ... id=<id> amplifier=<n> duration=<ticks> ...
+```
+
+Effect detail output is bounded to ten entries, consistent with existing query
+tool preview behavior.
 
 ## Deterministic coverage added
 
-`minecraft_world_discovery_test.dart` now covers:
+New focused test file:
 
-- absent singleplayer UUID
-- valid four-int UUID normalization
-- resolution to the exact discovered player snapshot
-- persisted UUID with missing player snapshot
-- wrong NBT type
-- wrong UUID array length
-- world-local `invalidData` behavior for malformed recognized values
+```text
+test/minecraft_player_active_effects_test.dart
+```
+
+Coverage includes:
+
+- absent active-effect list
+- modern resource IDs
+- modded resource IDs
+- recursive hidden effects
+- modern omitted-default normalization
+- explicit empty-list semantics and immutability
+- legacy integer IDs
+- older legacy byte IDs
+- modern-over-legacy authority
+- malformed-modern no-fallback behavior
+- malformed recognized effect fields
+- unknown/future effect metadata tolerance
 
 ## Validation
 
@@ -203,11 +274,11 @@ Authoritative local validation completed from
 dart analyze
 No issues found!
 
-dart test test/minecraft_world_discovery_test.dart
-00:00 +20: All tests passed!
+dart test test/minecraft_player_active_effects_test.dart
+00:00 +9: All tests passed!
 
 dart test
-00:02 +179: All tests passed!
+00:03 +188: All tests passed!
 ```
 
 Repository-root validation:
@@ -224,39 +295,64 @@ No `dart format` was run.
 
 ## Previous completed checkpoint
 
-Minecraft Text / Item Display Properties Foundation was completed and squash
-merged through PR #7.
+Java Edition 26.1+ Singleplayer UUID Relationship Foundation was validated,
+squash merged through PR #8, and cleaned up.
 
 Merged main HEAD:
 
 ```text
-4887a13138ecb7dfa87c44061e968d513e731a65
+d6ba63614a10eb9a8266e8ed0d93895b1944f175
 ```
 
 Package version at that checkpoint:
 
 ```text
-1.0.0-dev.15
+1.0.0-dev.16
 ```
 
-Its authoritative handoff remains:
+Authoritative handoff:
 
 ```text
-docs/continuity/HANDOFF_2026-10-05_MINECRAFT_INFO_PROVIDER_TEXT_ITEM_DISPLAY.md
+docs/continuity/HANDOFF_2026-10-05_MINECRAFT_INFO_PROVIDER_SINGLEPLAYER_UUID.md
 ```
 
-Locked text decisions remain unchanged:
+Its locked decisions remain:
 
-- `MtnMinecraftText.text` is the canonical mutable authority.
-- `plainText` is the static visible projection.
-- `items` is immutable render-ready semantic span data.
-- JSON/NBT conversion does not retain a second original-document authority.
-- `translate/fallback/with` semantics are preserved.
-- runtime `keybind`, selector, NBT-path and unresolved-score evaluation are
-  still outside the provider foundation.
-- item custom-name/item-name/lore reuse the global text model.
+- `singleplayerUuid` is the persisted authority
+- `singleplayerPlayer` is derived from `world.players`
+- 26.1+ four-int UUID data normalizes to canonical lowercase UUID text
+- missing referenced player snapshots do not fabricate a player
+- pre-26.1 embedded `Data.Player` handling remains separate
+
+## Existing locked foundations
+
+- Minecraft text uses `MtnMinecraftText.text` as canonical mutable authority.
+- Server MOTD and item display text share the global text model.
+- Item components preserve modern-over-legacy authority.
+- Player inventory/equipment use the shared item-stack parser.
+- Player storage uses modern-over-legacy UUID precedence.
+- Stats and advancements remain on-demand player-owned resources.
+- World snapshots own immutable discovered player lists.
 
 ## Explicitly deferred
+
+Mob effects / items:
+
+- potion base-effect resolution
+- `minecraft:potion_contents` parsing
+- custom potion color
+- effect registry/catalog lookup
+- numeric legacy effect ID to resource-location lookup
+- effect display names/localization
+- effect icon/color lookup
+- duration formatting
+- runtime attribute/effect calculation
+- effect writing
+- custom model data
+- attribute modifiers
+- nested containers / bundle-like contents
+- custom data
+- item writing
 
 Text/runtime:
 
@@ -271,15 +367,8 @@ Text/runtime:
 - hoverEvent
 - richer interactive text semantics
 
-Item/player/provider:
+Provider/player:
 
-- custom model data
-- attribute modifiers
-- potion-specific properties
-- nested containers / bundle-like contents
-- custom data
-- item writing
-- player active effects
 - pre-26.1 embedded `Data.Player` singleplayer identity handling
 - installed-content discovery
 

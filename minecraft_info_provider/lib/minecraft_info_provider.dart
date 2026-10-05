@@ -2,6 +2,7 @@ library;
 
 export 'src/info/info_item_stack.dart';
 export 'src/info/info_known_server.dart';
+export 'src/info/info_mob_effect.dart';
 export 'src/info/info_player.dart';
 export 'src/info/info_player_advancements.dart';
 export 'src/info/info_player_stats.dart';
