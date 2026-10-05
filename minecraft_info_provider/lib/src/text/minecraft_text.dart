@@ -423,9 +423,9 @@ final class MtnMinecraftTextItem {
 /// [plainText] and [items] results.
 final class MtnMinecraftText {
   MtnMinecraftText({
-    required this.text,
+    required String text,
     this.baseStyle = MtnMinecraftTextStyle.defaults,
-  });
+  }) : _text = text;
 
   factory MtnMinecraftText.fromItems(
     Iterable<MtnMinecraftTextItem> items,
@@ -462,7 +462,13 @@ final class MtnMinecraftText {
     );
   }
 
-  String text;
+  String _text;
+
+  String get text => _text;
+
+  set text(String value) {
+    _text = value;
+  }
 
   /// Effective starting style for source text before any formatting code.
   final MtnMinecraftTextStyle baseStyle;
