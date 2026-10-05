@@ -114,8 +114,12 @@ void main() {
         components.itemName?.items.single.color,
         MtnMinecraftTextColor.aqua,
       );
-      expect(components.lore?.map((MtnMinecraftText line) => line.plainText),
-          <String>['Lore A', 'Lore B']);
+      expect(
+        components.lore
+            ?.map((MtnMinecraftText line) => line.plainText)
+            .toList(growable: false),
+        <String>['Lore A', 'Lore B'],
+      );
       expect(components.lore?[1].items.single.underlined, isTrue);
     });
 

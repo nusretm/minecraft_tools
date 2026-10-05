@@ -250,7 +250,7 @@ void main() {
       expect(status.state, MtnMinecraftInfoServerState.online);
       expect(status.host, InternetAddress.loopbackIPv4.address);
       expect(status.port, fixture.port);
-      expect(status.motd, 'SRV target');
+      expect(status.motd?.plainText, 'SRV target');
     });
 
     test('explicit port skips Minecraft SRV lookup', () async {
@@ -341,7 +341,7 @@ void main() {
 
       expect(status.state, MtnMinecraftInfoServerState.online);
       expect(status.port, fixture.port);
-      expect(status.motd, 'Second SRV target');
+      expect(status.motd?.plainText, 'Second SRV target');
     });
 
     test('SRV target dot marks the service unavailable', () async {

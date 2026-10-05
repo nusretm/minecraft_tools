@@ -69,10 +69,11 @@ final class MtnMinecraftTextComponentParser {
     if (value is Map<Object?, Object?>) {
       final Map<String, Object?> object = <String, Object?>{};
       for (final MapEntry<Object?, Object?> entry in value.entries) {
-        if (entry.key is! String) {
+        final Object? key = entry.key;
+        if (key is! String) {
           throw const MtnMinecraftTextComponentParserException();
         }
-        object[entry.key! as String] = entry.value;
+        object[key] = entry.value;
       }
       _appendObject(object, parentStyle, result);
       return;
