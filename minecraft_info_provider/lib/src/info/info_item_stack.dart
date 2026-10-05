@@ -1,4 +1,5 @@
 import '../text/minecraft_text.dart';
+import 'info_item_attribute_modifier.dart';
 import 'info_potion_contents.dart';
 
 /// Normalized persisted item-stack component overrides.
@@ -17,6 +18,7 @@ final class MtnMinecraftInfoItemStackComponents {
     Iterable<MtnMinecraftText>? lore,
     this.potionContents,
     this.potionDurationScale,
+    Iterable<MtnMinecraftInfoItemAttributeModifier>? attributeModifiers,
     Iterable<String> removedComponentIds = const <String>[],
   })  : enchantments = enchantments == null
             ? null
@@ -27,6 +29,11 @@ final class MtnMinecraftInfoItemStackComponents {
         lore = lore == null
             ? null
             : List<MtnMinecraftText>.unmodifiable(lore),
+        attributeModifiers = attributeModifiers == null
+            ? null
+            : List<MtnMinecraftInfoItemAttributeModifier>.unmodifiable(
+                attributeModifiers,
+              ),
         removedComponentIds =
             Set<String>.unmodifiable(removedComponentIds);
 
@@ -72,6 +79,12 @@ final class MtnMinecraftInfoItemStackComponents {
   /// Null means the component was absent and the provider does not synthesize
   /// Minecraft's registry/default value.
   final double? potionDurationScale;
+
+  /// Explicitly persisted item attribute modifiers.
+  ///
+  /// Null means no attribute-modifier override was persisted. An empty
+  /// immutable list means the property was explicitly persisted as empty.
+  final List<MtnMinecraftInfoItemAttributeModifier>? attributeModifiers;
 
   /// Component IDs explicitly removed by a modern item component patch.
   ///

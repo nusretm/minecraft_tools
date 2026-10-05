@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.0.0-dev.19
+
+Item attribute modifiers foundation.
+
+- Added public `MtnMinecraftInfoItemAttributeModifier`,
+  `MtnMinecraftInfoAttributeModifierOperation`,
+  `MtnMinecraftInfoItemAttributeModifierSlot`,
+  `MtnMinecraftInfoItemAttributeModifierDisplay` and display-type APIs.
+- Added nullable immutable
+  `MtnMinecraftInfoItemStackComponents.attributeModifiers` with
+  absent-versus-explicitly-empty semantics.
+- Normalized legacy `AttributeModifiers` item-tag entries including
+  attribute identity, UUID, human-readable name, amount, operation and slot.
+- Preserved legacy modifier UUID/name identity separately instead of guessing
+  a modern namespaced modifier ID.
+- Added 1.20.5-era `minecraft:attribute_modifiers` full-object and
+  direct-list parsing, including legacy UUID/name modifier identity.
+- Added 1.21+ namespaced modifier `id` parsing with arbitrary vanilla,
+  future and modded attribute/modifier IDs.
+- Normalized legacy numeric operations and modern named operations to one
+  semantic enum.
+- Added slot normalization for `any`, `hand`, `armor`, main/off-hand,
+  armor slots, `body` and `saddle`.
+- Added 1.21.6+ modifier display metadata with default, hidden and text
+  override behavior through the shared `MtnMinecraftText` model.
+- Preserved modern item-component authority and component-removal conflict
+  handling for `minecraft:attribute_modifiers`.
+- Extracted the four-int Minecraft UUID parser so world singleplayer UUIDs and
+  legacy item modifier UUIDs share one internal normalization path.
+- Extended item query output with a bounded attribute-modifier preview.
+- Added focused deterministic attribute-modifier coverage.
+- Kept effective item-registry defaults, attribute calculations,
+  `tooltip_display`, writing and registry lookup outside this checkpoint.
+
 ## 1.0.0-dev.18
 
 Potion item properties foundation.

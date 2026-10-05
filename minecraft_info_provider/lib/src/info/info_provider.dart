@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'package:path/path.dart' as p;
 
 import '../nbt/minecraft_nbt.dart';
+import 'info_nbt_uuid_parser.dart';
 import 'info_player.dart';
 import 'info_player_advancements.dart';
 import 'info_player_nbt_parser.dart';
@@ -1275,22 +1276,11 @@ String? _optionalWorldUuid(
 ) {
   final MtnMinecraftNbtValue? value = data[name];
   if (value == null) return null;
-  if (value.type != MtnMinecraftNbtType.intArray ||
-      value.asIntArray.length != 4) {
+  try {
+    return const MtnMinecraftInfoNbtUuidParser().parse(value);
+  } on MtnMinecraftInfoNbtUuidParserException {
     throw const _InvalidWorldData();
   }
-
-  final String digits = value.asIntArray
-      .map(
-        (int part) =>
-            (part & 0xffffffff).toRadixString(16).padLeft(8, '0'),
-      )
-      .join();
-  return '${digits.substring(0, 8)}-'
-      '${digits.substring(8, 12)}-'
-      '${digits.substring(12, 16)}-'
-      '${digits.substring(16, 20)}-'
-      '${digits.substring(20)}';
 }
 
 MtnMinecraftInfoWorldVersion? _optionalWorldVersion(
