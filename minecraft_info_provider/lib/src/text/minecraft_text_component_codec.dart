@@ -203,25 +203,25 @@ final class _MtnMinecraftTextComponentCodec {
   }
 
   String? _contentFallback(Map<String, Object?> object) {
-    for (final String key in <String>['keybind', 'selector', 'nbt']) {
-      final Object? value = object[key];
-      if (value == null) continue;
-      if (value is! String) {
-        throw FormatException('Invalid Minecraft text component $key');
-      }
-      return value;
-    }
-
     final Object? score = object['score'];
     if (score != null) {
       if (score is! Map<Object?, Object?>) {
         throw const FormatException('Invalid Minecraft text component score');
       }
       final Object? value = score['value'];
-      if (value is String) return value;
-      final Object? name = score['name'];
-      if (name is String) return name;
+      if (value != null && value is! String) {
+        throw const FormatException('Invalid Minecraft text component score value');
+      }
+      return value as String?;
     }
+
+    for (final String key in <String>['keybind', 'selector', 'nbt']) {
+      final Object? value = object[key];
+      if (value != null && value is! String) {
+        throw FormatException('Invalid Minecraft text component $key');
+      }
+    }
+
     return null;
   }
 
