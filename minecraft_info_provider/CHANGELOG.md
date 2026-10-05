@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.0.0-dev.15
+
+Minecraft text and item display properties foundation.
+
+- Added global Pure Dart `MtnMinecraftText`, `MtnMinecraftTextItem`,
+  `MtnMinecraftTextStyle`, `MtnMinecraftTextColor` and
+  `MtnMinecraftTextFormat` APIs.
+- Added classic named colors, arbitrary RGB colors, section-sign parsing,
+  render-ready style spans, plain-text projection and canonical text
+  serialization.
+- Made `MtnMinecraftText.text` the authoritative mutable source through a
+  getter/setter contract; changing it invalidates imported semantic component
+  metadata.
+- Added Minecraft JSON Text Component and NBT Text Component import/export,
+  including 1.20.5-era JSON strings and direct inline NBT component values.
+- Added semantic `translate`, `fallback` and `with` preservation so
+  translated components can round-trip through `toJson()` and `toNbt()`.
+- Made translated argument lists immutable snapshots and preserved explicit
+  inherited-style overrides during serialization.
+- Kept unresolved dynamic `keybind`, `selector`, `nbt` and unresolved
+  `score` components from being exposed as fake visible text; an explicit
+  stored `score.value` remains usable as visible text.
+- Changed server status MOTD from a raw string to `MtnMinecraftText` while
+  preserving plain MOTD output in `toMap()`.
+- Added item display text normalization:
+  `MtnMinecraftInfoItemStackComponents.customName`,
+  `itemName` and immutable nullable `lore`.
+- Normalized legacy `tag.display.Name` / `tag.display.Lore` and modern
+  `minecraft:custom_name`, `minecraft:item_name` and `minecraft:lore`
+  through the shared text model.
+- Preserved modern-component authority, explicit empty lore semantics and
+  component-removal conflict validation.
+- Added focused Minecraft text and item-display tests; final validation reached
+  176/176 passing tests with clean analyzer and `git diff --check` output.
+- No `dart format` was run.
+
 ## 1.0.0-dev.14
 
 Java Edition item core properties foundation.

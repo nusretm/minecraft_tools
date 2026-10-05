@@ -6,231 +6,260 @@ Last updated: 2026-10-05
 
 - Repository: `nusretm/minecraft_tools`
 - Local path: `D:\development\cross-platform\minecraft_tools`
-- Repository layout:
-  - `hypixel_api/` — unrelated to the current Minecraft info work
-  - `minecraft_info_provider/` — current package
-- Do not modify `hypixel_api/` for `minecraft_info_provider` checkpoints.
+- Current package: `minecraft_info_provider/`
+- `hypixel_api/` is unrelated and must not be modified for these checkpoints.
 - `docs/WORKING_RULES.md` is authoritative.
 
-## Authoritative merged baseline
+## Completed checkpoint
+
+Minecraft Text / Item Display Properties Foundation.
+
+Feature branch:
+
+```text
+feature/minecraft-text-item-display-foundation
+```
+
+Implementation HEAD before finalization:
+
+```text
+a6e8e6fa91b2c923eb4d53c6e7d618dcbd5010c1
+```
 
 Feature branch base:
 
 ```text
 main
-00467ae4b985b092f79cf929b391a549070fb966
-Add Minecraft player inventory and equipment foundation
+0e6ae8b9250f4207dbeed431c356380709204506
+Add Minecraft item core properties
 ```
 
-This baseline includes COMPLETE / VALIDATED / MERGED foundations for:
-
-- Java NBT codec
-- `servers.dat` read/append
-- modern and legacy Java Server List Ping
-- server lifecycle / Forge-FML metadata / SRV
-- server address normalization and known-server matching
-- Java Edition world discovery
-- Java Edition player discovery
-- world-owned player snapshots and world icon I/O
-- Java Edition player statistics
-- Java Edition player advancements
-- Java Edition player gameplay core
-- Java Edition player inventory / ender chest / equipment
-- minimal semantic item stack `id + count`
-
-## Active checkpoint
-
-Java Edition Item Core Properties Foundation.
-
-Current branch:
+Package version:
 
 ```text
-feature/minecraft-item-core-properties-foundation
+1.0.0-dev.15
 ```
 
-Implementation/tool HEAD before this metadata pass:
+Checkpoint state:
 
 ```text
-f824ca985d8ab5802feff7cea0d0ced5d8257e8d
-Show item core properties in world query tool
+COMPLETED / AUTOMATED VALIDATED / MERGE APPROVED
 ```
 
-Package version for this checkpoint:
+## Global Minecraft text core
+
+Public text API:
 
 ```text
-1.0.0-dev.14
+MtnMinecraftText
+MtnMinecraftTextItem
+MtnMinecraftTextStyle
+MtnMinecraftTextColor
+MtnMinecraftTextColorType
+MtnMinecraftTextFormat
 ```
 
-## Public API addition
+`MtnMinecraftText.text` is the authoritative mutable source. `plainText`,
+`items`, `toJson()` and `toNbt()` derive from the current text/semantic
+state.
 
-`MtnMinecraftInfoItemStack` now has:
+The setter is state-aware:
 
 ```text
-components -> MtnMinecraftInfoItemStackComponents?
+same text assigned
+  -> semantic metadata retained
+
+different text assigned
+  -> imported semantic metadata invalidated
+  -> subsequent items/serialization derive from the new text
 ```
 
-Core persisted-property model:
+## Text rendering model
+
+`items` exposes immutable render-ready spans split only when effective style
+or semantic component identity changes.
+
+Supported style state:
 
 ```text
-MtnMinecraftInfoItemStackComponents
-  damage
-  repairCost
-  unbreakable
-  enchantments
-  storedEnchantments
-  removedComponentIds
+named color
+RGB color
+bold
+italic
+underlined
+strikethrough
+obfuscated
+reset
 ```
 
-The model represents explicitly persisted item overrides. It is not an
-effective item definition resolved against the Minecraft item registry.
+Classic section-sign parsing supports named colors and Java RGB sequences.
+Malformed RGB/unknown formatting is preserved literally instead of being
+partially consumed.
 
-## Parser architecture
+Color semantics distinguish named colors from arbitrary RGB even when the
+rendered RGB value is identical.
+
+## JSON / NBT Text Components
+
+Supported conversion APIs:
+
+```dart
+MtnMinecraftText.fromJson(...)
+MtnMinecraftText.fromNbt(...)
+text.toJson()
+text.toNbt()
+```
+
+The provider accepts:
 
 ```text
-MtnMinecraftInfoPlayerInventoryNbtParser
-  -> MtnMinecraftInfoItemStackNbtParser
-       -> id / count
-       -> MtnMinecraftInfoItemStackComponentsNbtParser
-            -> legacy tag
-            -> modern components
-            -> semantic core properties
+JSON Text Component sources
+1.20.5-era NBT TAG_String containing JSON text
+direct inline NBT Text Component values
 ```
 
-Item metadata remains an item-domain responsibility rather than a
-player-inventory responsibility.
+Serialization is generated from the current semantic/text state. The original
+input document is not retained as a second authority.
 
-## Legacy item normalization
+## Translate semantics
 
-Pre-1.20.5 `tag` properties handled by this checkpoint:
+Translated components preserve:
 
 ```text
-Damage
-RepairCost
-Unbreakable
-Enchantments
-StoredEnchantments
+translate
+fallback
+with
 ```
 
-Semantic output:
+Public item fields:
 
 ```text
-Damage             -> damage
-RepairCost         -> repairCost
-Unbreakable        -> unbreakable
-Enchantments       -> enchantments
-StoredEnchantments -> storedEnchantments
+MtnMinecraftTextItem.translate
+MtnMinecraftTextItem.translateFallback
+MtnMinecraftTextItem.translateWith
+MtnMinecraftTextItem.isTranslated
 ```
 
-Legacy enchantments are normalized from compound-list entries containing
-namespaced `id` plus short `lvl`.
+`translateWith` is an immutable snapshot. Nested translation arguments remain
+`MtnMinecraftText` values and explicit inherited-style overrides survive
+round-trip serialization.
 
-Unknown legacy metadata remains tolerated. Recognized properties remain
-schema-strict.
-
-## Modern item normalization
-
-Recognized 1.20.5+ component IDs:
+Visible fallback behavior:
 
 ```text
-minecraft:damage
-minecraft:repair_cost
-minecraft:unbreakable
-minecraft:enchantments
-minecraft:stored_enchantments
+translate with fallback
+  -> item.text/plainText uses fallback
+
+translate without fallback
+  -> item.text/plainText uses translation key as a safe unresolved fallback
 ```
 
-A present `components` compound is authoritative over legacy `tag`.
+This does not claim that a locale-specific translation has been resolved.
 
-Enchantments accept both:
+## Other dynamic component types
+
+The provider deliberately does not implement runtime resolution for:
 
 ```text
-1.20.5-style:
-minecraft:enchantments = {
-  levels: {
-    minecraft:sharpness: 5
-  }
-}
-
-later simplified form:
-minecraft:enchantments = {
-  minecraft:sharpness: 5
-}
+keybind
+selector
+nbt
+unresolved score
 ```
 
-Both normalize to immutable `Map<String, int>`.
+These require client/server/world/command context and are not converted into
+fake visible values.
 
-Unknown modern components remain tolerated.
-
-## Component removals
-
-Modern item component patches may explicitly remove components:
+Current behavior:
 
 ```text
-!minecraft:damage
-!minecraft:enchantments
-!example:custom_component
+keybind / selector / nbt
+  -> no fabricated plainText
+
+score without explicit value
+  -> no fabricated plainText
+
+score with explicit string value
+  -> value may be exposed as visible text
+
+extra children
+  -> still parsed normally
 ```
 
-Their IDs are retained in:
+Runtime resolver machinery remains outside this foundation.
+
+## Server status integration
+
+`MtnMinecraftInfoServerStatus.motd` is now:
+
+```dart
+MtnMinecraftText?
+```
+
+Modern status description JSON is parsed through the shared text component
+codec. Legacy ping MOTDs use the same text model from their section-sign source.
+
+`MtnMinecraftInfoServerStatus.toMap()` intentionally keeps:
 
 ```text
-removedComponentIds
+motd -> motd.plainText
 ```
 
-The provider deliberately does not turn a removal into an effective default
-value because item defaults require registry knowledge.
+so the existing plain output surface remains simple.
 
-A recognized component cannot simultaneously be supplied and explicitly
-removed in the same normalized patch.
+## Item display text integration
 
-## Semantic rules
+`MtnMinecraftInfoItemStackComponents` now includes:
+
+```dart
+MtnMinecraftText? customName
+MtnMinecraftText? itemName
+List<MtnMinecraftText>? lore
+```
+
+Legacy normalization:
+
+```text
+tag.display.Name -> customName
+tag.display.Lore -> lore
+```
+
+Modern normalization:
+
+```text
+minecraft:custom_name -> customName
+minecraft:item_name   -> itemName
+minecraft:lore        -> lore
+```
+
+Modern `components` remains authoritative over legacy `tag`.
+
+Lore semantics:
 
 ```text
 property absent
-  -> nullable semantic property remains null
+  -> lore == null
 
-enchantment property explicitly empty
-  -> immutable empty map
-
-modern removal present
-  -> component ID retained in removedComponentIds
-
-no recognized property/removal
-  -> item.components == null
+property explicitly empty
+  -> immutable empty list
 ```
 
-All public enchantment maps and removal sets are immutable.
+Recognized display component conflicts with explicit modern removals remain
+invalid data. Unknown modern components remain tolerated.
 
-Namespaced enchantment IDs are preserved as external strings so modded
-enchantments require no provider-specific registry.
+## Validation
 
-## Deterministic validation
-
-Fourteen focused item-core-properties tests cover:
-
-- complete legacy damage / repair / unbreakable / enchantment normalization
-- complete 1.20.5-style modern core-component normalization
-- later simplified enchantment representation
-- modern-over-legacy authority
-- unknown legacy/modern metadata tolerance
-- explicit empty enchantments
-- legacy explicit false unbreakable
-- immutable enchantment maps
-- malformed recognized legacy properties
-- duplicate legacy enchantment IDs
-- malformed recognized modern properties
-- strict `tag` / `components` container shapes
-- modern component removals and conflict rejection
-- immutable component-removal set
-
-Full package validation before smoke-tool extension:
+Authoritative local validation after the final behavior changes:
 
 ```text
 dart analyze
 No issues found!
 
+dart test test/minecraft_text_test.dart
++19: All tests passed!
+
 dart test
-00:02 +149: All tests passed!
++176: All tests passed!
 
 git diff --check origin/main...HEAD
 PASS
@@ -239,128 +268,45 @@ git status
 clean
 ```
 
-After pulling the smoke-tool extension:
-
-```text
-dart analyze
-No issues found!
-```
-
-Final analyzer/test/diff/status validation must be rerun after this metadata
-pass.
-
 No `dart format` was run.
 
-## Real Java Edition 1.20.1 modded smoke validation
+## Locked decisions
 
-Three worlds and eight player snapshots were read from a real modded game
-directory. All observed player files used legacy storage with
-`DataVersion=3465`.
-
-Real-file validated:
-
-```text
-legacy tag parsing
-damage
-repairCost
-active enchantments
-vanilla enchantment IDs
-modded enchantment IDs
-inventory item properties
-equipment item properties
-large repairCost values
-bounded enchantment preview
-```
-
-Representative inventory observations:
-
-```text
-simplyswords:diamond_greataxe
-  damage=365
-  repairCost=3
-  enchantments=
-    celestisynth:pulsation:1
-    minecraft:sharpness:4
-    minecraft:unbreaking:3
-
-cataclysm:cursed_bow
-  enchantments=minecraft:power:5
-
-minecraft:diamond_axe
-  damage=147
-  enchantments=majruszsenchantments:leech:1
-```
-
-Representative equipment observations:
-
-```text
-caverns_and_chasms:sanguine_chestplate
-  damage=280
-  repairCost=1
-  enchantments=
-    combatroll:acrobat:3
-    minecraft:protection:4
-    minecraft:unbreaking:3
-
-cataclysm:cursium_helmet/chestplate/leggings/boots
-  damage=0
-  repairCost up to 131071
-  many vanilla and modded enchantments
-```
-
-The smoke preview correctly bounded large enchantment collections and reported
-the remaining count rather than dumping every entry.
-
-Not encountered in the real 1.20.1 dataset:
-
-```text
-explicit unbreakable value
-stored enchantments
-non-empty EnderItems
-```
-
-Deterministic-test only:
-
-```text
-unbreakable normalization
-storedEnchantments normalization
-modern 1.20.5+ components
-modern component removals
-later simplified enchantment representation
-```
-
-Current checkpoint state:
-
-```text
-IMPLEMENTED / AUTOMATED VALIDATED / REAL-WORLD 1.20.1 MODDED VALIDATED
-```
+- `MtnMinecraftText.text` remains the canonical mutable authority.
+- Original JSON/NBT source is not cached as a parallel authority.
+- Text items remain render-ready spans rather than a full Minecraft runtime
+  component evaluator.
+- `translate` metadata is preserved because it is useful for persisted text
+  and serialization.
+- `keybind`, `selector`, `nbt` and unresolved `score` are not resolved by
+  this provider.
+- Item display properties reuse the global text model; item parsing does not
+  own a second text-component implementation.
+- Server MOTD and item display text share the same text core.
+- Backward-compatibility shims are not added before the first release unless
+  explicitly approved.
 
 ## Explicitly deferred
 
-- custom name / lore / text-component normalization
+- runtime localization/language resolver
+- keybind resolver
+- selector evaluation
+- scoreboard lookup
+- NBT component path evaluation
+- font
+- insertion
+- clickEvent
+- hoverEvent
+- richer interactive text semantics
 - custom model data
 - attribute modifiers
 - potion-specific properties
 - nested containers / bundle-like contents
 - custom data
-- other rich item components
 - item writing
 - player active effects
 - singleplayer player identity / UUID relationship
 - installed-content discovery
-
-## Locked foundations
-
-This checkpoint does not redesign:
-
-- item identity / count semantics
-- inventory / ender-chest slot routing
-- equipment normalization
-- player identity / storage precedence
-- gameplay core
-- stats / advancements
-- world ownership
-- raw NBT codec
 
 ## Development rules
 
@@ -369,26 +315,18 @@ Always follow `docs/WORKING_RULES.md`.
 In particular:
 
 - no implementation without explicit user approval
-- keep checkpoints small and reviewable
+- keep checkpoints small and independently reviewable
 - do not run `dart format` for Pure Dart unless explicitly requested
-- keep `.dart_tool/` and `pubspec.lock` ignored for this library package
+- use `dart analyze`, `dart test`, `git diff --check`, `git status`
+- keep `.dart_tool/` and library `pubspec.lock` ignored
 - architecture/naming/dependency boundaries are acceptance criteria
-- backward/legacy support is added only with explicit approval
+- do not modify `hypixel_api/` for this work
+- do not add backward compatibility unless explicitly approved
 
 ## Next action
 
-1. Pull the metadata/finalization commit into the local feature branch.
-2. Run final `dart analyze`, `dart test`, `git diff --check` and
-   `git status`.
-3. Squash the feature branch to one clean commit against
-   `00467ae4b985b092f79cf929b391a549070fb966`.
-4. Force-push only with `--force-with-lease`.
-5. Fast-forward merge to `main` only after the squashed tree is locally
-   verified.
+Continue from `main` in a new chat after this checkpoint is merged.
 
-Likely next item-components sub-checkpoint:
-
-- Item Display / Text Properties Foundation
-
-That checkpoint should be designed separately because custom-name/lore text
-storage changed materially across Minecraft versions.
+The next checkpoint has not been selected yet. Start by auditing the remaining
+Minecraft information-provider gaps and choose one small foundation before any
+implementation.

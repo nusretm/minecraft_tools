@@ -27,8 +27,13 @@ void main() {
           },
           'description': <String, Object?>{
             'text': 'Hello ',
+            'color': 'gold',
             'extra': <Object?>[
-              <String, Object?>{'text': 'world'},
+              <String, Object?>{
+                'text': 'world',
+                'color': '#12ABEF',
+                'bold': true,
+              },
             ],
           },
           'favicon': 'data:image/png;base64,abc',
@@ -53,7 +58,11 @@ void main() {
       expect(status.maxPlayers, 100);
       expect(status.playerSample, hasLength(1));
       expect(status.playerSample.single.name, 'Player');
-      expect(status.motd, 'Hello world');
+      expect(status.motd?.plainText, 'Hello world');
+      expect(status.motd?.items, hasLength(2));
+      expect(status.motd?.items[0].color, MtnMinecraftTextColor.gold);
+      expect(status.motd?.items[1].color.hex, '#12ABEF');
+      expect(status.motd?.items[1].bold, isTrue);
       expect(status.favicon, 'data:image/png;base64,abc');
       expect(status.enforcesSecureChat, isTrue);
       expect(status.latency, isNotNull);
@@ -241,7 +250,7 @@ void main() {
       expect(status.state, MtnMinecraftInfoServerState.online);
       expect(status.host, InternetAddress.loopbackIPv4.address);
       expect(status.port, fixture.port);
-      expect(status.motd, 'SRV target');
+      expect(status.motd?.plainText, 'SRV target');
     });
 
     test('explicit port skips Minecraft SRV lookup', () async {
@@ -332,7 +341,7 @@ void main() {
 
       expect(status.state, MtnMinecraftInfoServerState.online);
       expect(status.port, fixture.port);
-      expect(status.motd, 'Second SRV target');
+      expect(status.motd?.plainText, 'Second SRV target');
     });
 
     test('SRV target dot marks the service unavailable', () async {

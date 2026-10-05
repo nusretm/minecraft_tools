@@ -298,7 +298,7 @@ bool _sameEffectiveStatus(
       left.onlinePlayers == right.onlinePlayers &&
       left.maxPlayers == right.maxPlayers &&
       _samePlayers(left.playerSample, right.playerSample) &&
-      left.motd == right.motd &&
+      left.motd?.text == right.motd?.text &&
       left.rawJson == right.rawJson &&
       left.favicon == right.favicon &&
       left.latency == right.latency &&

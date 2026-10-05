@@ -27,7 +27,7 @@ void main() {
       expect(status.format, MtnMinecraftInfoServerStatusFormat.legacy16);
       expect(status.protocol, 78);
       expect(status.versionName, '1.6.4');
-      expect(status.motd, 'Legacy 1.6 Server');
+      expect(status.motd?.plainText, 'Legacy 1.6 Server');
       expect(status.onlinePlayers, 4);
       expect(status.maxPlayers, 20);
       expect(status.latency, isNotNull);
@@ -56,7 +56,7 @@ void main() {
       expect(status.format, MtnMinecraftInfoServerStatusFormat.legacy14);
       expect(status.protocol, 61);
       expect(status.versionName, '1.5.2');
-      expect(status.motd, 'Legacy 1.5 Server');
+      expect(status.motd?.plainText, 'Legacy 1.5 Server');
       expect(status.onlinePlayers, 2);
       expect(status.maxPlayers, 10);
       expect(fixture.connections, 3);
@@ -81,7 +81,8 @@ void main() {
       expect(status.format, MtnMinecraftInfoServerStatusFormat.legacyPre14);
       expect(status.protocol, isNull);
       expect(status.versionName, isNull);
-      expect(status.motd, '§aVery Old Server');
+      expect(status.motd?.plainText, 'Very Old Server');
+      expect(status.motd?.items.single.color, MtnMinecraftTextColor.green);
       expect(status.onlinePlayers, 5);
       expect(status.maxPlayers, 12);
       expect(fixture.connections, 4);

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import '../text/minecraft_text.dart';
 import 'info_server_status.dart';
 
 enum MtnMinecraftInfoServerStatusError {
@@ -276,7 +277,9 @@ MtnMinecraftInfoServerStatus _parseStatus(
     onlinePlayers: onlinePlayers,
     maxPlayers: maxPlayers,
     playerSample: sample,
-    motd: _chatPlainText(root['description']),
+    motd: MtnMinecraftText.fromJson(
+      jsonEncode(root['description']),
+    ),
     rawJson: rawJson,
     favicon: favicon,
     latency: latency,
@@ -363,27 +366,6 @@ MtnMinecraftInfoServerModMetadata? _parseModMetadata(
     mods: mods,
     channels: const <MtnMinecraftInfoServerAdvertisedChannel>[],
   );
-}
-
-String _chatPlainText(Object? value) {
-  if (value == null) return '';
-  if (value is String) return value;
-  if (value is List<Object?>) {
-    return value.map(_chatPlainText).join();
-  }
-  if (value is Map<String, Object?>) {
-    final StringBuffer result = StringBuffer();
-    final Object? text = value['text'];
-    if (text is String) result.write(text);
-    final Object? extra = value['extra'];
-    if (extra is List<Object?>) {
-      for (final Object? child in extra) {
-        result.write(_chatPlainText(child));
-      }
-    }
-    return result.toString();
-  }
-  throw const _StatusResponseException();
 }
 
 Map<String, Object?> _expectObject(Object? value) {

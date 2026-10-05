@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../text/minecraft_text.dart';
+
 enum MtnMinecraftInfoServerState {
   online,
   offline,
@@ -200,8 +202,8 @@ final class MtnMinecraftInfoServerStatus {
   final int? maxPlayers;
   final List<MtnMinecraftInfoServerStatusPlayer> playerSample;
 
-  /// Plain-text projection of the server description/chat component.
-  final String? motd;
+  /// Parsed server description/chat component.
+  final MtnMinecraftText? motd;
 
   /// Exact JSON status response for fields not modeled by this package.
   final String? rawJson;
@@ -236,7 +238,7 @@ final class MtnMinecraftInfoServerStatus {
                 (MtnMinecraftInfoServerStatusPlayer player) => player.toMap(),
               )
               .toList(growable: false),
-        if (motd != null) 'motd': motd,
+        if (motd != null) 'motd': motd!.plainText,
         if (favicon != null) 'favicon': favicon,
         if (latency != null) 'latencyMilliseconds': latency!.inMilliseconds,
         if (enforcesSecureChat != null)

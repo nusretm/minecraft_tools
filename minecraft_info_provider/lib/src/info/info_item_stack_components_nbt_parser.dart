@@ -1,4 +1,5 @@
 import '../nbt/minecraft_nbt.dart';
+import '../text/minecraft_text.dart';
 import 'info_item_stack.dart';
 
 /// Internal cross-version parser for persisted item-stack properties.
@@ -38,12 +39,18 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
         _optionalLegacyEnchantments(tag, 'Enchantments');
     final Map<String, int>? storedEnchantments =
         _optionalLegacyEnchantments(tag, 'StoredEnchantments');
+    final ({
+      MtnMinecraftText? customName,
+      List<MtnMinecraftText>? lore,
+    }) display = _optionalLegacyDisplay(tag);
 
     if (damage == null &&
         repairCost == null &&
         unbreakable == null &&
         enchantments == null &&
-        storedEnchantments == null) {
+        storedEnchantments == null &&
+        display.customName == null &&
+        display.lore == null) {
       return null;
     }
 
@@ -53,6 +60,8 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
       unbreakable: unbreakable,
       enchantments: enchantments,
       storedEnchantments: storedEnchantments,
+      customName: display.customName,
+      lore: display.lore,
     );
   }
 
@@ -75,6 +84,9 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
       'minecraft:unbreakable',
       'minecraft:enchantments',
       'minecraft:stored_enchantments',
+      'minecraft:custom_name',
+      'minecraft:item_name',
+      'minecraft:lore',
     ];
     for (final String id in recognizedIds) {
       if (components.containsKey(id) && removedComponentIds.contains(id)) {
@@ -95,12 +107,21 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
       components,
       'minecraft:stored_enchantments',
     );
+    final MtnMinecraftText? customName =
+        _optionalModernText(components, 'minecraft:custom_name');
+    final MtnMinecraftText? itemName =
+        _optionalModernText(components, 'minecraft:item_name');
+    final List<MtnMinecraftText>? lore =
+        _optionalModernLore(components, 'minecraft:lore');
 
     if (damage == null &&
         repairCost == null &&
         unbreakable == null &&
         enchantments == null &&
         storedEnchantments == null &&
+        customName == null &&
+        itemName == null &&
+        lore == null &&
         removedComponentIds.isEmpty) {
       return null;
     }
@@ -111,8 +132,107 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
       unbreakable: unbreakable,
       enchantments: enchantments,
       storedEnchantments: storedEnchantments,
+      customName: customName,
+      itemName: itemName,
+      lore: lore,
       removedComponentIds: removedComponentIds,
     );
+  }
+
+  ({
+    MtnMinecraftText? customName,
+    List<MtnMinecraftText>? lore,
+  }) _optionalLegacyDisplay(
+    Map<String, MtnMinecraftNbtValue> tag,
+  ) {
+    final MtnMinecraftNbtValue? value = tag['display'];
+    if (value == null) {
+      return (customName: null, lore: null);
+    }
+    if (value.type != MtnMinecraftNbtType.compound) {
+      throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+    }
+
+    final Map<String, MtnMinecraftNbtValue> display = value.asCompound;
+    final MtnMinecraftText? customName;
+    final MtnMinecraftNbtValue? nameValue = display['Name'];
+    if (nameValue == null) {
+      customName = null;
+    } else {
+      if (nameValue.type != MtnMinecraftNbtType.string) {
+        throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+      }
+      customName = _parseJsonText(nameValue.asString);
+    }
+
+    final List<MtnMinecraftText>? lore;
+    final MtnMinecraftNbtValue? loreValue = display['Lore'];
+    if (loreValue == null) {
+      lore = null;
+    } else {
+      if (loreValue.type != MtnMinecraftNbtType.list) {
+        throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+      }
+      final MtnMinecraftNbtList list = loreValue.asList;
+      if (list.values.isEmpty) {
+        if (list.elementType != MtnMinecraftNbtType.end &&
+            list.elementType != MtnMinecraftNbtType.string) {
+          throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+        }
+        lore = const <MtnMinecraftText>[];
+      } else {
+        if (list.elementType != MtnMinecraftNbtType.string) {
+          throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+        }
+        lore = List<MtnMinecraftText>.unmodifiable(
+          list.values.map(
+            (MtnMinecraftNbtValue line) => _parseJsonText(line.asString),
+          ),
+        );
+      }
+    }
+
+    return (customName: customName, lore: lore);
+  }
+
+  MtnMinecraftText? _optionalModernText(
+    Map<String, MtnMinecraftNbtValue> components,
+    String name,
+  ) {
+    final MtnMinecraftNbtValue? value = components[name];
+    if (value == null) return null;
+    return _parseNbtText(value);
+  }
+
+  List<MtnMinecraftText>? _optionalModernLore(
+    Map<String, MtnMinecraftNbtValue> components,
+    String name,
+  ) {
+    final MtnMinecraftNbtValue? value = components[name];
+    if (value == null) return null;
+    if (value.type != MtnMinecraftNbtType.list) {
+      throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+    }
+
+    return List<MtnMinecraftText>.unmodifiable(
+      value.asList.values.map(_parseNbtText),
+    );
+  }
+
+  MtnMinecraftText _parseJsonText(String source) {
+    try {
+      return MtnMinecraftText.fromJson(source);
+    } on FormatException {
+      throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+    }
+  }
+
+  MtnMinecraftText _parseNbtText(MtnMinecraftNbtValue value) {
+    try {
+      return MtnMinecraftText.fromNbt(value);
+    } on FormatException {
+      throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+    }
   }
 
   int? _optionalNonNegativeInt(
