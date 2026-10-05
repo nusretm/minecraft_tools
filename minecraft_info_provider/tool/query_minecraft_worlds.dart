@@ -110,6 +110,18 @@ Future<void> main(List<String> arguments) async {
         'value=${_lastDeath(player.lastDeath)}',
       );
 
+      _writePlayerInventory(world, player);
+      _writePlayerEnderChest(world, player);
+      stdout.writeln(
+        'PLAYER_EQUIPMENT world=${world.directoryName} '
+        'uuid=${player.uuid} '
+        'head=${_item(player.equipment?.head)} '
+        'chest=${_item(player.equipment?.chest)} '
+        'legs=${_item(player.equipment?.legs)} '
+        'feet=${_item(player.equipment?.feet)} '
+        'offHand=${_item(player.equipment?.offHand)}',
+      );
+
       final MtnMinecraftInfoPlayerStats? stats =
           await provider.readPlayerStats(world, player);
       if (stats == null) {
@@ -272,6 +284,108 @@ String _lastDeath(MtnMinecraftInfoPlayerLastDeath? lastDeath) {
   if (lastDeath == null) return 'null';
   return 'position=${_blockPosition(lastDeath.position)},'
       'dimension=${lastDeath.dimension}';
+}
+
+void _writePlayerInventory(
+  MtnMinecraftInfoWorld world,
+  MtnMinecraftInfoPlayer player,
+) {
+  final List<MtnMinecraftInfoItemStack?>? inventory = player.inventory;
+  if (inventory == null) {
+    stdout.writeln(
+      'PLAYER_INVENTORY world=${world.directoryName} '
+      'uuid=${player.uuid} missing=true',
+    );
+    return;
+  }
+
+  final List<int> usedSlots = _usedItemSlots(inventory);
+  stdout.writeln(
+    'PLAYER_INVENTORY world=${world.directoryName} '
+    'uuid=${player.uuid} '
+    'usedSlots=${usedSlots.length} '
+    'selectedSlot=${player.selectedItemSlot} '
+    'selectedItem=${_item(player.selectedItem)}',
+  );
+
+  _writeItemPreview(
+    lineName: 'PLAYER_INVENTORY_ITEM',
+    world: world,
+    player: player,
+    items: inventory,
+    usedSlots: usedSlots,
+  );
+}
+
+void _writePlayerEnderChest(
+  MtnMinecraftInfoWorld world,
+  MtnMinecraftInfoPlayer player,
+) {
+  final List<MtnMinecraftInfoItemStack?>? enderChest = player.enderChest;
+  if (enderChest == null) {
+    stdout.writeln(
+      'PLAYER_ENDER_CHEST world=${world.directoryName} '
+      'uuid=${player.uuid} missing=true',
+    );
+    return;
+  }
+
+  final List<int> usedSlots = _usedItemSlots(enderChest);
+  stdout.writeln(
+    'PLAYER_ENDER_CHEST world=${world.directoryName} '
+    'uuid=${player.uuid} '
+    'usedSlots=${usedSlots.length}',
+  );
+
+  _writeItemPreview(
+    lineName: 'PLAYER_ENDER_ITEM',
+    world: world,
+    player: player,
+    items: enderChest,
+    usedSlots: usedSlots,
+  );
+}
+
+void _writeItemPreview({
+  required String lineName,
+  required MtnMinecraftInfoWorld world,
+  required MtnMinecraftInfoPlayer player,
+  required List<MtnMinecraftInfoItemStack?> items,
+  required List<int> usedSlots,
+}) {
+  const int previewLimit = 10;
+  for (final int slot in usedSlots.take(previewLimit)) {
+    final MtnMinecraftInfoItemStack item = items[slot]!;
+    stdout.writeln(
+      '$lineName world=${world.directoryName} '
+      'uuid=${player.uuid} '
+      'slot=$slot '
+      'id=${item.id} '
+      'count=${item.count}',
+    );
+  }
+  if (usedSlots.length > previewLimit) {
+    stdout.writeln(
+      '${lineName}_MORE world=${world.directoryName} '
+      'uuid=${player.uuid} '
+      'count=${usedSlots.length - previewLimit}',
+    );
+  }
+}
+
+List<int> _usedItemSlots(
+  List<MtnMinecraftInfoItemStack?> items,
+) {
+  final List<int> slots = <int>[];
+  for (var slot = 0; slot < items.length; slot++) {
+    if (items[slot] != null) slots.add(slot);
+  }
+  return slots;
+}
+
+String _item(MtnMinecraftInfoItemStack? item) {
+  if (item == null) return 'null';
+  return '${item.id}x${item.count}';
 }
 
 int _statsCounterCount(MtnMinecraftInfoPlayerStats stats) {

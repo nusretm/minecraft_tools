@@ -35,6 +35,10 @@ launcher runtime, package-management or UI code.
   absorption, food, XP, abilities, selected hotbar slot, respawn and last-death
 - Cross-version respawn normalization from legacy `Spawn*`, 1.21.5
   `respawn.angle`, and 1.21.9+ `respawn.yaw` / `respawn.pitch`
+- Immutable 36-slot player inventory and 27-slot ender chest snapshots
+- Minimal semantic `MtnMinecraftInfoItemStack` with namespaced item ID and count
+- Legacy armor/off-hand slot normalization and modern player equipment support
+- Legacy `Count` and modern `count` item-stack count normalization
 
 ## Usage
 
@@ -199,9 +203,9 @@ The supplied world must be a direct child of this provider's `saves`
 directory and must still exist as a directory. Invalid storage-directory shapes
 remain provider-level path errors.
 
-The player snapshot now also exposes gameplay-core metadata. Inventory,
-ender-chest contents, equipment, active effects and the singleplayer-player
-relationship remain separate follow-up foundations.
+The player snapshot now also exposes gameplay-core, inventory, ender-chest and
+equipment metadata. Active effects, item components and the
+singleplayer-player relationship remain separate follow-up foundations.
 
 ## Java player gameplay core
 
@@ -269,8 +273,84 @@ When the modern `respawn` compound is present, it is authoritative. A
 malformed modern compound does not silently fall back to legacy `Spawn*`
 fields.
 
-Inventory, ender-chest contents, equipment/item components and active effects
-are intentionally outside this gameplay-core checkpoint.
+Inventory, ender-chest contents and equipment are normalized by the next
+player-data layer. Item components and active effects remain outside the
+gameplay-core checkpoint.
+
+## Java player inventory and equipment
+
+Player inventory/equipment data is parsed from the same player `.dat` snapshot
+and exposed without leaking storage-generation slot conventions into callers.
+
+Public models:
+
+```dart
+final class MtnMinecraftInfoItemStack {
+  final String id;
+  final int count;
+}
+
+final class MtnMinecraftInfoPlayerEquipment {
+  final MtnMinecraftInfoItemStack? head;
+  final MtnMinecraftInfoItemStack? chest;
+  final MtnMinecraftInfoItemStack? legs;
+  final MtnMinecraftInfoItemStack? feet;
+  final MtnMinecraftInfoItemStack? offHand;
+}
+```
+
+`MtnMinecraftInfoPlayer` exposes:
+
+- nullable immutable 36-slot `inventory`
+- nullable immutable 27-slot `enderChest`
+- nullable normalized `equipment`
+- derived nullable `selectedItem` from `selectedItemSlot`
+
+A missing `Inventory` or `EnderItems` tag remains null. A present but empty
+list becomes a fixed-size all-null semantic slot list, preserving the
+difference between "not persisted" and "persisted empty".
+
+Legacy player inventory slots are normalized as:
+
+```text
+0..35  -> player inventory
+100    -> feet
+101    -> legs
+102    -> chest
+103    -> head
+-106   -> offHand
+```
+
+Unknown/future/modded slot numbers are ignored by this foundation rather than
+invalidating the entire player snapshot. Duplicate recognized semantic slots
+remain invalid player data.
+
+For 1.21.5+ player equipment, the modern `equipment` compound is resolved per
+slot. A modern slot value wins for that slot, while an absent modern slot can
+fall back to its legacy inventory equivalent. An explicitly present empty
+modern slot suppresses legacy fallback for that slot.
+
+Serialized item stacks are parsed through the internal
+`MtnMinecraftInfoItemStackNbtParser`. It normalizes:
+
+```text
+legacy: Count -> byte
+modern: count -> int
+missing count -> semantic count 1
+```
+
+When both `count` and legacy `Count` exist, the modern `count` field is
+authoritative. Zero/non-positive counts and `minecraft:air` normalize to an
+empty semantic slot.
+
+Item identifiers are preserved as namespaced strings. The provider does not
+need a vanilla or mod registry to expose IDs such as `minecraft:stone`,
+`alexsmobs:animal_dictionary` or any other mod namespace.
+
+Legacy `tag` and modern `components` payloads are intentionally not parsed or
+validated by this foundation. Enchantments, durability, names/lore, nested
+containers and other item metadata belong to a separate item-components
+checkpoint.
 
 ## Java player statistics
 
@@ -679,7 +759,7 @@ The validator copies the source to a temporary directory, reads it through the
 public provider, appends a validation server to the copy, re-reads it and
 verifies preservation of every pre-existing server compound.
 
-Real world/player/icon/gameplay/stats/advancements smoke inspection is available through:
+Real world/player/icon/gameplay/inventory/equipment/stats/advancements smoke inspection is available through:
 
 ```powershell
 dart run tool/query_minecraft_worlds.dart `
@@ -694,14 +774,18 @@ dart run tool/query_minecraft_worlds.dart `
   --world "New World"
 ```
 
-The tool also prints player gameplay-core state, reads player stats and reads
-advancement progress on demand. Gameplay output covers rotation, game modes,
+The tool also prints player gameplay-core state, bounded inventory/ender-chest
+previews, normalized equipment, reads player stats and reads advancement
+progress on demand. Gameplay output covers rotation, game modes,
 health/absorption, food, XP, abilities, selected slot, respawn and last-death.
-Stats output includes layout, state/error, DataVersion, category count and
-total counter count. Advancement output includes layout, state/error,
-DataVersion, advancement/completion/criterion counts and a bounded preview of
-advancement IDs. Supplying `--set-icon <png>` atomically replaces that
-world's icon and re-reads it to verify the persisted bytes.
+Inventory output reports occupied slot count, selected item and up to 10
+occupied slots. Ender-chest output uses the same bounded preview, while
+equipment prints head/chest/legs/feet/off-hand semantic slots. Stats output
+includes layout, state/error, DataVersion, category count and total counter
+count. Advancement output includes layout, state/error, DataVersion,
+advancement/completion/criterion counts and a bounded preview of advancement
+IDs. Supplying `--set-icon <png>` atomically replaces that world's icon and
+re-reads it to verify the persisted bytes.
 
 ## Validation status
 
@@ -719,7 +803,7 @@ Validated on Windows with Dart:
 
 - address deduplication/write policy
 - richer world metadata and cross-version normalization
-- player inventory / ender chest / equipment and item-component information
+- player item-component information
 - player active effects
 - singleplayer UUID relationship
 - statistics aggregation / semantic unit conversion / writing

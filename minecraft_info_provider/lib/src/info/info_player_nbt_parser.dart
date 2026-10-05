@@ -2,6 +2,7 @@ import 'dart:io';
 
 import '../nbt/minecraft_nbt.dart';
 import 'info_player.dart';
+import 'info_player_inventory_nbt_parser.dart';
 
 /// Internal schema parser for one decoded Java Edition player NBT document.
 ///
@@ -21,6 +22,14 @@ final class MtnMinecraftInfoPlayerNbtParser {
     }
 
     final Map<String, MtnMinecraftNbtValue> data = document.root.asCompound;
+    late final MtnMinecraftInfoPlayerInventoryData inventoryData;
+    try {
+      inventoryData =
+          const MtnMinecraftInfoPlayerInventoryNbtParser().parse(data);
+    } on MtnMinecraftInfoPlayerInventoryNbtParserException {
+      throw const MtnMinecraftInfoPlayerNbtParserException();
+    }
+
     return MtnMinecraftInfoPlayer.available(
       uuid: uuid,
       dataFile: dataFile,
@@ -43,6 +52,9 @@ final class MtnMinecraftInfoPlayerNbtParser {
       selectedItemSlot: _optionalSelectedItemSlot(data),
       respawn: _optionalRespawn(data),
       lastDeath: _optionalLastDeath(data),
+      inventory: inventoryData.inventory,
+      enderChest: inventoryData.enderChest,
+      equipment: inventoryData.equipment,
     );
   }
 

@@ -18,8 +18,8 @@ Feature branch base:
 
 ```text
 main
-32091e15224b91f78a92668e92b53439fc1c2578
-Add Minecraft player advancements foundation
+a4e1f76ee8004e9909cbe1319af123515921ec1d
+Add Minecraft player gameplay core
 ```
 
 This baseline includes COMPLETE / VALIDATED / MERGED foundations for:
@@ -34,236 +34,286 @@ This baseline includes COMPLETE / VALIDATED / MERGED foundations for:
 - world-owned player snapshots and world icon I/O
 - Java Edition player statistics
 - Java Edition player advancements
+- Java Edition player gameplay core
 
 ## Active checkpoint
 
-Java Edition Player Gameplay Core.
+Java Edition Player Inventory / Equipment Foundation.
 
 Current branch:
 
 ```text
-feature/minecraft-player-gameplay-core
+feature/minecraft-player-inventory-equipment-foundation
 ```
 
 Implementation/tool HEAD before this metadata pass:
 
 ```text
-029411e8eca2c697391f2c1f96ef49271fd57bd6
-Show player gameplay state in world query tool
+a25956fae7dbeaf351aa1fed35ee455a25055b4b
+Show player inventory and equipment in world query tool
 ```
 
 Package version for this checkpoint:
 
 ```text
-1.0.0-dev.12
+1.0.0-dev.13
 ```
 
-## Public player additions
+## Public API additions
 
-`MtnMinecraftInfoPlayer` now exposes nullable gameplay-core state:
+New public item model:
 
 ```text
-rotation
-gameMode
-previousGameMode
-health
-absorptionAmount
-food
-experience
-abilities
-selectedItemSlot
-respawn
-lastDeath
+MtnMinecraftInfoItemStack
+  id
+  count
 ```
 
-New semantic types:
+New equipment model:
 
 ```text
-MtnMinecraftInfoPlayerRotation
-MtnMinecraftInfoPlayerGameMode
-MtnMinecraftInfoPlayerBlockPosition
-MtnMinecraftInfoPlayerFood
-MtnMinecraftInfoPlayerExperience
-MtnMinecraftInfoPlayerAbilities
-MtnMinecraftInfoPlayerRespawn
-MtnMinecraftInfoPlayerLastDeath
+MtnMinecraftInfoPlayerEquipment
+  head
+  chest
+  legs
+  feet
+  offHand
 ```
+
+`MtnMinecraftInfoPlayer` now additionally exposes:
+
+```text
+inventory
+enderChest
+equipment
+selectedItem
+```
+
+Semantic storage shapes:
+
+```text
+inventory  -> nullable immutable List<MtnMinecraftInfoItemStack?> length 36
+enderChest -> nullable immutable List<MtnMinecraftInfoItemStack?> length 27
+```
+
+`selectedItem` is derived from the existing `selectedItemSlot` and semantic
+inventory.
 
 ## Parsing architecture
 
-Player NBT schema parsing is now physically separated from provider I/O:
+Inventory/equipment parsing is split into dedicated internal parsers:
 
 ```text
-MtnMinecraftInfoProvider
-  -> player file discovery
-  -> gzip decode
-  -> raw MtnMinecraftNbtCodec decode
-  -> MtnMinecraftInfoPlayerNbtParser
-  -> semantic MtnMinecraftInfoPlayer
+MtnMinecraftInfoPlayerNbtParser
+  -> MtnMinecraftInfoPlayerInventoryNbtParser
+       -> slot routing / storage normalization
+       -> MtnMinecraftInfoItemStackNbtParser
+            -> serialized item-stack normalization
 ```
 
-The parser owns player NBT tag names/types and semantic normalization.
-The provider continues to own filesystem, storage-layout precedence,
-compression and player-local error classification.
+The main player parser remains responsible for composing the semantic
+`MtnMinecraftInfoPlayer` snapshot. Filesystem/gzip/raw-NBT responsibilities
+remain in `MtnMinecraftInfoProvider`.
 
-## Gameplay rules
+## Inventory and ender chest rules
 
-Missing persisted gameplay values remain null. No vanilla default values are
-invented.
-
-Game mode mapping:
+Legacy player `Inventory` slot mapping:
 
 ```text
-0 -> survival
-1 -> creative
-2 -> adventure
-3 -> spectator
+0..35  -> semantic inventory
+100    -> feet
+101    -> legs
+102    -> chest
+103    -> head
+-106   -> offHand
 ```
 
-`previousPlayerGameType=-1` means no previous game mode and becomes null.
-Other unsupported game-mode integers are invalid player data.
+`EnderItems` recognizes slots 0..26.
 
-`SelectedItemSlot` is accepted only in the hotbar range 0 through 8.
-
-Abilities parse nullable persisted fields for:
+Missing tag semantics:
 
 ```text
-flying
-mayfly
-instabuild
-invulnerable
-mayBuild
-flySpeed
-walkSpeed
+Inventory absent  -> inventory == null
+Inventory empty   -> 36 null semantic slots
+
+EnderItems absent -> enderChest == null
+EnderItems empty  -> 27 null semantic slots
 ```
 
-Public Dart names use `mayFly` and `instantBuild`; raw Minecraft tag names
-remain at the parser boundary.
+Unknown/future/modded slot numbers are ignored. Duplicate recognized semantic
+slots are invalid player data.
 
-## Respawn normalization
+## Item stack normalization
 
-Supported semantic sources:
+Minimal semantic item:
 
 ```text
-legacy / 1.20.1:
-SpawnX / SpawnY / SpawnZ
-SpawnAngle
-SpawnDimension
-SpawnForced
-
-1.21.5:
-respawn.pos
-respawn.angle
-respawn.dimension
-respawn.forced
-
-1.21.9+:
-respawn.pos
-respawn.yaw
-respawn.pitch
-respawn.dimension
-respawn.forced
+id    -> namespaced external resource ID
+count -> semantic integer stack count
 ```
 
-All become one `MtnMinecraftInfoPlayerRespawn`.
+Supported serialized count forms:
 
-When modern `respawn` exists, it is authoritative. A malformed modern
-compound does not fall back to legacy fields.
+```text
+legacy / pre-1.20.5:
+Count: Byte
 
-`LastDeathLocation` is normalized to a dimension plus
-`MtnMinecraftInfoPlayerBlockPosition`.
+modern / 1.20.5+:
+count: Int
+
+missing count:
+semantic count = 1
+```
+
+Modern `count` is authoritative when both modern and legacy count fields are
+present.
+
+Non-positive counts and `minecraft:air` normalize to an empty slot.
+
+Legacy `tag` and modern `components` payloads are intentionally ignored by
+this foundation. They are not schema-validated here.
+
+Namespaced item IDs are preserved unchanged, so modded items require no
+provider-specific registry or switch.
+
+## Equipment normalization
+
+Legacy equipment is derived from the special `Inventory` slot numbers listed
+above.
+
+Modern player `equipment` is resolved per semantic slot:
+
+```text
+modern slot has item
+  -> modern item wins
+
+modern slot explicitly present but empty
+  -> semantic slot is empty
+  -> no legacy fallback
+
+modern slot absent
+  -> matching legacy equipment slot may be used
+```
+
+This keeps modern representation authoritative without discarding still-valid
+legacy fallback data for unrelated slots.
 
 ## Deterministic validation
 
-Sixteen focused gameplay tests cover:
+Fifteen focused inventory/equipment tests cover:
 
-- complete gameplay-core parsing
-- legacy respawn fields
-- 1.21.5 respawn `angle`
-- 1.21.9+ respawn `yaw` / `pitch`
-- modern respawn precedence
-- null semantics for missing gameplay fields
-- previous game mode `-1`
-- partial food / XP groups
-- partial abilities
-- invalid game mode
-- selected-slot range validation
-- ability boolean validation
-- rotation schema validation
-- incomplete legacy respawn
-- malformed modern respawn with no legacy fallback
-- invalid last-death position
-- invalid scalar gameplay type
+- legacy inventory routing
+- legacy armor/off-hand routing
+- ender-chest routing
+- selected-item derivation
+- modern count parsing
+- missing-count default
+- legacy metadata ignored
+- modern equipment per-slot precedence
+- explicit empty modern slot
+- missing-vs-empty storage semantics
+- unknown slot tolerance
+- duplicate recognized inventory/equipment/ender slots
+- malformed recognized item fields
+- legacy signed-byte count normalization
+- air / zero-count empty normalization
+- immutable public slot lists
+- invalid storage/equipment container shapes
 
-Full package test result before metadata finalization:
+Full package validation before smoke-tool finalization:
 
 ```text
+dart analyze
+No issues found!
+
 dart test
-00:02 +120: All tests passed!
+00:02 +135: All tests passed!
+
+git diff --check origin/main...HEAD
+PASS
+
+git status
+clean
 ```
 
-Analyzer after the smoke-tool extension:
+Smoke-tool extension was then pulled locally and re-analyzed:
 
 ```text
 dart analyze
 No issues found!
 ```
 
-Earlier checkpoint diff validation:
-
-```text
-git diff --check origin/main...HEAD
-PASS
-```
-
-Final analyzer/test/diff/status validation must be rerun after this metadata
-pass.
+Final test/diff/status validation must be rerun after this metadata pass.
 
 No `dart format` was run.
 
-## Real Java Edition 1.20.1 smoke validation
+## Real Java Edition 1.20.1 modded smoke validation
 
-Three worlds and eight player snapshots were read from a real game directory.
-All player snapshots remained `state=available` with `DataVersion=3465`.
+Three worlds and eight player snapshots were read from the real game directory.
+All observed files used legacy player-data storage with `DataVersion=3465`.
 
-Observed gameplay behavior included:
+Real inventory/equipment behavior included:
 
-- rotation values for all eight players
-- both creative and survival game modes
-- health values including 3.5 and 20.0
-- absorption values
-- food level/saturation/exhaustion/tick timer
-- XP level/progress/total/seed, including zero-XP and high-XP players
-- creative and survival ability combinations
-- selected hotbar slots
-- real `LastDeathLocation` values for multiple players
-- one real legacy respawn:
-  - position `1060,135,-243`
-  - dimension `minecraft:overworld`
-  - yaw `105.85567474365234`
-  - pitch null
-  - forced false
+- populated and empty 36-slot inventories
+- selected-item derivation from the selected hotbar slot
+- legacy stack counts including stacks of 64, 55, 28, 21 and other values
+- legacy armor slots normalized into head/chest/legs/feet
+- legacy off-hand normalized independently
+- vanilla and modded namespaced IDs in the same semantic item model
+- bounded smoke output for inventories containing up to 35 occupied slots
 
-The legacy respawn observation validates normalization from the real 1.20.1
-`Spawn*` representation.
+Observed mod namespaces included examples such as:
 
-Modern respawn generations remain deterministic-test validated; a real
-1.21.5+ or 26.1 player file was not used in this checkpoint.
+```text
+aquamirae
+alexsmobs
+caverns_and_chasms
+born_in_chaos_v1
+butchersdelight
+deeperdarker
+simplyswords
+cataclysm
+eeeabsmobs
+sophisticatedbackpacks
+farmersdelight
+artifacts
+```
+
+Representative real equipment observations included:
+
+```text
+head=aquamirae:abyssal_heaume
+offHand=minecraft:totem_of_undying
+
+chest=caverns_and_chasms:sanguine_chestplate
+legs=caverns_and_chasms:sanguine_leggings
+feet=caverns_and_chasms:sanguine_boots
+
+head/chest/legs/feet=cataclysm:cursium_*
+```
+
+All observed `EnderItems` snapshots were empty, so non-empty ender-chest
+behavior remains deterministic-test validated.
+
+Modern 1.20.5+ `count` and 1.21.5+ player `equipment` formats also remain
+deterministic-test validated because no real modern-format player file was used
+for this checkpoint.
 
 Current checkpoint state:
 
 ```text
-IMPLEMENTED / AUTOMATED VALIDATED / REAL-WORLD 1.20.1 VALIDATED
+IMPLEMENTED / AUTOMATED VALIDATED / REAL-WORLD 1.20.1 MODDED VALIDATED
 ```
 
 ## Explicitly deferred
 
-- player inventory
-- ender chest
-- equipment
-- item components / richer item information
-- active effects
+- legacy item `tag` semantics
+- modern item `components` semantics
+- enchantments / durability / custom names / lore
+- nested item containers
+- player active effects
 - singleplayer player identity / UUID relationship
+- inventory/equipment writing
 - installed-content discovery
 
 ## Locked foundations
@@ -271,7 +321,8 @@ IMPLEMENTED / AUTOMATED VALIDATED / REAL-WORLD 1.20.1 VALIDATED
 This checkpoint does not redesign:
 
 - player identity / UUID discovery
-- legacy vs modern player-data precedence
+- legacy vs modern player-data storage precedence
+- gameplay-core fields
 - stats / advancements APIs
 - world ownership / player aggregate semantics
 - world icon I/O
@@ -297,11 +348,13 @@ In particular:
 2. Run final `dart analyze`, `dart test`, `git diff --check` and
    `git status`.
 3. Squash the feature branch to one clean commit against
-   `32091e15224b91f78a92668e92b53439fc1c2578`.
+   `a4e1f76ee8004e9909cbe1319af123515921ec1d`.
 4. Force-push only with `--force-with-lease`.
 5. Fast-forward merge to `main` only after the squashed tree is locally
    verified.
 
-Likely next checkpoint:
+Likely next player-data checkpoint:
 
-- Player Inventory / Equipment Foundation
+- Player Active Effects Foundation
+
+Item components remain a separate cross-domain item-model checkpoint.

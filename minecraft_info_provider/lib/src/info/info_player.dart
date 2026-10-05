@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'info_item_stack.dart';
+
 /// On-disk Java Edition player-data layout used by the discovered file.
 enum MtnMinecraftInfoPlayerStorageLayout {
   /// `<world>/playerdata/<uuid>.dat`, used before the 26.1 layout move.
@@ -149,6 +151,23 @@ final class MtnMinecraftInfoPlayerLastDeath {
   final String dimension;
 }
 
+/// Immutable normalized player equipment snapshot.
+final class MtnMinecraftInfoPlayerEquipment {
+  const MtnMinecraftInfoPlayerEquipment({
+    this.head,
+    this.chest,
+    this.legs,
+    this.feet,
+    this.offHand,
+  });
+
+  final MtnMinecraftInfoItemStack? head;
+  final MtnMinecraftInfoItemStack? chest;
+  final MtnMinecraftInfoItemStack? legs;
+  final MtnMinecraftInfoItemStack? feet;
+  final MtnMinecraftInfoItemStack? offHand;
+}
+
 /// Immutable snapshot of one Java Edition player-data file.
 final class MtnMinecraftInfoPlayer {
   MtnMinecraftInfoPlayer._({
@@ -171,6 +190,9 @@ final class MtnMinecraftInfoPlayer {
     this.selectedItemSlot,
     this.respawn,
     this.lastDeath,
+    this.inventory,
+    this.enderChest,
+    this.equipment,
   });
 
   factory MtnMinecraftInfoPlayer.available({
@@ -191,6 +213,9 @@ final class MtnMinecraftInfoPlayer {
     int? selectedItemSlot,
     MtnMinecraftInfoPlayerRespawn? respawn,
     MtnMinecraftInfoPlayerLastDeath? lastDeath,
+    List<MtnMinecraftInfoItemStack?>? inventory,
+    List<MtnMinecraftInfoItemStack?>? enderChest,
+    MtnMinecraftInfoPlayerEquipment? equipment,
   }) =>
       MtnMinecraftInfoPlayer._(
         uuid: uuid,
@@ -212,6 +237,13 @@ final class MtnMinecraftInfoPlayer {
         selectedItemSlot: selectedItemSlot,
         respawn: respawn,
         lastDeath: lastDeath,
+        inventory: inventory == null
+            ? null
+            : List<MtnMinecraftInfoItemStack?>.unmodifiable(inventory),
+        enderChest: enderChest == null
+            ? null
+            : List<MtnMinecraftInfoItemStack?>.unmodifiable(enderChest),
+        equipment: equipment,
       );
 
   factory MtnMinecraftInfoPlayer.invalid({
@@ -283,4 +315,24 @@ final class MtnMinecraftInfoPlayer {
 
   /// Root `LastDeathLocation`, when present.
   final MtnMinecraftInfoPlayerLastDeath? lastDeath;
+
+  /// Semantic 36-slot player inventory, or null when `Inventory` is absent.
+  ///
+  /// Hotbar slots are 0 through 8 and main storage slots are 9 through 35.
+  final List<MtnMinecraftInfoItemStack?>? inventory;
+
+  /// Semantic 27-slot ender chest, or null when `EnderItems` is absent.
+  final List<MtnMinecraftInfoItemStack?>? enderChest;
+
+  /// Armor/off-hand equipment normalized across legacy inventory slots and
+  /// the modern `equipment` compound.
+  final MtnMinecraftInfoPlayerEquipment? equipment;
+
+  /// Item in [selectedItemSlot], when both slot and inventory are available.
+  MtnMinecraftInfoItemStack? get selectedItem {
+    final List<MtnMinecraftInfoItemStack?>? inventory = this.inventory;
+    final int? slot = selectedItemSlot;
+    if (inventory == null || slot == null) return null;
+    return inventory[slot];
+  }
 }

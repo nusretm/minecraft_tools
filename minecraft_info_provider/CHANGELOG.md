@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.0.0-dev.13
+
+Java Edition player inventory and equipment foundation.
+
+- Added public `MtnMinecraftInfoItemStack` with semantic namespaced item ID
+  and stack count.
+- Extended `MtnMinecraftInfoPlayer` with immutable nullable 36-slot
+  `inventory`, immutable nullable 27-slot `enderChest`, normalized
+  `equipment`, and derived `selectedItem`.
+- Added `MtnMinecraftInfoPlayerEquipment` for head, chest, legs, feet and
+  off-hand slots.
+- Added internal `MtnMinecraftInfoItemStackNbtParser` with legacy `Count`
+  byte and modern `count` integer support.
+- Added internal `MtnMinecraftInfoPlayerInventoryNbtParser` so inventory and
+  equipment storage rules remain out of the main player schema parser.
+- Normalized legacy player slots 100..103 and -106 into semantic equipment.
+- Added per-slot modern `equipment` precedence with legacy fallback only when
+  the corresponding modern slot is absent.
+- Preserved absent-vs-empty storage semantics for `Inventory` and
+  `EnderItems`.
+- Ignored unknown/future/modded slot numbers while keeping duplicate recognized
+  slots and malformed recognized item data strict.
+- Preserved arbitrary vanilla and modded namespaced item IDs without requiring
+  an item registry.
+- Kept legacy `tag` and modern `components` metadata outside this
+  foundation.
+- Added 15 focused inventory/equipment tests; full package validation reached
+  135/135 passing tests with clean analyzer output.
+- Extended `tool/query_minecraft_worlds.dart` with bounded inventory,
+  ender-chest and equipment smoke output.
+- Real Java Edition 1.20.1 modded smoke validation read legacy inventory and
+  equipment from all 8 discovered player snapshots across 3 worlds, including
+  vanilla and many mod namespaces.
+- Real files validated selected-item resolution, legacy armor/off-hand routing
+  and stack counts. Non-empty ender-chest data and modern 1.20.5+/1.21.5+
+  storage remain deterministic-test validated.
+
 ## 1.0.0-dev.12
 
 Java Edition player gameplay core.
