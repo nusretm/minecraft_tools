@@ -230,7 +230,7 @@ void main() {
     test('preserves translate fallback and arguments through JSON', () {
       final MtnMinecraftText text = MtnMinecraftText.fromJson(
         '{"translate":"chat.type.text","fallback":"%s: %s","color":"yellow",'
-        '"with":[{"text":"Steve","color":"gold"},'
+        '"italic":true,"with":[{"text":"Steve","color":"gold","italic":false},'
         '{"translate":"example.message","fallback":"Hello"}]}',
       );
 
@@ -244,7 +244,9 @@ void main() {
       expect(item.translateWith, hasLength(2));
       expect(item.translateWith[0].plainText, 'Steve');
       expect(item.translateWith[0].items.single.color, MtnMinecraftTextColor.gold);
+      expect(item.translateWith[0].items.single.italic, isFalse);
       expect(item.translateWith[1].plainText, 'Hello');
+      expect(item.translateWith[1].items.single.italic, isTrue);
       expect(item.translateWith[1].items.single.translate, 'example.message');
 
       final Map<String, Object?> encoded =
@@ -255,14 +257,20 @@ void main() {
 
       final List<Object?> withValues = encoded['with'] as List<Object?>;
       expect(withValues, hasLength(2));
-      expect(
-        (withValues[0] as Map<String, Object?>)['text'],
-        'Steve',
-      );
-      expect(
-        (withValues[1] as Map<String, Object?>)['translate'],
-        'example.message',
-      );
+      final Map<String, Object?> firstWith =
+          withValues[0] as Map<String, Object?>;
+      expect(firstWith['text'], 'Steve');
+      expect(firstWith['italic'], isFalse);
+
+      final Map<String, Object?> secondWith =
+          withValues[1] as Map<String, Object?>;
+      expect(secondWith['translate'], 'example.message');
+      expect(secondWith['italic'], isTrue);
+
+      final MtnMinecraftText roundTrip =
+          MtnMinecraftText.fromJson(text.toJson());
+      expect(roundTrip.items.single.translateWith[0].items.single.italic, isFalse);
+      expect(roundTrip.items.single.translateWith[1].items.single.italic, isTrue);
     });
 
     test('preserves translate metadata through inline NBT', () {
