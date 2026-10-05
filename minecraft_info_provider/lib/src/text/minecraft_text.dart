@@ -1,3 +1,9 @@
+import 'dart:convert';
+
+import '../nbt/minecraft_nbt.dart';
+
+part 'minecraft_text_component_codec.dart';
+
 /// Semantic kind of a Minecraft text color.
 enum MtnMinecraftTextColorType {
   named,
@@ -426,6 +432,36 @@ final class MtnMinecraftText {
   ) =>
       MtnMinecraftText(text: _encodeItems(items));
 
+  factory MtnMinecraftText.fromJson(
+    String source, {
+    MtnMinecraftTextStyle baseStyle = MtnMinecraftTextStyle.defaults,
+  }) {
+    final List<MtnMinecraftTextItem> items =
+        const _MtnMinecraftTextComponentCodec().parseJsonSource(
+      source,
+      baseStyle: baseStyle,
+    );
+    return MtnMinecraftText(
+      text: _encodeItems(items, initialStyle: baseStyle),
+      baseStyle: baseStyle,
+    );
+  }
+
+  factory MtnMinecraftText.fromNbt(
+    MtnMinecraftNbtValue source, {
+    MtnMinecraftTextStyle baseStyle = MtnMinecraftTextStyle.defaults,
+  }) {
+    final List<MtnMinecraftTextItem> items =
+        const _MtnMinecraftTextComponentCodec().parseNbtValue(
+      source,
+      baseStyle: baseStyle,
+    );
+    return MtnMinecraftText(
+      text: _encodeItems(items, initialStyle: baseStyle),
+      baseStyle: baseStyle,
+    );
+  }
+
   String text;
 
   /// Effective starting style for source text before any formatting code.
@@ -441,6 +477,12 @@ final class MtnMinecraftText {
 
   List<MtnMinecraftTextItem> get items =>
       _MtnMinecraftLegacyTextParser(text, baseStyle).parse();
+
+  String toJson() =>
+      const _MtnMinecraftTextComponentCodec().encodeJson(items);
+
+  MtnMinecraftNbtValue toNbt() =>
+      const _MtnMinecraftTextComponentCodec().encodeNbt(items);
 
   @override
   String toString() => text;
@@ -586,28 +628,38 @@ final class _RgbSequence {
   final int nextIndex;
 }
 
-String _encodeItems(Iterable<MtnMinecraftTextItem> items) {
+String _encodeItems(
+  Iterable<MtnMinecraftTextItem> items, {
+  MtnMinecraftTextStyle initialStyle = MtnMinecraftTextStyle.defaults,
+}) {
   final StringBuffer result = StringBuffer();
+  var currentStyle = initialStyle;
+
   for (final MtnMinecraftTextItem item in items) {
     if (item.text.isEmpty) continue;
-    result.write(MtnMinecraftTextFormat.reset.toServerString());
-    result.write(item.color.toServerString());
-    if (item.obfuscated) {
-      result.write(MtnMinecraftTextFormat.obfuscated.toServerString());
+
+    if (item.style != currentStyle) {
+      result.write(item.color.toServerString());
+      if (item.obfuscated) {
+        result.write(MtnMinecraftTextFormat.obfuscated.toServerString());
+      }
+      if (item.bold) {
+        result.write(MtnMinecraftTextFormat.bold.toServerString());
+      }
+      if (item.strikethrough) {
+        result.write(MtnMinecraftTextFormat.strikethrough.toServerString());
+      }
+      if (item.underlined) {
+        result.write(MtnMinecraftTextFormat.underlined.toServerString());
+      }
+      if (item.italic) {
+        result.write(MtnMinecraftTextFormat.italic.toServerString());
+      }
+      currentStyle = item.style;
     }
-    if (item.bold) {
-      result.write(MtnMinecraftTextFormat.bold.toServerString());
-    }
-    if (item.strikethrough) {
-      result.write(MtnMinecraftTextFormat.strikethrough.toServerString());
-    }
-    if (item.underlined) {
-      result.write(MtnMinecraftTextFormat.underlined.toServerString());
-    }
-    if (item.italic) {
-      result.write(MtnMinecraftTextFormat.italic.toServerString());
-    }
+
     result.write(item.text);
   }
+
   return result.toString();
 }

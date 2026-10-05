@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import '../text/minecraft_text_component_parser.dart';
+import '../text/minecraft_text.dart';
 import 'info_server_status.dart';
 
 enum MtnMinecraftInfoServerStatusError {
@@ -277,8 +277,8 @@ MtnMinecraftInfoServerStatus _parseStatus(
     onlinePlayers: onlinePlayers,
     maxPlayers: maxPlayers,
     playerSample: sample,
-    motd: const MtnMinecraftTextComponentParser().parseJsonValue(
-      root['description'],
+    motd: MtnMinecraftText.fromJson(
+      jsonEncode(root['description']),
     ),
     rawJson: rawJson,
     favicon: favicon,

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:minecraft_info_provider/minecraft_info_provider.dart';
 import 'package:test/test.dart';
 
@@ -166,6 +168,87 @@ void main() {
         ),
         throwsUnsupportedError,
       );
+    });
+
+    test('imports and exports JSON text components through canonical text', () {
+      final MtnMinecraftText text = MtnMinecraftText.fromJson(
+        '{"text":"Hello ","color":"gold","extra":['
+        '{"text":"world","color":"#12ABEF","bold":true}]}',
+      );
+
+      expect(text.plainText, 'Hello world');
+      expect(text.items, hasLength(2));
+      expect(text.items[0].color, MtnMinecraftTextColor.gold);
+      expect(text.items[1].color.hex, '#12ABEF');
+      expect(text.items[1].bold, isTrue);
+
+      final MtnMinecraftText roundTrip = MtnMinecraftText.fromJson(text.toJson());
+      expect(roundTrip.plainText, text.plainText);
+      expect(roundTrip.items, hasLength(2));
+      expect(roundTrip.items[0].color, MtnMinecraftTextColor.gold);
+      expect(roundTrip.items[1].color.hex, '#12ABEF');
+      expect(roundTrip.items[1].bold, isTrue);
+    });
+
+    test('imports and exports inline NBT text components', () {
+      final MtnMinecraftNbtValue source = MtnMinecraftNbtValue.compound(
+        <String, MtnMinecraftNbtValue>{
+          'text': MtnMinecraftNbtValue.string('NBT '),
+          'color': MtnMinecraftNbtValue.string('aqua'),
+          'extra': MtnMinecraftNbtValue.list(
+            MtnMinecraftNbtList(
+              elementType: MtnMinecraftNbtType.compound,
+              values: <MtnMinecraftNbtValue>[
+                MtnMinecraftNbtValue.compound(
+                  <String, MtnMinecraftNbtValue>{
+                    'text': MtnMinecraftNbtValue.string('text'),
+                    'color': MtnMinecraftNbtValue.string('#12ABEF'),
+                    'italic': MtnMinecraftNbtValue.byte(1),
+                  },
+                ),
+              ],
+            ),
+          ),
+        },
+      );
+
+      final MtnMinecraftText text = MtnMinecraftText.fromNbt(source);
+      expect(text.plainText, 'NBT text');
+      expect(text.items, hasLength(2));
+      expect(text.items[0].color, MtnMinecraftTextColor.aqua);
+      expect(text.items[1].color.hex, '#12ABEF');
+      expect(text.items[1].italic, isTrue);
+
+      final MtnMinecraftText roundTrip = MtnMinecraftText.fromNbt(text.toNbt());
+      expect(roundTrip.plainText, text.plainText);
+      expect(roundTrip.items, hasLength(2));
+      expect(roundTrip.items[0].color, MtnMinecraftTextColor.aqua);
+      expect(roundTrip.items[1].color.hex, '#12ABEF');
+      expect(roundTrip.items[1].italic, isTrue);
+    });
+
+    test('JSON and NBT export always use the current text state', () {
+      final MtnMinecraftText text = MtnMinecraftText(text: '§cOld');
+      text.text = '§aNew';
+
+      final Map<String, Object?> json =
+          jsonDecode(text.toJson()) as Map<String, Object?>;
+      expect(json['text'], 'New');
+      expect(json['color'], 'green');
+
+      final Map<String, MtnMinecraftNbtValue> nbt = text.toNbt().asCompound;
+      expect(nbt['text']?.asString, 'New');
+      expect(nbt['color']?.asString, 'green');
+    });
+
+    test('fromJson is strict while fromNbt accepts inline string text', () {
+      expect(() => MtnMinecraftText.fromJson('not json'), throwsFormatException);
+
+      final MtnMinecraftText inline = MtnMinecraftText.fromNbt(
+        MtnMinecraftNbtValue.string('Inline text'),
+      );
+      expect(inline.text, 'Inline text');
+      expect(inline.plainText, 'Inline text');
     });
 
     test('fromItems produces a source string that resolves back to styles', () {

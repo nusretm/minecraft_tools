@@ -1,6 +1,5 @@
 import '../nbt/minecraft_nbt.dart';
 import '../text/minecraft_text.dart';
-import '../text/minecraft_text_component_parser.dart';
 import 'info_item_stack.dart';
 
 /// Internal cross-version parser for persisted item-stack properties.
@@ -222,16 +221,16 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
 
   MtnMinecraftText _parseJsonText(String source) {
     try {
-      return const MtnMinecraftTextComponentParser().parseJsonSource(source);
-    } on MtnMinecraftTextComponentParserException {
+      return MtnMinecraftText.fromJson(source);
+    } on FormatException {
       throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
     }
   }
 
   MtnMinecraftText _parseNbtText(MtnMinecraftNbtValue value) {
     try {
-      return const MtnMinecraftTextComponentParser().parseNbtValue(value);
-    } on MtnMinecraftTextComponentParserException {
+      return MtnMinecraftText.fromNbt(value);
+    } on FormatException {
       throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
     }
   }
