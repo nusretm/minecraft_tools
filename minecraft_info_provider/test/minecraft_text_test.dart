@@ -227,6 +227,90 @@ void main() {
       expect(roundTrip.items[1].italic, isTrue);
     });
 
+    test('preserves translate fallback and arguments through JSON', () {
+      final MtnMinecraftText text = MtnMinecraftText.fromJson(
+        '{"translate":"chat.type.text","fallback":"%s: %s","color":"yellow",'
+        '"with":[{"text":"Steve","color":"gold"},'
+        '{"translate":"example.message","fallback":"Hello"}]}',
+      );
+
+      expect(text.plainText, '%s: %s');
+      expect(text.items, hasLength(1));
+
+      final MtnMinecraftTextItem item = text.items.single;
+      expect(item.isTranslated, isTrue);
+      expect(item.translate, 'chat.type.text');
+      expect(item.translateFallback, '%s: %s');
+      expect(item.translateWith, hasLength(2));
+      expect(item.translateWith[0].plainText, 'Steve');
+      expect(item.translateWith[0].items.single.color, MtnMinecraftTextColor.gold);
+      expect(item.translateWith[1].plainText, 'Hello');
+      expect(item.translateWith[1].items.single.translate, 'example.message');
+
+      final Map<String, Object?> encoded =
+          jsonDecode(text.toJson()) as Map<String, Object?>;
+      expect(encoded['translate'], 'chat.type.text');
+      expect(encoded['fallback'], '%s: %s');
+      expect(encoded.containsKey('text'), isFalse);
+
+      final List<Object?> withValues = encoded['with'] as List<Object?>;
+      expect(withValues, hasLength(2));
+      expect(
+        (withValues[0] as Map<String, Object?>)['text'],
+        'Steve',
+      );
+      expect(
+        (withValues[1] as Map<String, Object?>)['translate'],
+        'example.message',
+      );
+    });
+
+    test('preserves translate metadata through inline NBT', () {
+      final MtnMinecraftText source = MtnMinecraftText.fromJson(
+        '{"translate":"menu.example","fallback":"Example","with":['
+        '{"text":"Argument","italic":true}]}',
+      );
+
+      final MtnMinecraftNbtValue encoded = source.toNbt();
+      final Map<String, MtnMinecraftNbtValue> compound = encoded.asCompound;
+
+      expect(compound['translate']?.asString, 'menu.example');
+      expect(compound['fallback']?.asString, 'Example');
+      expect(compound['text'], isNull);
+      expect(compound['with']?.type, MtnMinecraftNbtType.list);
+      expect(compound['with']?.asList.elementType, MtnMinecraftNbtType.compound);
+
+      final MtnMinecraftText roundTrip = MtnMinecraftText.fromNbt(encoded);
+      expect(roundTrip.plainText, 'Example');
+      expect(roundTrip.items.single.translate, 'menu.example');
+      expect(roundTrip.items.single.translateFallback, 'Example');
+      expect(roundTrip.items.single.translateWith, hasLength(1));
+      expect(roundTrip.items.single.translateWith.single.plainText, 'Argument');
+      expect(roundTrip.items.single.translateWith.single.items.single.italic, isTrue);
+    });
+
+    test('text setter invalidates imported translate metadata on change', () {
+      final MtnMinecraftText text = MtnMinecraftText.fromJson(
+        '{"translate":"example.old","fallback":"Old"}',
+      );
+
+      final String canonical = text.text;
+      text.text = canonical;
+      expect(text.items.single.translate, 'example.old');
+
+      text.text = '§cNew';
+
+      expect(text.plainText, 'New');
+      expect(text.items.single.translate, isNull);
+      expect(text.items.single.color, MtnMinecraftTextColor.red);
+
+      final Map<String, Object?> encoded =
+          jsonDecode(text.toJson()) as Map<String, Object?>;
+      expect(encoded['text'], 'New');
+      expect(encoded['color'], 'red');
+      expect(encoded.containsKey('translate'), isFalse);
+    });
+
     test('JSON and NBT export always use the current text state', () {
       final MtnMinecraftText text = MtnMinecraftText(text: '§cOld');
       text.text = '§aNew';
