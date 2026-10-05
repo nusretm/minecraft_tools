@@ -472,7 +472,7 @@ String _itemProperties(MtnMinecraftInfoItemStack item) {
         'enchantments=null storedEnchantments=null '
         'potion=null potionColor=null potionCustomEffects=null '
         'potionCustomName=null potionDurationScale=null '
-        'attributeModifiers=null removedComponents=null';
+        'attributeModifiers=null customModelData=null removedComponents=null';
   }
 
   return 'damage=${components.damage} '
@@ -486,7 +486,33 @@ String _itemProperties(MtnMinecraftInfoItemStack item) {
       'potionCustomName=${components.potionContents?.customName} '
       'potionDurationScale=${components.potionDurationScale} '
       'attributeModifiers=${_attributeModifierPreview(components.attributeModifiers)} '
+      'customModelData=${_customModelDataPreview(components.customModelData)} '
       'removedComponents=${_setPreview(components.removedComponentIds)}';
+}
+
+String _customModelDataPreview(
+  MtnMinecraftInfoItemCustomModelData? data,
+) {
+  if (data == null) return 'null';
+  final int? legacyValue = data.legacyValue;
+  if (legacyValue != null) return '{legacy:$legacyValue}';
+  return '{floats:${_valueListPreview(data.floats)} '
+      'flags:${_valueListPreview(data.flags)} '
+      'strings:${_valueListPreview(data.strings)} '
+      'colors:${_valueListPreview(data.colors)}}';
+}
+
+String _valueListPreview<T>(List<T> values) {
+  if (values.isEmpty) return '[]';
+  const int previewLimit = 3;
+  final List<String> preview = values
+      .take(previewLimit)
+      .map((T value) => value.toString())
+      .toList(growable: true);
+  if (values.length > previewLimit) {
+    preview.add('+${values.length - previewLimit}');
+  }
+  return '[${preview.join(',')}]';
 }
 
 String _attributeModifierPreview(

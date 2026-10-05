@@ -1,5 +1,6 @@
 import '../text/minecraft_text.dart';
 import 'info_item_attribute_modifier.dart';
+import 'info_item_custom_model_data.dart';
 import 'info_potion_contents.dart';
 
 /// Normalized persisted item-stack component overrides.
@@ -19,6 +20,7 @@ final class MtnMinecraftInfoItemStackComponents {
     this.potionContents,
     this.potionDurationScale,
     Iterable<MtnMinecraftInfoItemAttributeModifier>? attributeModifiers,
+    this.customModelData,
     Iterable<String> removedComponentIds = const <String>[],
   })  : enchantments = enchantments == null
             ? null
@@ -85,6 +87,11 @@ final class MtnMinecraftInfoItemStackComponents {
   /// Null means no attribute-modifier override was persisted. An empty
   /// immutable list means the property was explicitly persisted as empty.
   final List<MtnMinecraftInfoItemAttributeModifier>? attributeModifiers;
+
+  /// Explicit persisted custom-model data.
+  ///
+  /// Null means the stack did not persist a custom-model-data override.
+  final MtnMinecraftInfoItemCustomModelData? customModelData;
 
   /// Component IDs explicitly removed by a modern item component patch.
   ///
