@@ -4,6 +4,7 @@ import 'info_item_attribute_modifier.dart';
 import 'info_item_attribute_modifier_nbt_parser.dart';
 import 'info_item_custom_model_data.dart';
 import 'info_item_custom_model_data_nbt_parser.dart';
+import 'info_item_nested_stack_nbt_parser.dart';
 import 'info_item_stack.dart';
 import 'info_potion_contents.dart';
 import 'info_potion_contents_nbt_parser.dart';
@@ -14,7 +15,14 @@ import 'info_potion_contents_nbt_parser.dart';
 /// into the same semantic public model. If the modern `components` compound
 /// exists it is authoritative and legacy `tag` is not consulted.
 final class MtnMinecraftInfoItemStackComponentsNbtParser {
-  const MtnMinecraftInfoItemStackComponentsNbtParser();
+  MtnMinecraftInfoItemStackComponentsNbtParser({
+    required MtnMinecraftInfoItemStack? Function(MtnMinecraftNbtValue value)
+        parseItem,
+  }) : _nestedStackParser = MtnMinecraftInfoItemNestedStackNbtParser(
+          parseItem: parseItem,
+        );
+
+  final MtnMinecraftInfoItemNestedStackNbtParser _nestedStackParser;
 
   MtnMinecraftInfoItemStackComponents? parse(
     Map<String, MtnMinecraftNbtValue> item,
@@ -55,6 +63,12 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
         _optionalLegacyAttributeModifiers(tag);
     final MtnMinecraftInfoItemCustomModelData? customModelData =
         _optionalLegacyCustomModelData(tag);
+    final Map<int, MtnMinecraftInfoItemStack>? containerContents =
+        _optionalLegacyContainerContents(tag);
+    final List<MtnMinecraftInfoItemStack>? bundleContents =
+        _optionalLegacyBundleContents(tag);
+    final List<MtnMinecraftInfoItemStack>? chargedProjectiles =
+        _optionalLegacyChargedProjectiles(tag);
 
     if (damage == null &&
         repairCost == null &&
@@ -65,7 +79,10 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
         display.lore == null &&
         potionContents == null &&
         attributeModifiers == null &&
-        customModelData == null) {
+        customModelData == null &&
+        containerContents == null &&
+        bundleContents == null &&
+        chargedProjectiles == null) {
       return null;
     }
 
@@ -80,6 +97,9 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
       potionContents: potionContents,
       attributeModifiers: attributeModifiers,
       customModelData: customModelData,
+      containerContents: containerContents,
+      bundleContents: bundleContents,
+      chargedProjectiles: chargedProjectiles,
     );
   }
 
@@ -109,6 +129,10 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
       'minecraft:potion_duration_scale',
       'minecraft:attribute_modifiers',
       'minecraft:custom_model_data',
+      'minecraft:container',
+      'minecraft:bundle_contents',
+      'minecraft:charged_projectiles',
+      'minecraft:use_remainder',
     ];
     for (final String id in recognizedIds) {
       if (components.containsKey(id) && removedComponentIds.contains(id)) {
@@ -154,6 +178,25 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
       components,
       'minecraft:custom_model_data',
     );
+    final Map<int, MtnMinecraftInfoItemStack>? containerContents =
+        _optionalModernContainerContents(
+      components,
+      'minecraft:container',
+    );
+    final List<MtnMinecraftInfoItemStack>? bundleContents =
+        _optionalModernItemList(
+      components,
+      'minecraft:bundle_contents',
+    );
+    final List<MtnMinecraftInfoItemStack>? chargedProjectiles =
+        _optionalModernItemList(
+      components,
+      'minecraft:charged_projectiles',
+    );
+    final MtnMinecraftInfoItemStack? useRemainder = _optionalModernItem(
+      components,
+      'minecraft:use_remainder',
+    );
 
     if (damage == null &&
         repairCost == null &&
@@ -167,6 +210,10 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
         potionDurationScale == null &&
         attributeModifiers == null &&
         customModelData == null &&
+        containerContents == null &&
+        bundleContents == null &&
+        chargedProjectiles == null &&
+        useRemainder == null &&
         removedComponentIds.isEmpty) {
       return null;
     }
@@ -184,10 +231,82 @@ final class MtnMinecraftInfoItemStackComponentsNbtParser {
       potionDurationScale: potionDurationScale,
       attributeModifiers: attributeModifiers,
       customModelData: customModelData,
+      containerContents: containerContents,
+      bundleContents: bundleContents,
+      chargedProjectiles: chargedProjectiles,
+      useRemainder: useRemainder,
       removedComponentIds: removedComponentIds,
     );
   }
 
+  Map<int, MtnMinecraftInfoItemStack>? _optionalLegacyContainerContents(
+    Map<String, MtnMinecraftNbtValue> tag,
+  ) {
+    try {
+      return _nestedStackParser.parseLegacyContainer(tag);
+    } on MtnMinecraftInfoItemNestedStackNbtParserException {
+      throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+    }
+  }
+
+  List<MtnMinecraftInfoItemStack>? _optionalLegacyBundleContents(
+    Map<String, MtnMinecraftNbtValue> tag,
+  ) {
+    try {
+      return _nestedStackParser.parseLegacyBundle(tag);
+    } on MtnMinecraftInfoItemNestedStackNbtParserException {
+      throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+    }
+  }
+
+  List<MtnMinecraftInfoItemStack>? _optionalLegacyChargedProjectiles(
+    Map<String, MtnMinecraftNbtValue> tag,
+  ) {
+    try {
+      return _nestedStackParser.parseLegacyChargedProjectiles(tag);
+    } on MtnMinecraftInfoItemNestedStackNbtParserException {
+      throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+    }
+  }
+
+  Map<int, MtnMinecraftInfoItemStack>? _optionalModernContainerContents(
+    Map<String, MtnMinecraftNbtValue> components,
+    String name,
+  ) {
+    final MtnMinecraftNbtValue? value = components[name];
+    if (value == null) return null;
+    try {
+      return _nestedStackParser.parseModernContainer(value);
+    } on MtnMinecraftInfoItemNestedStackNbtParserException {
+      throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+    }
+  }
+
+  List<MtnMinecraftInfoItemStack>? _optionalModernItemList(
+    Map<String, MtnMinecraftNbtValue> components,
+    String name,
+  ) {
+    final MtnMinecraftNbtValue? value = components[name];
+    if (value == null) return null;
+    try {
+      return _nestedStackParser.parseModernItemList(value);
+    } on MtnMinecraftInfoItemNestedStackNbtParserException {
+      throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+    }
+  }
+
+  MtnMinecraftInfoItemStack? _optionalModernItem(
+    Map<String, MtnMinecraftNbtValue> components,
+    String name,
+  ) {
+    final MtnMinecraftNbtValue? value = components[name];
+    if (value == null) return null;
+    try {
+      return _nestedStackParser.parseModernItem(value);
+    } on MtnMinecraftInfoItemNestedStackNbtParserException {
+      throw const MtnMinecraftInfoItemStackComponentsNbtParserException();
+    }
+  }
   MtnMinecraftInfoItemCustomModelData? _optionalLegacyCustomModelData(
     Map<String, MtnMinecraftNbtValue> tag,
   ) {

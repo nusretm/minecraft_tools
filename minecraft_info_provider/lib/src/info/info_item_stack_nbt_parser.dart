@@ -52,8 +52,9 @@ final class MtnMinecraftInfoItemStackNbtParser {
 
     late final MtnMinecraftInfoItemStackComponents? components;
     try {
-      components =
-          const MtnMinecraftInfoItemStackComponentsNbtParser().parse(data);
+      components = MtnMinecraftInfoItemStackComponentsNbtParser(
+        parseItem: parse,
+      ).parse(data);
     } on MtnMinecraftInfoItemStackComponentsNbtParserException {
       throw const MtnMinecraftInfoItemStackNbtParserException();
     }

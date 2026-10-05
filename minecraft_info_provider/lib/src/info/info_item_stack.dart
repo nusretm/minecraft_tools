@@ -21,6 +21,10 @@ final class MtnMinecraftInfoItemStackComponents {
     this.potionDurationScale,
     Iterable<MtnMinecraftInfoItemAttributeModifier>? attributeModifiers,
     this.customModelData,
+    Map<int, MtnMinecraftInfoItemStack>? containerContents,
+    Iterable<MtnMinecraftInfoItemStack>? bundleContents,
+    Iterable<MtnMinecraftInfoItemStack>? chargedProjectiles,
+    this.useRemainder,
     Iterable<String> removedComponentIds = const <String>[],
   })  : enchantments = enchantments == null
             ? null
@@ -36,6 +40,15 @@ final class MtnMinecraftInfoItemStackComponents {
             : List<MtnMinecraftInfoItemAttributeModifier>.unmodifiable(
                 attributeModifiers,
               ),
+        containerContents = containerContents == null
+            ? null
+            : Map<int, MtnMinecraftInfoItemStack>.unmodifiable(containerContents),
+        bundleContents = bundleContents == null
+            ? null
+            : List<MtnMinecraftInfoItemStack>.unmodifiable(bundleContents),
+        chargedProjectiles = chargedProjectiles == null
+            ? null
+            : List<MtnMinecraftInfoItemStack>.unmodifiable(chargedProjectiles),
         removedComponentIds =
             Set<String>.unmodifiable(removedComponentIds);
 
@@ -92,6 +105,25 @@ final class MtnMinecraftInfoItemStackComponents {
   ///
   /// Null means the stack did not persist a custom-model-data override.
   final MtnMinecraftInfoItemCustomModelData? customModelData;
+
+  /// Explicit persisted slotted container contents.
+  ///
+  /// Null means no container contents were persisted. An empty immutable map
+  /// means the contents were explicitly persisted as empty. Keys are persisted
+  /// slot numbers; effective container capacity requires registry knowledge.
+  final Map<int, MtnMinecraftInfoItemStack>? containerContents;
+
+  /// Explicit persisted Bundle contents.
+  ///
+  /// Null means the property was absent. An empty immutable list means it was
+  /// explicitly persisted as empty.
+  final List<MtnMinecraftInfoItemStack>? bundleContents;
+
+  /// Explicit persisted Crossbow charged projectiles.
+  final List<MtnMinecraftInfoItemStack>? chargedProjectiles;
+
+  /// Explicit item produced/returned after using this stack, when persisted.
+  final MtnMinecraftInfoItemStack? useRemainder;
 
   /// Component IDs explicitly removed by a modern item component patch.
   ///
