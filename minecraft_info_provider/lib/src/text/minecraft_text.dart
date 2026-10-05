@@ -400,13 +400,13 @@ final class MtnMinecraftTextStyle {
 
 /// One render-ready span of Minecraft text.
 final class MtnMinecraftTextItem {
-  const MtnMinecraftTextItem({
+  MtnMinecraftTextItem({
     required this.text,
     required this.style,
     this.translate,
     this.translateFallback,
-    this.translateWith = const <MtnMinecraftText>[],
-  });
+    Iterable<MtnMinecraftText> translateWith = const <MtnMinecraftText>[],
+  }) : translateWith = List<MtnMinecraftText>.unmodifiable(translateWith);
 
   final String text;
   final MtnMinecraftTextStyle style;
