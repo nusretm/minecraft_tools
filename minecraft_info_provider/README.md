@@ -39,6 +39,10 @@ launcher runtime, package-management or UI code.
 - Minimal semantic `MtnMinecraftInfoItemStack` with namespaced item ID and count
 - Legacy armor/off-hand slot normalization and modern player equipment support
 - Legacy `Count` and modern `count` item-stack count normalization
+- Cross-version item core-property normalization for damage, repair cost,
+  unbreakable state, active enchantments and stored enchantments
+- Preservation of modern explicitly removed component IDs without requiring
+  an item registry
 
 ## Usage
 
@@ -204,7 +208,8 @@ directory and must still exist as a directory. Invalid storage-directory shapes
 remain provider-level path errors.
 
 The player snapshot now also exposes gameplay-core, inventory, ender-chest and
-equipment metadata. Active effects, item components and the
+equipment metadata. Item stacks can additionally expose normalized persisted
+core properties. Active effects, richer item components and the
 singleplayer-player relationship remain separate follow-up foundations.
 
 ## Java player gameplay core
@@ -288,6 +293,7 @@ Public models:
 final class MtnMinecraftInfoItemStack {
   final String id;
   final int count;
+  final MtnMinecraftInfoItemStackComponents? components;
 }
 
 final class MtnMinecraftInfoPlayerEquipment {
@@ -347,10 +353,68 @@ Item identifiers are preserved as namespaced strings. The provider does not
 need a vanilla or mod registry to expose IDs such as `minecraft:stone`,
 `alexsmobs:animal_dictionary` or any other mod namespace.
 
-Legacy `tag` and modern `components` payloads are intentionally not parsed or
-validated by this foundation. Enchantments, durability, names/lore, nested
-containers and other item metadata belong to a separate item-components
-checkpoint.
+The inventory/equipment foundation owns item identity/count and storage-slot
+routing. Persisted item metadata is delegated to a separate cross-version item
+properties parser.
+
+## Java item core properties
+
+`MtnMinecraftInfoItemStack.components` exposes normalized properties that were
+explicitly serialized on the stack:
+
+```dart
+final class MtnMinecraftInfoItemStackComponents {
+  final int? damage;
+  final int? repairCost;
+  final bool? unbreakable;
+  final Map<String, int>? enchantments;
+  final Map<String, int>? storedEnchantments;
+  final Set<String> removedComponentIds;
+}
+```
+
+These values are persisted overrides, not a reconstructed effective item from
+Minecraft's item registry. Registry defaults are deliberately not synthesized.
+
+Pre-1.20.5 legacy item data is read from `tag`:
+
+```text
+Damage
+RepairCost
+Unbreakable
+Enchantments
+StoredEnchantments
+```
+
+Modern item data is read from the 1.20.5+ `components` patch:
+
+```text
+minecraft:damage
+minecraft:repair_cost
+minecraft:unbreakable
+minecraft:enchantments
+minecraft:stored_enchantments
+```
+
+When a modern `components` compound exists, it is authoritative for this
+normalization layer; legacy `tag` is not consulted for the same stack.
+
+Both the 1.20.5-style enchantment payload with a nested `levels` compound and
+the later simplified direct enchantment-ID map are normalized to immutable
+`Map<String, int>` values. Namespaced enchantment IDs remain open strings so
+future and modded enchantments are preserved without a registry.
+
+Modern component-patch removal keys such as `!minecraft:damage` are preserved
+as `removedComponentIds`. The provider does not infer the resulting default
+value because that requires the item registry.
+
+Unknown legacy tag fields and unknown modern component IDs are tolerated.
+Recognized fields remain schema-strict. An explicitly present empty enchantment
+collection remains distinguishable from an absent enchantment property.
+
+This first component checkpoint intentionally does not normalize custom
+name/lore/text components, custom model data, attribute modifiers, potion data,
+container contents, custom data or other richer item metadata.
 
 ## Java player statistics
 
@@ -759,7 +823,7 @@ The validator copies the source to a temporary directory, reads it through the
 public provider, appends a validation server to the copy, re-reads it and
 verifies preservation of every pre-existing server compound.
 
-Real world/player/icon/gameplay/inventory/equipment/stats/advancements smoke inspection is available through:
+Real world/player/icon/gameplay/inventory/equipment/item-properties/stats/advancements smoke inspection is available through:
 
 ```powershell
 dart run tool/query_minecraft_worlds.dart `
@@ -779,10 +843,13 @@ previews, normalized equipment, reads player stats and reads advancement
 progress on demand. Gameplay output covers rotation, game modes,
 health/absorption, food, XP, abilities, selected slot, respawn and last-death.
 Inventory output reports occupied slot count, selected item and up to 10
-occupied slots. Ender-chest output uses the same bounded preview, while
-equipment prints head/chest/legs/feet/off-hand semantic slots. Stats output
-includes layout, state/error, DataVersion, category count and total counter
-count. Advancement output includes layout, state/error, DataVersion,
+occupied slots. Item preview lines include normalized damage, repair cost,
+unbreakable state, enchantments, stored enchantments and removed modern
+component IDs. Enchantment/removal previews are bounded. Ender-chest output
+uses the same item preview, while equipment prints both the semantic equipment
+summary and per-item core properties. Stats output includes layout,
+state/error, DataVersion, category count and total counter count. Advancement
+output includes layout, state/error, DataVersion,
 advancement/completion/criterion counts and a bounded preview of advancement
 IDs. Supplying `--set-icon <png>` atomically replaces that world's icon and
 re-reads it to verify the persisted bytes.
@@ -803,7 +870,8 @@ Validated on Windows with Dart:
 
 - address deduplication/write policy
 - richer world metadata and cross-version normalization
-- player item-component information
+- richer item-component information: custom name/lore/text, attributes,
+  potion/container/custom-data and related properties
 - player active effects
 - singleplayer UUID relationship
 - statistics aggregation / semantic unit conversion / writing

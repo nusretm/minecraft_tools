@@ -18,8 +18,8 @@ Feature branch base:
 
 ```text
 main
-a4e1f76ee8004e9909cbe1319af123515921ec1d
-Add Minecraft player gameplay core
+00467ae4b985b092f79cf929b391a549070fb966
+Add Minecraft player inventory and equipment foundation
 ```
 
 This baseline includes COMPLETE / VALIDATED / MERGED foundations for:
@@ -35,199 +35,202 @@ This baseline includes COMPLETE / VALIDATED / MERGED foundations for:
 - Java Edition player statistics
 - Java Edition player advancements
 - Java Edition player gameplay core
+- Java Edition player inventory / ender chest / equipment
+- minimal semantic item stack `id + count`
 
 ## Active checkpoint
 
-Java Edition Player Inventory / Equipment Foundation.
+Java Edition Item Core Properties Foundation.
 
 Current branch:
 
 ```text
-feature/minecraft-player-inventory-equipment-foundation
+feature/minecraft-item-core-properties-foundation
 ```
 
 Implementation/tool HEAD before this metadata pass:
 
 ```text
-a25956fae7dbeaf351aa1fed35ee455a25055b4b
-Show player inventory and equipment in world query tool
+f824ca985d8ab5802feff7cea0d0ced5d8257e8d
+Show item core properties in world query tool
 ```
 
 Package version for this checkpoint:
 
 ```text
-1.0.0-dev.13
+1.0.0-dev.14
 ```
 
-## Public API additions
+## Public API addition
 
-New public item model:
+`MtnMinecraftInfoItemStack` now has:
 
 ```text
-MtnMinecraftInfoItemStack
-  id
-  count
+components -> MtnMinecraftInfoItemStackComponents?
 ```
 
-New equipment model:
+Core persisted-property model:
 
 ```text
-MtnMinecraftInfoPlayerEquipment
-  head
-  chest
-  legs
-  feet
-  offHand
+MtnMinecraftInfoItemStackComponents
+  damage
+  repairCost
+  unbreakable
+  enchantments
+  storedEnchantments
+  removedComponentIds
 ```
 
-`MtnMinecraftInfoPlayer` now additionally exposes:
+The model represents explicitly persisted item overrides. It is not an
+effective item definition resolved against the Minecraft item registry.
+
+## Parser architecture
 
 ```text
-inventory
-enderChest
-equipment
-selectedItem
+MtnMinecraftInfoPlayerInventoryNbtParser
+  -> MtnMinecraftInfoItemStackNbtParser
+       -> id / count
+       -> MtnMinecraftInfoItemStackComponentsNbtParser
+            -> legacy tag
+            -> modern components
+            -> semantic core properties
 ```
 
-Semantic storage shapes:
+Item metadata remains an item-domain responsibility rather than a
+player-inventory responsibility.
+
+## Legacy item normalization
+
+Pre-1.20.5 `tag` properties handled by this checkpoint:
 
 ```text
-inventory  -> nullable immutable List<MtnMinecraftInfoItemStack?> length 36
-enderChest -> nullable immutable List<MtnMinecraftInfoItemStack?> length 27
+Damage
+RepairCost
+Unbreakable
+Enchantments
+StoredEnchantments
 ```
 
-`selectedItem` is derived from the existing `selectedItemSlot` and semantic
-inventory.
-
-## Parsing architecture
-
-Inventory/equipment parsing is split into dedicated internal parsers:
+Semantic output:
 
 ```text
-MtnMinecraftInfoPlayerNbtParser
-  -> MtnMinecraftInfoPlayerInventoryNbtParser
-       -> slot routing / storage normalization
-       -> MtnMinecraftInfoItemStackNbtParser
-            -> serialized item-stack normalization
+Damage             -> damage
+RepairCost         -> repairCost
+Unbreakable        -> unbreakable
+Enchantments       -> enchantments
+StoredEnchantments -> storedEnchantments
 ```
 
-The main player parser remains responsible for composing the semantic
-`MtnMinecraftInfoPlayer` snapshot. Filesystem/gzip/raw-NBT responsibilities
-remain in `MtnMinecraftInfoProvider`.
+Legacy enchantments are normalized from compound-list entries containing
+namespaced `id` plus short `lvl`.
 
-## Inventory and ender chest rules
+Unknown legacy metadata remains tolerated. Recognized properties remain
+schema-strict.
 
-Legacy player `Inventory` slot mapping:
+## Modern item normalization
+
+Recognized 1.20.5+ component IDs:
 
 ```text
-0..35  -> semantic inventory
-100    -> feet
-101    -> legs
-102    -> chest
-103    -> head
--106   -> offHand
+minecraft:damage
+minecraft:repair_cost
+minecraft:unbreakable
+minecraft:enchantments
+minecraft:stored_enchantments
 ```
 
-`EnderItems` recognizes slots 0..26.
+A present `components` compound is authoritative over legacy `tag`.
 
-Missing tag semantics:
+Enchantments accept both:
 
 ```text
-Inventory absent  -> inventory == null
-Inventory empty   -> 36 null semantic slots
+1.20.5-style:
+minecraft:enchantments = {
+  levels: {
+    minecraft:sharpness: 5
+  }
+}
 
-EnderItems absent -> enderChest == null
-EnderItems empty  -> 27 null semantic slots
+later simplified form:
+minecraft:enchantments = {
+  minecraft:sharpness: 5
+}
 ```
 
-Unknown/future/modded slot numbers are ignored. Duplicate recognized semantic
-slots are invalid player data.
+Both normalize to immutable `Map<String, int>`.
 
-## Item stack normalization
+Unknown modern components remain tolerated.
 
-Minimal semantic item:
+## Component removals
+
+Modern item component patches may explicitly remove components:
 
 ```text
-id    -> namespaced external resource ID
-count -> semantic integer stack count
+!minecraft:damage
+!minecraft:enchantments
+!example:custom_component
 ```
 
-Supported serialized count forms:
+Their IDs are retained in:
 
 ```text
-legacy / pre-1.20.5:
-Count: Byte
-
-modern / 1.20.5+:
-count: Int
-
-missing count:
-semantic count = 1
+removedComponentIds
 ```
 
-Modern `count` is authoritative when both modern and legacy count fields are
-present.
+The provider deliberately does not turn a removal into an effective default
+value because item defaults require registry knowledge.
 
-Non-positive counts and `minecraft:air` normalize to an empty slot.
+A recognized component cannot simultaneously be supplied and explicitly
+removed in the same normalized patch.
 
-Legacy `tag` and modern `components` payloads are intentionally ignored by
-this foundation. They are not schema-validated here.
-
-Namespaced item IDs are preserved unchanged, so modded items require no
-provider-specific registry or switch.
-
-## Equipment normalization
-
-Legacy equipment is derived from the special `Inventory` slot numbers listed
-above.
-
-Modern player `equipment` is resolved per semantic slot:
+## Semantic rules
 
 ```text
-modern slot has item
-  -> modern item wins
+property absent
+  -> nullable semantic property remains null
 
-modern slot explicitly present but empty
-  -> semantic slot is empty
-  -> no legacy fallback
+enchantment property explicitly empty
+  -> immutable empty map
 
-modern slot absent
-  -> matching legacy equipment slot may be used
+modern removal present
+  -> component ID retained in removedComponentIds
+
+no recognized property/removal
+  -> item.components == null
 ```
 
-This keeps modern representation authoritative without discarding still-valid
-legacy fallback data for unrelated slots.
+All public enchantment maps and removal sets are immutable.
+
+Namespaced enchantment IDs are preserved as external strings so modded
+enchantments require no provider-specific registry.
 
 ## Deterministic validation
 
-Fifteen focused inventory/equipment tests cover:
+Fourteen focused item-core-properties tests cover:
 
-- legacy inventory routing
-- legacy armor/off-hand routing
-- ender-chest routing
-- selected-item derivation
-- modern count parsing
-- missing-count default
-- legacy metadata ignored
-- modern equipment per-slot precedence
-- explicit empty modern slot
-- missing-vs-empty storage semantics
-- unknown slot tolerance
-- duplicate recognized inventory/equipment/ender slots
-- malformed recognized item fields
-- legacy signed-byte count normalization
-- air / zero-count empty normalization
-- immutable public slot lists
-- invalid storage/equipment container shapes
+- complete legacy damage / repair / unbreakable / enchantment normalization
+- complete 1.20.5-style modern core-component normalization
+- later simplified enchantment representation
+- modern-over-legacy authority
+- unknown legacy/modern metadata tolerance
+- explicit empty enchantments
+- legacy explicit false unbreakable
+- immutable enchantment maps
+- malformed recognized legacy properties
+- duplicate legacy enchantment IDs
+- malformed recognized modern properties
+- strict `tag` / `components` container shapes
+- modern component removals and conflict rejection
+- immutable component-removal set
 
-Full package validation before smoke-tool finalization:
+Full package validation before smoke-tool extension:
 
 ```text
 dart analyze
 No issues found!
 
 dart test
-00:02 +135: All tests passed!
+00:02 +149: All tests passed!
 
 git diff --check origin/main...HEAD
 PASS
@@ -236,68 +239,95 @@ git status
 clean
 ```
 
-Smoke-tool extension was then pulled locally and re-analyzed:
+After pulling the smoke-tool extension:
 
 ```text
 dart analyze
 No issues found!
 ```
 
-Final test/diff/status validation must be rerun after this metadata pass.
+Final analyzer/test/diff/status validation must be rerun after this metadata
+pass.
 
 No `dart format` was run.
 
 ## Real Java Edition 1.20.1 modded smoke validation
 
-Three worlds and eight player snapshots were read from the real game directory.
-All observed files used legacy player-data storage with `DataVersion=3465`.
+Three worlds and eight player snapshots were read from a real modded game
+directory. All observed player files used legacy storage with
+`DataVersion=3465`.
 
-Real inventory/equipment behavior included:
-
-- populated and empty 36-slot inventories
-- selected-item derivation from the selected hotbar slot
-- legacy stack counts including stacks of 64, 55, 28, 21 and other values
-- legacy armor slots normalized into head/chest/legs/feet
-- legacy off-hand normalized independently
-- vanilla and modded namespaced IDs in the same semantic item model
-- bounded smoke output for inventories containing up to 35 occupied slots
-
-Observed mod namespaces included examples such as:
+Real-file validated:
 
 ```text
-aquamirae
-alexsmobs
-caverns_and_chasms
-born_in_chaos_v1
-butchersdelight
-deeperdarker
-simplyswords
-cataclysm
-eeeabsmobs
-sophisticatedbackpacks
-farmersdelight
-artifacts
+legacy tag parsing
+damage
+repairCost
+active enchantments
+vanilla enchantment IDs
+modded enchantment IDs
+inventory item properties
+equipment item properties
+large repairCost values
+bounded enchantment preview
 ```
 
-Representative real equipment observations included:
+Representative inventory observations:
 
 ```text
-head=aquamirae:abyssal_heaume
-offHand=minecraft:totem_of_undying
+simplyswords:diamond_greataxe
+  damage=365
+  repairCost=3
+  enchantments=
+    celestisynth:pulsation:1
+    minecraft:sharpness:4
+    minecraft:unbreaking:3
 
-chest=caverns_and_chasms:sanguine_chestplate
-legs=caverns_and_chasms:sanguine_leggings
-feet=caverns_and_chasms:sanguine_boots
+cataclysm:cursed_bow
+  enchantments=minecraft:power:5
 
-head/chest/legs/feet=cataclysm:cursium_*
+minecraft:diamond_axe
+  damage=147
+  enchantments=majruszsenchantments:leech:1
 ```
 
-All observed `EnderItems` snapshots were empty, so non-empty ender-chest
-behavior remains deterministic-test validated.
+Representative equipment observations:
 
-Modern 1.20.5+ `count` and 1.21.5+ player `equipment` formats also remain
-deterministic-test validated because no real modern-format player file was used
-for this checkpoint.
+```text
+caverns_and_chasms:sanguine_chestplate
+  damage=280
+  repairCost=1
+  enchantments=
+    combatroll:acrobat:3
+    minecraft:protection:4
+    minecraft:unbreaking:3
+
+cataclysm:cursium_helmet/chestplate/leggings/boots
+  damage=0
+  repairCost up to 131071
+  many vanilla and modded enchantments
+```
+
+The smoke preview correctly bounded large enchantment collections and reported
+the remaining count rather than dumping every entry.
+
+Not encountered in the real 1.20.1 dataset:
+
+```text
+explicit unbreakable value
+stored enchantments
+non-empty EnderItems
+```
+
+Deterministic-test only:
+
+```text
+unbreakable normalization
+storedEnchantments normalization
+modern 1.20.5+ components
+modern component removals
+later simplified enchantment representation
+```
 
 Current checkpoint state:
 
@@ -307,26 +337,29 @@ IMPLEMENTED / AUTOMATED VALIDATED / REAL-WORLD 1.20.1 MODDED VALIDATED
 
 ## Explicitly deferred
 
-- legacy item `tag` semantics
-- modern item `components` semantics
-- enchantments / durability / custom names / lore
-- nested item containers
+- custom name / lore / text-component normalization
+- custom model data
+- attribute modifiers
+- potion-specific properties
+- nested containers / bundle-like contents
+- custom data
+- other rich item components
+- item writing
 - player active effects
 - singleplayer player identity / UUID relationship
-- inventory/equipment writing
 - installed-content discovery
 
 ## Locked foundations
 
 This checkpoint does not redesign:
 
-- player identity / UUID discovery
-- legacy vs modern player-data storage precedence
-- gameplay-core fields
-- stats / advancements APIs
-- world ownership / player aggregate semantics
-- world icon I/O
-- server/status/SRV/address behavior
+- item identity / count semantics
+- inventory / ender-chest slot routing
+- equipment normalization
+- player identity / storage precedence
+- gameplay core
+- stats / advancements
+- world ownership
 - raw NBT codec
 
 ## Development rules
@@ -348,13 +381,14 @@ In particular:
 2. Run final `dart analyze`, `dart test`, `git diff --check` and
    `git status`.
 3. Squash the feature branch to one clean commit against
-   `a4e1f76ee8004e9909cbe1319af123515921ec1d`.
+   `00467ae4b985b092f79cf929b391a549070fb966`.
 4. Force-push only with `--force-with-lease`.
 5. Fast-forward merge to `main` only after the squashed tree is locally
    verified.
 
-Likely next player-data checkpoint:
+Likely next item-components sub-checkpoint:
 
-- Player Active Effects Foundation
+- Item Display / Text Properties Foundation
 
-Item components remain a separate cross-domain item-model checkpoint.
+That checkpoint should be designed separately because custom-name/lore text
+storage changed materially across Minecraft versions.

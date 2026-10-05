@@ -1,11 +1,12 @@
 import '../nbt/minecraft_nbt.dart';
 import 'info_item_stack.dart';
+import 'info_item_stack_components_nbt_parser.dart';
 
 /// Internal parser for serialized Minecraft item stacks.
 ///
 /// Supports both the pre-1.20.5 `Count` byte representation and the 1.20.5+
-/// `count` integer representation. Legacy `tag` and modern `components`
-/// are deliberately ignored by this foundation.
+/// `count` integer representation, then delegates persisted item properties
+/// to the cross-version component parser.
 final class MtnMinecraftInfoItemStackNbtParser {
   const MtnMinecraftInfoItemStackNbtParser();
 
@@ -49,9 +50,18 @@ final class MtnMinecraftInfoItemStackNbtParser {
 
     if (count <= 0 || id == 'minecraft:air') return null;
 
+    late final MtnMinecraftInfoItemStackComponents? components;
+    try {
+      components =
+          const MtnMinecraftInfoItemStackComponentsNbtParser().parse(data);
+    } on MtnMinecraftInfoItemStackComponentsNbtParserException {
+      throw const MtnMinecraftInfoItemStackNbtParserException();
+    }
+
     return MtnMinecraftInfoItemStack(
       id: id,
       count: count,
+      components: components,
     );
   }
 }

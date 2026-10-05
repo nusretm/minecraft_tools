@@ -1,5 +1,46 @@
 # Changelog
 
+## 1.0.0-dev.14
+
+Java Edition item core properties foundation.
+
+- Added `MtnMinecraftInfoItemStackComponents` and
+  `MtnMinecraftInfoItemStack.components`.
+- Normalized explicitly persisted damage, repair cost, unbreakable state,
+  active enchantments and stored enchantments across legacy item `tag` data
+  and modern item `components`.
+- Added a dedicated internal
+  `MtnMinecraftInfoItemStackComponentsNbtParser` instead of expanding player
+  inventory parsing with item-metadata schema rules.
+- Made a present modern `components` compound authoritative over legacy
+  `tag` for the same stack.
+- Preserved arbitrary vanilla, future and modded enchantment resource IDs as
+  immutable maps without requiring an enchantment registry.
+- Supported both 1.20.5-style enchantment payloads with nested `levels` and
+  the later simplified direct enchantment-ID map.
+- Preserved explicitly removed modern component IDs separately so registry
+  defaults are not guessed by the provider.
+- Kept unknown legacy metadata and unknown modern component IDs tolerant while
+  recognized properties remain schema-strict.
+- Preserved absent-versus-explicitly-empty enchantment semantics.
+- Added 14 focused item-core-properties tests; full package validation reached
+  149/149 passing tests with clean analyzer output.
+- Adjusted prior inventory tests so `tag` / `components` containers now use
+  valid compound shapes while unknown contents remain tolerated.
+- Extended `tool/query_minecraft_worlds.dart` with bounded item-property
+  output for inventory, ender-chest and equipment items.
+- Real modded Java Edition 1.20.1 smoke validation read legacy damage,
+  repair-cost and enchantment data from real inventory and equipment stacks,
+  including vanilla and modded enchantment namespaces.
+- Real smoke examples included a Simply Swords greataxe with damage 365,
+  repair cost 3 and mixed modded/vanilla enchantments, and Cataclysm armor
+  carrying large repair costs and many enchantments.
+- Real-file validation did not encounter explicit unbreakable values or stored
+  enchantments. Those fields, modern 1.20.5+ components, component removals and
+  later enchantment representation remain deterministic-test validated.
+- Kept custom name/lore/text, custom model data, attributes, potion/container
+  data and other richer item components outside this checkpoint.
+
 ## 1.0.0-dev.13
 
 Java Edition player inventory and equipment foundation.

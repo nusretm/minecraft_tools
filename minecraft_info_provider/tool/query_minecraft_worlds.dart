@@ -121,6 +121,7 @@ Future<void> main(List<String> arguments) async {
         'feet=${_item(player.equipment?.feet)} '
         'offHand=${_item(player.equipment?.offHand)}',
       );
+      _writePlayerEquipmentItems(world, player);
 
       final MtnMinecraftInfoPlayerStats? stats =
           await provider.readPlayerStats(world, player);
@@ -361,7 +362,8 @@ void _writeItemPreview({
       'uuid=${player.uuid} '
       'slot=$slot '
       'id=${item.id} '
-      'count=${item.count}',
+      'count=${item.count} '
+      '${_itemProperties(item)}',
     );
   }
   if (usedSlots.length > previewLimit) {
@@ -369,6 +371,37 @@ void _writeItemPreview({
       '${lineName}_MORE world=${world.directoryName} '
       'uuid=${player.uuid} '
       'count=${usedSlots.length - previewLimit}',
+    );
+  }
+}
+
+void _writePlayerEquipmentItems(
+  MtnMinecraftInfoWorld world,
+  MtnMinecraftInfoPlayer player,
+) {
+  final MtnMinecraftInfoPlayerEquipment? equipment = player.equipment;
+  if (equipment == null) return;
+
+  final Map<String, MtnMinecraftInfoItemStack?> items =
+      <String, MtnMinecraftInfoItemStack?>{
+    'head': equipment.head,
+    'chest': equipment.chest,
+    'legs': equipment.legs,
+    'feet': equipment.feet,
+    'offHand': equipment.offHand,
+  };
+
+  for (final MapEntry<String, MtnMinecraftInfoItemStack?> entry
+      in items.entries) {
+    final MtnMinecraftInfoItemStack? item = entry.value;
+    if (item == null) continue;
+    stdout.writeln(
+      'PLAYER_EQUIPMENT_ITEM world=${world.directoryName} '
+      'uuid=${player.uuid} '
+      'slot=${entry.key} '
+      'id=${item.id} '
+      'count=${item.count} '
+      '${_itemProperties(item)}',
     );
   }
 }
@@ -386,6 +419,50 @@ List<int> _usedItemSlots(
 String _item(MtnMinecraftInfoItemStack? item) {
   if (item == null) return 'null';
   return '${item.id}x${item.count}';
+}
+
+String _itemProperties(MtnMinecraftInfoItemStack item) {
+  final MtnMinecraftInfoItemStackComponents? components = item.components;
+  if (components == null) {
+    return 'damage=null repairCost=null unbreakable=null '
+        'enchantments=null storedEnchantments=null removedComponents=null';
+  }
+
+  return 'damage=${components.damage} '
+      'repairCost=${components.repairCost} '
+      'unbreakable=${components.unbreakable} '
+      'enchantments=${_mapPreview(components.enchantments)} '
+      'storedEnchantments=${_mapPreview(components.storedEnchantments)} '
+      'removedComponents=${_setPreview(components.removedComponentIds)}';
+}
+
+String _mapPreview(Map<String, int>? values) {
+  if (values == null) return 'null';
+  if (values.isEmpty) return '[]';
+
+  const int previewLimit = 5;
+  final List<String> keys = values.keys.toList()..sort();
+  final List<String> preview = <String>[
+    for (final String key in keys.take(previewLimit))
+      '$key:${values[key]}',
+  ];
+  if (keys.length > previewLimit) {
+    preview.add('+${keys.length - previewLimit}');
+  }
+  return '[${preview.join(',')}]';
+}
+
+String _setPreview(Set<String> values) {
+  if (values.isEmpty) return '[]';
+
+  const int previewLimit = 5;
+  final List<String> sorted = values.toList()..sort();
+  final List<String> preview =
+      sorted.take(previewLimit).toList(growable: true);
+  if (sorted.length > previewLimit) {
+    preview.add('+${sorted.length - previewLimit}');
+  }
+  return '[${preview.join(',')}]';
 }
 
 int _statsCounterCount(MtnMinecraftInfoPlayerStats stats) {

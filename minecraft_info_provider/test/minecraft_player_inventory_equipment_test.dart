@@ -89,7 +89,12 @@ void main() {
               count: 5,
               extra: <String, MtnMinecraftNbtValue>{
                 'Count': MtnMinecraftNbtValue.string('ignored legacy count'),
-                'components': MtnMinecraftNbtValue.string('ignored'),
+                'components': MtnMinecraftNbtValue.compound(
+                  <String, MtnMinecraftNbtValue>{
+                    'example:unknown':
+                        MtnMinecraftNbtValue.string('ignored'),
+                  },
+                ),
               },
             ),
             _modernItem(
@@ -108,7 +113,7 @@ void main() {
       expect(player.inventory![1]?.count, 1);
     });
 
-    test('legacy tag metadata is ignored by the foundation', () async {
+    test('unknown legacy tag metadata is tolerated', () async {
       await _writePlayer(
         worldDirectory,
         <String, MtnMinecraftNbtValue>{
@@ -118,7 +123,12 @@ void main() {
               id: 'minecraft:diamond_sword',
               count: 1,
               extra: <String, MtnMinecraftNbtValue>{
-                'tag': MtnMinecraftNbtValue.string('not parsed here'),
+                'tag': MtnMinecraftNbtValue.compound(
+                  <String, MtnMinecraftNbtValue>{
+                    'ExampleModData':
+                        MtnMinecraftNbtValue.string('not modeled here'),
+                  },
+                ),
               },
             ),
           ]),
