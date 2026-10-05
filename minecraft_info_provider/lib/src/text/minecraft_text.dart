@@ -3,133 +3,141 @@
 /// The sixteen classic colors are exposed as named static constants while
 /// arbitrary RGB colors remain representable without a Flutter dependency.
 final class MtnMinecraftTextColor {
+
+  factory MtnMinecraftTextColor.fromCode(String code) {
+    final MtnMinecraftTextColor? value = tryFromCode(code);
+    if (value == null) {
+      throw FormatException('Unknown Minecraft text color code: $code');
+    }
+    return value;
+  }
+
+  MtnMinecraftTextColor.rgb(this.colorR, this.colorG, this.colorB)
+      : code = null,
+        name = null {
+    _checkChannel(colorR, 'red');
+    _checkChannel(colorG, 'green');
+    _checkChannel(colorB, 'blue');
+  }
   const MtnMinecraftTextColor._named({
     required this.code,
     required this.name,
-    required this.red,
-    required this.green,
-    required this.blue,
+    required this.colorR,
+    required this.colorG,
+    required this.colorB,
   });
-
-  MtnMinecraftTextColor.rgb(this.red, this.green, this.blue)
-      : code = null,
-        name = null {
-    _checkChannel(red, 'red');
-    _checkChannel(green, 'green');
-    _checkChannel(blue, 'blue');
-  }
 
   static const MtnMinecraftTextColor black = MtnMinecraftTextColor._named(
     code: '0',
     name: 'black',
-    red: 0,
-    green: 0,
-    blue: 0,
+    colorR: 0,
+    colorG: 0,
+    colorB: 0,
   );
   static const MtnMinecraftTextColor darkBlue = MtnMinecraftTextColor._named(
     code: '1',
     name: 'dark_blue',
-    red: 0,
-    green: 0,
-    blue: 170,
+    colorR: 0,
+    colorG: 0,
+    colorB: 170,
   );
   static const MtnMinecraftTextColor darkGreen = MtnMinecraftTextColor._named(
     code: '2',
     name: 'dark_green',
-    red: 0,
-    green: 170,
-    blue: 0,
+    colorR: 0,
+    colorG: 170,
+    colorB: 0,
   );
   static const MtnMinecraftTextColor darkAqua = MtnMinecraftTextColor._named(
     code: '3',
     name: 'dark_aqua',
-    red: 0,
-    green: 170,
-    blue: 170,
+    colorR: 0,
+    colorG: 170,
+    colorB: 170,
   );
   static const MtnMinecraftTextColor darkRed = MtnMinecraftTextColor._named(
     code: '4',
     name: 'dark_red',
-    red: 170,
-    green: 0,
-    blue: 0,
+    colorR: 170,
+    colorG: 0,
+    colorB: 0,
   );
   static const MtnMinecraftTextColor darkPurple = MtnMinecraftTextColor._named(
     code: '5',
     name: 'dark_purple',
-    red: 170,
-    green: 0,
-    blue: 170,
+    colorR: 170,
+    colorG: 0,
+    colorB: 170,
   );
   static const MtnMinecraftTextColor gold = MtnMinecraftTextColor._named(
     code: '6',
     name: 'gold',
-    red: 255,
-    green: 170,
-    blue: 0,
+    colorR: 255,
+    colorG: 170,
+    colorB: 0,
   );
   static const MtnMinecraftTextColor gray = MtnMinecraftTextColor._named(
     code: '7',
     name: 'gray',
-    red: 170,
-    green: 170,
-    blue: 170,
+    colorR: 170,
+    colorG: 170,
+    colorB: 170,
   );
   static const MtnMinecraftTextColor darkGray = MtnMinecraftTextColor._named(
     code: '8',
     name: 'dark_gray',
-    red: 85,
-    green: 85,
-    blue: 85,
+    colorR: 85,
+    colorG: 85,
+    colorB: 85,
   );
   static const MtnMinecraftTextColor blue = MtnMinecraftTextColor._named(
     code: '9',
     name: 'blue',
-    red: 85,
-    green: 85,
-    blue: 255,
+    colorR: 85,
+    colorG: 85,
+    colorB: 255,
   );
   static const MtnMinecraftTextColor green = MtnMinecraftTextColor._named(
     code: 'a',
     name: 'green',
-    red: 85,
-    green: 255,
-    blue: 85,
+    colorR: 85,
+    colorG: 255,
+    colorB: 85,
   );
   static const MtnMinecraftTextColor aqua = MtnMinecraftTextColor._named(
     code: 'b',
     name: 'aqua',
-    red: 85,
-    green: 255,
-    blue: 255,
+    colorR: 85,
+    colorG: 255,
+    colorB: 255,
   );
   static const MtnMinecraftTextColor red = MtnMinecraftTextColor._named(
     code: 'c',
     name: 'red',
-    red: 255,
-    green: 85,
-    blue: 85,
+    colorR: 255,
+    colorG: 85,
+    colorB: 85,
   );
   static const MtnMinecraftTextColor lightPurple = MtnMinecraftTextColor._named(
     code: 'd',
     name: 'light_purple',
-    red: 255,
-    green: 85,
-    blue: 255,
+    colorR: 255,
+    colorG: 85,
+    colorB: 255,
   );
   static const MtnMinecraftTextColor yellow = MtnMinecraftTextColor._named(
     code: 'e',
     name: 'yellow',
-    red: 255,
-    green: 255,
-    blue: 85,
+    colorR: 255,
+    colorG: 255,
+    colorB: 85,
   );
   static const MtnMinecraftTextColor white = MtnMinecraftTextColor._named(
     code: 'f',
     name: 'white',
-    red: 255,
-    green: 255,
-    blue: 255,
+    colorR: 255,
+    colorG: 255,
+    colorB: 255,
   );
 
   static const List<MtnMinecraftTextColor> namedValues =
@@ -158,11 +166,11 @@ final class MtnMinecraftTextColor {
   /// Minecraft named-color token, or null for an arbitrary RGB color.
   final String? name;
 
-  final int red;
-  final int green;
-  final int blue;
+  final int colorR;
+  final int colorG;
+  final int colorB;
 
-  int get rgb => (red << 16) | (green << 8) | blue;
+  int get rgb => (colorR << 16) | (colorG << 8) | colorB;
 
   String get hex =>
       '#${rgb.toRadixString(16).padLeft(6, '0').toUpperCase()}';
@@ -184,14 +192,6 @@ final class MtnMinecraftTextColor {
       return _tryFromHexDigits(clean.substring(1));
     }
     return null;
-  }
-
-  factory MtnMinecraftTextColor.fromCode(String code) {
-    final MtnMinecraftTextColor? value = tryFromCode(code);
-    if (value == null) {
-      throw FormatException('Unknown Minecraft text color code: $code');
-    }
-    return value;
   }
 
   static MtnMinecraftTextColor? tryFromMinecraftValue(String value) {
@@ -241,12 +241,12 @@ final class MtnMinecraftTextColor {
   bool operator ==(Object other) =>
       other is MtnMinecraftTextColor &&
       other.code == code &&
-      other.red == red &&
-      other.green == green &&
-      other.blue == blue;
+      other.colorR == colorR &&
+      other.colorG == colorG &&
+      other.colorB == colorB;
 
   @override
-  int get hashCode => Object.hash(code, red, green, blue);
+  int get hashCode => Object.hash(code, colorR, colorG, colorB);
 
   static void _checkChannel(int value, String name) {
     if (value < 0 || value > 255) {
@@ -367,25 +367,19 @@ final class MtnMinecraftTextItem {
 /// [plainText] and [items] results.
 final class MtnMinecraftText {
   MtnMinecraftText({
-    required String text,
+    required this.text,
     this.baseStyle = MtnMinecraftTextStyle.defaults,
-  }) : _text = text;
+  });
 
   factory MtnMinecraftText.fromItems(
     Iterable<MtnMinecraftTextItem> items,
   ) =>
       MtnMinecraftText(text: _encodeItems(items));
 
-  String _text;
+  String text;
 
   /// Effective starting style for source text before any formatting code.
   final MtnMinecraftTextStyle baseStyle;
-
-  String get text => _text;
-
-  set text(String value) {
-    _text = value;
-  }
 
   String get plainText {
     final StringBuffer result = StringBuffer();
@@ -396,7 +390,7 @@ final class MtnMinecraftText {
   }
 
   List<MtnMinecraftTextItem> get items =>
-      _MtnMinecraftLegacyTextParser(_text, baseStyle).parse();
+      _MtnMinecraftLegacyTextParser(text, baseStyle).parse();
 
   @override
   String toString() => text;
@@ -449,6 +443,11 @@ final class _MtnMinecraftLegacyTextParser {
           index = rgb.nextIndex;
           continue;
         }
+
+        final int literalEnd = _readMalformedRgbPrefixEnd(index);
+        buffer.write(source.substring(index, literalEnd));
+        index = literalEnd;
+        continue;
       }
 
       final MtnMinecraftTextColor? color =
@@ -485,6 +484,23 @@ final class _MtnMinecraftLegacyTextParser {
 
     flush();
     return List<MtnMinecraftTextItem>.unmodifiable(result);
+  }
+
+  int _readMalformedRgbPrefixEnd(int index) {
+    var cursor = index + 2;
+    var parts = 0;
+
+    while (parts < 6 &&
+        cursor + 1 < source.length &&
+        source.codeUnitAt(cursor) == 0x00a7) {
+      final String digit =
+          String.fromCharCode(source.codeUnitAt(cursor + 1));
+      if (int.tryParse(digit, radix: 16) == null) break;
+      cursor += 2;
+      parts++;
+    }
+
+    return cursor;
   }
 
   _RgbSequence? _readRgb(int index) {
