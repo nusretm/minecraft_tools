@@ -467,6 +467,7 @@ final class MtnMinecraftText {
   String get text => _text;
 
   set text(String value) {
+    if (_text == value) return;
     _text = value;
   }
 
