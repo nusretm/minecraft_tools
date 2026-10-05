@@ -161,7 +161,7 @@ void main() {
       expect(text.items.single.color.hex, '#12ABEF');
       expect(
         () => text.items.add(
-          const MtnMinecraftTextItem(
+          MtnMinecraftTextItem(
             text: 'x',
             style: MtnMinecraftTextStyle.defaults,
           ),
@@ -297,6 +297,27 @@ void main() {
       expect(roundTrip.items.single.translateWith.single.items.single.italic, isTrue);
     });
 
+    test('translateWith is snapshotted and immutable', () {
+      final List<MtnMinecraftText> source = <MtnMinecraftText>[
+        MtnMinecraftText(text: 'One'),
+      ];
+      final MtnMinecraftTextItem item = MtnMinecraftTextItem(
+        text: 'Translated',
+        style: MtnMinecraftTextStyle.defaults,
+        translate: 'example.key',
+        translateWith: source,
+      );
+
+      source.add(MtnMinecraftText(text: 'Two'));
+
+      expect(item.translateWith, hasLength(1));
+      expect(item.translateWith.single.plainText, 'One');
+      expect(
+        () => item.translateWith.add(MtnMinecraftText(text: 'Three')),
+        throwsUnsupportedError,
+      );
+    });
+
     test('text setter invalidates imported translate metadata on change', () {
       final MtnMinecraftText text = MtnMinecraftText.fromJson(
         '{"translate":"example.old","fallback":"Old"}',
@@ -346,14 +367,14 @@ void main() {
     test('fromItems produces a source string that resolves back to styles', () {
       final MtnMinecraftText source = MtnMinecraftText.fromItems(
         <MtnMinecraftTextItem>[
-          const MtnMinecraftTextItem(
+          MtnMinecraftTextItem(
             text: 'Error',
             style: MtnMinecraftTextStyle(
               color: MtnMinecraftTextColor.red,
               bold: true,
             ),
           ),
-          const MtnMinecraftTextItem(
+          MtnMinecraftTextItem(
             text: '!',
             style: MtnMinecraftTextStyle(
               color: MtnMinecraftTextColor.yellow,
