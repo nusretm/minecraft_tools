@@ -45,17 +45,21 @@ void main() {
       expect(read, original);
       expect(identical(read, original), isFalse);
 
-      expect(
-        () => source.read('Example', 'lang/en_us.json'),
+      await expectLater(
+        source.read('Example', 'lang/en_us.json'),
+        throwsArgumentError,
+      );
+      await expectLater(
+        source.read('example', '../secret.txt'),
+        throwsArgumentError,
+      );
+      await expectLater(
+        source.read('example', '/textures/item/a.png'),
         throwsArgumentError,
       );
       expect(
-        () => source.read('example', '../secret.txt'),
-        throwsArgumentError,
-      );
-      expect(
-        () => source.read('example', '/textures/item/a.png'),
-        throwsArgumentError,
+        await source.read('missing', 'lang/en_us.json'),
+        isNull,
       );
     });
 
