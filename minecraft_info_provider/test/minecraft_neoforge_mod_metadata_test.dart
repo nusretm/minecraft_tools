@@ -237,8 +237,7 @@ version = "1"
       expect(await (await provider.parse(jar))!.single.getIcon(), icon);
     });
 
-    test('uses legacy logoFile fallback', () async {
-      final Uint8List icon = Uint8List.fromList(<int>[4]);
+    test('does not reinterpret NeoForge logoFile as iconFile', () async {
       final File jar = await _writeJar(
         directory,
         'logo-file.jar',
@@ -253,11 +252,14 @@ version = "1"
 logoFile = "logo.png"
 ''',
           ),
-          'logo.png': icon,
+          'logo.png': <int>[4],
         },
       );
 
-      expect(await (await provider.parse(jar))!.single.getIcon(), icon);
+      final MtnMinecraftInfoMod mod = (await provider.parse(jar))!.single;
+
+      expect(mod.hasIcon, isFalse);
+      expect(await mod.getIcon(), isNull);
     });
 
     test('resolves NeoForge file version substitutions', () async {
