@@ -489,7 +489,7 @@ List<MtnMinecraftInfoModDependency> _fabricDependenciesFromJson(
 
   addGroup(
     'depends',
-    MtnMinecraftInfoModDependencyType.requiredDependency,
+    MtnMinecraftInfoModDependencyType.required,
   );
   addGroup(
     'recommends',
@@ -501,7 +501,7 @@ List<MtnMinecraftInfoModDependency> _fabricDependenciesFromJson(
   );
   addGroup(
     'conflicts',
-    MtnMinecraftInfoModDependencyType.conflicting,
+    MtnMinecraftInfoModDependencyType.conflict,
   );
   addGroup(
     'breaks',
