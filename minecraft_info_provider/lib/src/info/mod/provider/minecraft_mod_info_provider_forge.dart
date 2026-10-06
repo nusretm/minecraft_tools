@@ -258,7 +258,7 @@ final class MtnMinecraftModInfoProviderForge
           iconLoaders: !hasLogo
               ? const <MtnMinecraftInfoModIconLoader>[]
               : <MtnMinecraftInfoModIconLoader>[
-                  (int size) => source.readEntry(logoFile),
+                  (int size) => source.readEntry(logoFile!),
                 ],
         ),
       );
@@ -527,7 +527,7 @@ String? _implementationVersionFromArchive(Archive archive) {
 }
 
 Map<String, String> _filePropertiesFromToml(Object? rawProperties) {
-  if (rawProperties == null) return const <String, String>[];
+  if (rawProperties == null) return const <String, String>{};
   final Map<String, dynamic> properties = _requiredMap(
     rawProperties,
   );
