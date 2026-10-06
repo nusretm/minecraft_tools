@@ -31,7 +31,7 @@ squash merge
 Package version:
 
 ```text
-1.0.0-dev.27
+1.0.0-dev.28
 ```
 
 Working milestone state:
@@ -405,6 +405,105 @@ required: fabricloader >=0.15.0
 required: minecraft ~26.3
 required: fabric-api *
 ```
+
+Example:
+
+```text
+minecraft_info_provider/example/mod_metadata.dart
+```
+
+
+## Forge mod metadata checkpoint
+
+```text
+Branch: feature/forge-mod-metadata-foundation
+Status: IMPLEMENTED / VALIDATED / REAL JAR SMOKE PASSED
+```
+
+Public/provider surface:
+
+- `MtnMinecraftModInfoProviderForge`
+- `MtnMinecraftInfoModDependencyType.optional`
+- `MtnMinecraftInfoModDependencyOrdering.none`
+- `MtnMinecraftInfoModDependencyOrdering.before`
+- `MtnMinecraftInfoModDependencyOrdering.after`
+
+Locked Forge scope:
+
+- modern Forge metadata is read from root `META-INF/mods.toml`
+- one JAR may declare multiple `[[mods]]` entries
+- generic fields include ID, version, display name, description, authors, license, homepage and issue tracker
+- Forge metadata does not provide a source repository URL in the validated Armor HUD JAR; `urls.source` therefore remains null
+- `logoFile` uses the existing lazy provider-backed icon API
+- missing logo files do not invalidate otherwise valid mod metadata
+- dependency `mandatory=true` maps to generic required
+- dependency `mandatory=false` maps to generic optional
+- dependency `ordering=NONE/BEFORE/AFTER` maps to generic dependency ordering
+- dependency `side=CLIENT/SERVER/BOTH` applies only to that dependency relationship
+- dependency side is never promoted into mod-level `clientSide/serverSide`
+- Forge `displayTest` is not treated as a physical-side declaration
+- explicit file-level `clientSideOnly=true` maps to client-only; otherwise mod-level side remains conservatively both
+- Forge `versionRange` syntax is preserved as raw generic `versionConstraints`
+- `${file.jarVersion}` resolves from manifest `Implementation-Version`
+- `${file.<property>}` resolves from Forge file-level `properties`
+- declared JarJar entries are read from `META-INF/jarjar/metadata.json`
+- embedded Forge mods are recursively parsed in memory
+- JarJar libraries without Forge mod metadata do not become logical mods
+- legacy `mcmod.info`, bytecode `@Mod` discovery and older Forge fallbacks remain outside this checkpoint
+
+Shared archive infrastructure:
+
+- Fabric and Forge now reuse the same internal ZIP signature validation, archive entry lookup and lazy root/embedded archive-chain reading implementation
+- embedded JARs and icons remain in-memory/lazy and are not extracted to disk
+
+Final validation on 2026-10-06:
+
+```text
+dart analyze
+No issues found!
+
+focused Forge provider
+15/15 passed
+
+focused Fabric provider regression
+19/19 passed
+
+full package test suite
+316/316 passed
+
+git diff --check
+PASS
+
+working tree
+clean
+```
+
+Real JAR smoke target:
+
+```text
+armor_hud-forge-3.5.0+1.20.1.jar
+```
+
+Observed logical mods:
+
+```text
+armor_hud@3.5.0
+mixinextras@0.4.1
+```
+
+Observed Armor HUD normalization:
+
+```text
+homepage: https://modrinth.com/mod/armor-hud
+source: null
+issues: https://github.com/SaolGhra/Armor-Hud/issues
+clientSide: true
+serverSide: true
+required: forge [47,) client=true server=false
+required: minecraft [1.20.1] client=true server=false
+```
+
+The Forge dependency `CLIENT` scopes intentionally do not imply that the whole mod is client-only.
 
 Example:
 
