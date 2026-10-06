@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.0-dev.23
+
+Mod-loader discovery foundation.
+
+- Added `MtnMinecraftInfoModLoaderType` for Fabric, Forge, NeoForge and Quilt.
+- Added immutable `MtnMinecraftInfoModLoader` with loader type, loader version and inherited Minecraft version.
+- Added `MtnMinecraftInfoProvider.readModLoader()`.
+- Discovery reads only `versions/version.json` fields needed by this feature: `id` and `inheritsFrom`.
+- Kept launcher-version parsing, libraries, arguments, assets, downloads and runtime reconstruction outside this checkpoint.
+- Missing `version.json` or an unrecognized loader returns null; recognized malformed loader data remains strict.
+- Added a focused `example/mod_loader.dart` smoke-test entry point.
+- Added deterministic Fabric, Quilt, Forge and NeoForge discovery coverage.
+
 ## 1.0.0-dev.22
 
 Item custom data foundation.

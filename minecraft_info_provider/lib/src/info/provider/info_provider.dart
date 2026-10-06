@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 
 import '../../nbt/minecraft_nbt.dart';
 import '../info_nbt_uuid_parser.dart';
+import '../mod/info_mod_loader.dart';
 import '../player/info_player.dart';
 import '../player/info_player_advancements.dart';
 import '../player/info_player_nbt_parser.dart';
@@ -19,6 +20,8 @@ import '../world/info_world.dart';
 const String _serversFileName = 'servers.dat';
 const String _serversTagName = 'servers';
 const String _savesDirectoryName = 'saves';
+const String _versionsDirectoryName = 'versions';
+const String _versionFileName = 'version.json';
 const String _legacyPlayerDataDirectoryName = 'playerdata';
 const String _modernPlayersDirectoryName = 'players';
 const String _modernPlayerDataDirectoryName = 'data';
@@ -277,6 +280,73 @@ final class MtnMinecraftInfoProvider {
       await _validateWorldDirectory(world, forWrite: true);
       await _writeFileAtomic(world.iconFile, bytes);
     });
+  }
+
+  /// Reads the mod loader declared by this profile's `versions/version.json`.
+  ///
+  /// Only the profile `id` and `inheritsFrom` values are interpreted.
+  /// A missing profile or an unrecognized loader returns null.
+  Future<MtnMinecraftInfoModLoader?> readModLoader() async {
+    final FileSystemEntityType gameDirectoryType =
+        await _entityType(gameDirectory.path, forWrite: false);
+    if (gameDirectoryType != FileSystemEntityType.directory) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidPath,
+      );
+    }
+
+    final Directory versionsDirectory = Directory(
+      p.join(gameDirectory.path, _versionsDirectoryName),
+    );
+    final FileSystemEntityType versionsDirectoryType =
+        await _entityType(versionsDirectory.path, forWrite: false);
+    if (versionsDirectoryType == FileSystemEntityType.notFound) return null;
+    if (versionsDirectoryType != FileSystemEntityType.directory) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidPath,
+      );
+    }
+
+    final File versionFile = File(
+      p.join(versionsDirectory.path, _versionFileName),
+    );
+    final FileSystemEntityType versionFileType =
+        await _entityType(versionFile.path, forWrite: false);
+    if (versionFileType == FileSystemEntityType.notFound) return null;
+    if (versionFileType != FileSystemEntityType.file) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidPath,
+      );
+    }
+
+    late final String source;
+    try {
+      source = await versionFile.readAsString();
+    } on FileSystemException {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.readFailed,
+      );
+    } on FormatException {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidData,
+      );
+    }
+
+    late final Object? decoded;
+    try {
+      decoded = jsonDecode(source);
+    } on FormatException {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidData,
+      );
+    }
+    if (decoded is! Map<String, dynamic>) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidData,
+      );
+    }
+
+    return _modLoaderFromVersionJson(decoded);
   }
 
   Future<List<MtnMinecraftInfoPlayer>> _readPlayersFromDirectory(
@@ -1022,6 +1092,72 @@ final class MtnMinecraftInfoProvider {
       }
     }
   }
+}
+
+MtnMinecraftInfoModLoader? _modLoaderFromVersionJson(
+  Map<String, dynamic> json,
+) {
+  final Object? rawId = json['id'];
+  if (rawId is! String || rawId.isEmpty) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+
+  late final MtnMinecraftInfoModLoaderType type;
+  if (rawId.startsWith('fabric-loader-')) {
+    type = MtnMinecraftInfoModLoaderType.fabric;
+  } else if (rawId.startsWith('quilt-loader-')) {
+    type = MtnMinecraftInfoModLoaderType.quilt;
+  } else if (rawId.contains('-neoforge-')) {
+    type = MtnMinecraftInfoModLoaderType.neoForge;
+  } else if (rawId.contains('-forge-')) {
+    type = MtnMinecraftInfoModLoaderType.forge;
+  } else {
+    return null;
+  }
+
+  final Object? rawMinecraftVersion = json['inheritsFrom'];
+  if (rawMinecraftVersion is! String || rawMinecraftVersion.isEmpty) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+
+  final (String prefix, String? suffix) pattern = switch (type) {
+    MtnMinecraftInfoModLoaderType.fabric =>
+      ('fabric-loader-', '-$rawMinecraftVersion'),
+    MtnMinecraftInfoModLoaderType.quilt =>
+      ('quilt-loader-', '-$rawMinecraftVersion'),
+    MtnMinecraftInfoModLoaderType.forge =>
+      ('$rawMinecraftVersion-forge-', null),
+    MtnMinecraftInfoModLoaderType.neoForge =>
+      ('$rawMinecraftVersion-neoforge-', null),
+  };
+  final String prefix = pattern.$1;
+  final String? suffix = pattern.$2;
+
+  if (!rawId.startsWith(prefix) ||
+      (suffix != null && !rawId.endsWith(suffix))) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+
+  final int end = suffix == null
+      ? rawId.length
+      : rawId.length - suffix.length;
+  if (end <= prefix.length) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+
+  return MtnMinecraftInfoModLoader(
+    type: type,
+    version: rawId.substring(prefix.length, end),
+    minecraftVersion: rawMinecraftVersion,
+  );
 }
 
 const String _playerUuidPattern =

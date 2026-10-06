@@ -31,7 +31,7 @@ squash merge
 Package version:
 
 ```text
-1.0.0-dev.22
+1.0.0-dev.23
 ```
 
 Working milestone state:
@@ -40,6 +40,62 @@ Working milestone state:
 SERVER LIST CRUD + AUTO CHECK / HEALTH CHECK
 COMPLETE / VALIDATED / MERGED
 ```
+
+Working mod-loader discovery checkpoint:
+
+```text
+Branch: feature/mod-loader-discovery-foundation
+Status: IMPLEMENTED / VALIDATED / REAL PROFILE SMOKE PASSED
+```
+
+Public surface:
+
+- `MtnMinecraftInfoModLoaderType`
+- `MtnMinecraftInfoModLoader`
+- `MtnMinecraftInfoProvider.readModLoader()`
+
+Locked scope:
+
+- reads only `<gameDirectory>/versions/version.json`
+- interprets only `id` and `inheritsFrom`
+- reports recognized loader type, loader version and Minecraft version
+- missing profile or unknown loader returns null
+- does not parse libraries, launcher arguments, assets, downloads or runtime metadata
+- does not inspect loader JARs or the `mods/` directory
+
+Final validation on 2026-10-06:
+
+```text
+dart analyze
+No issues found!
+
+focused mod-loader discovery
+9/9 passed
+
+full package test suite
+265/265 passed
+
+git diff --check
+PASS
+
+working tree
+clean
+```
+
+Real-profile smoke target:
+
+```text
+C:\Provanas\profiles\02766803-f0e2-4101-a3b8-962e1f520bcb
+```
+
+Observed active profile signal:
+
+```text
+Mod loader: fabric
+Loader version: 0.19.5
+Minecraft version: 26.1.2
+```
+
 
 ## Completed server-list management
 
@@ -250,7 +306,6 @@ Remaining major areas include:
 
 ### Installed content / launcher presentation
 
-- Minecraft version mod-loader discovery
 - installed mod list
 - mod metadata discovery
 - mod namespace -> owning mod mapping
@@ -339,4 +394,4 @@ In particular:
 
 There is no automatically selected next implementation checkpoint.
 
-Choose the next narrow area explicitly before implementation. Based on the current launcher-facing priorities, installed mod-loader/mod metadata discovery is a natural candidate, but it is not approved merely by appearing here.
+Choose the next narrow area explicitly before implementation. Based on the current launcher-facing priorities, installed mod-file discovery under `mods/` is the natural next candidate, followed by mod metadata discovery. Neither is approved merely by appearing here.
