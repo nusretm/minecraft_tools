@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.0-dev.27
+
+Generic mod metadata foundation.
+
+- Expanded `MtnMinecraftInfoMod` with provider-independent contributors, licenses, URLs, client/server-side support, dependency metadata and provided mod IDs.
+- Added `MtnMinecraftInfoModUrls` with first-class homepage, source and issue-tracker URLs.
+- Added `MtnMinecraftInfoModDependency` and generic dependency types: required, recommended, suggested, conflict and incompatible.
+- Preserved raw provider version constraints instead of forcing Fabric and future Forge/NeoForge syntaxes into one parser.
+- Multiple dependency constraints are preserved as OR alternatives.
+- Fabric `authors`, `contributors`, `license`, `contact`, `environment`, `provides`, `depends`, `recommends`, `suggests`, `conflicts` and `breaks` are normalized into the generic model.
+- Fabric `environment` maps to independent `clientSide` and `serverSide` booleans.
+- Source URLs are populated only from authoritative metadata; issue URLs are never rewritten or guessed into repository URLs.
+- `MtnMinecraftModList` merges generic metadata contributed by multiple providers for the same logical `id + version`.
+- Added `example/mod_metadata.dart` with explicit missing-file validation.
+- Real Armor HUD Fabric validation confirmed homepage, GitHub source, issue tracker, client-only support and dependency normalization.
+- Final validation: analyzer clean, Fabric metadata tests 19/19, mod-list tests 10/10, full suite 301/301, diff-check clean and working tree clean.
+
 ## 1.0.0-dev.26
 
 Mod icon lookup foundation.
