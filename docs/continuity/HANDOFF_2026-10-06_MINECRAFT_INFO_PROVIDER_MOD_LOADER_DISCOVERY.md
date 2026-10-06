@@ -16,8 +16,7 @@ Package:    minecraft_info_provider/
 
 ```text
 MOD LOADER DISCOVERY FOUNDATION
-IMPLEMENTED / DETERMINISTICALLY VALIDATED
-REAL PROFILE SMOKE PENDING
+IMPLEMENTED / VALIDATED / REAL PROFILE SMOKE PASSED
 ```
 
 Branch:
@@ -130,19 +129,20 @@ Usage:
 dart run example/mod_loader.dart "C:\Provanas\profiles\02766803-f0e2-4101-a3b8-962e1f520bcb"
 ```
 
-## Validation completed before example/continuity-only additions
+## Final validation
 
-Authoritative local validation supplied on 2026-10-06:
+Authoritative local validation supplied on 2026-10-06 after the example,
+package-version and continuity additions:
 
 ```text
 dart analyze
 No issues found!
 
 dart test test/minecraft_mod_loader_discovery_test.dart
-00:04 +9: All tests passed!
+00:00 +9: All tests passed!
 
 dart test
-00:03 +265: All tests passed!
+00:04 +265: All tests passed!
 
 git diff --check main...HEAD
 PASS
@@ -151,11 +151,7 @@ git status
 clean
 ```
 
-Because the example and continuity/package-version updates were added after
-that validation run, rerun `dart analyze`, focused/full tests and
-`git diff --check` before merge.
-
-## Real profile smoke pending
+## Real profile smoke passed
 
 Target:
 
@@ -163,13 +159,16 @@ Target:
 C:\Provanas\profiles\02766803-f0e2-4101-a3b8-962e1f520bcb
 ```
 
-Expected result:
+Observed result:
 
 ```text
 Mod loader: fabric
 Loader version: 0.19.5
 Minecraft version: 26.1.2
 ```
+
+The example therefore confirmed the real Provanas Fabric profile without
+consulting loader JAR filenames or any unrelated `version.json` fields.
 
 ## Explicitly out of scope
 
