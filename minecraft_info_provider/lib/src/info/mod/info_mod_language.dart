@@ -129,4 +129,4 @@ final class MtnMinecraftInfoModTranslation {
   final String value;
 }
 
-final RegExp _localePattern = RegExp(r'^[a-z0-9_-]+);
+final RegExp _localePattern = RegExp(r'^[a-z0-9_-]+$');
