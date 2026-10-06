@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.0-dev.26
+
+Mod icon lookup foundation.
+
+- Added lazy icon access to `MtnMinecraftInfoMod` through `hasIcon` and `getIcon({int size = 128})`.
+- Kept icon bytes out of the normalized model until explicitly requested.
+- Preserved provider ownership of icon metadata and archive lookup rules.
+- Added Fabric icon parsing for both single string paths and size-to-path maps.
+- Multi-size Fabric icons select the smallest available width greater than or equal to the requested size, falling back to the largest available icon.
+- Missing declared icon files do not invalidate otherwise valid mod metadata; `hasIcon` remains false and `getIcon()` returns null.
+- Added lazy root-JAR reopening for installed mod icons.
+- Added lazy embedded archive-chain traversal so icons for embedded mods remain readable after initial parsing without extracting nested JARs to disk.
+- Preserved icon loaders through `MtnMinecraftModList` normalization/merge.
+- Added `example/mod_icons.dart` for real-profile smoke validation.
+- Real Fabric profile validation found 116 mods with declared/readable icons and loaded all 116 successfully.
+- Added focused icon coverage; Fabric provider tests reached 15/15, mod-list tests 9/9, and the full suite 296/296.
+
 ## 1.0.0-dev.25
 
 Fabric mod metadata/provider and embedded dependency graph foundation.
