@@ -366,7 +366,8 @@ _FabricIcon? _fabricIconFromJson(
     if (width == null ||
         width <= 0 ||
         rawPath is! String ||
-        rawPath.isEmpty) {
+        rawPath.isEmpty ||
+        paths.containsKey(width)) {
       throw const MtnMinecraftModInfoProviderException(
         MtnMinecraftModInfoProviderError.invalidData,
       );
@@ -427,7 +428,7 @@ final class _FabricJarSource {
         rootArchive = ZipDecoder().decodeBytes(_content!, verify: true);
       }
 
-      Archive currentArchive = rootArchive;
+      Archive currentArchive = rootArchive!;
       for (final String embeddedPath in _embeddedPaths) {
         final ArchiveFile? embeddedFile = _findArchiveFile(
           currentArchive,
