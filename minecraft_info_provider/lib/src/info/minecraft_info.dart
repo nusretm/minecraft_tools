@@ -6,8 +6,10 @@ export 'item/info_item_custom_model_data.dart';
 export 'item/info_item_stack.dart';
 
 export 'mod/info_mod.dart';
+export 'mod/info_mod_list.dart';
 export 'mod/info_mod_loader.dart';
-export 'mod/info_mod_metadata.dart';
+export 'mod/provider/minecraft_mod_info_provider.dart';
+export 'mod/provider/minecraft_mod_info_provider_fabric.dart';
 
 export 'player/info_player.dart';
 export 'player/info_player_advancements.dart';
