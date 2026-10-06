@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.0.0-dev.32
+
+Item name resolution foundation and real-profile compatibility corrections.
+
+- Added `MtnMinecraftInfoItemIdentity` for validated namespaced item IDs and conventional `item.<namespace>.<path>` / `block.<namespace>.<path>` translation-key derivation.
+- Added `MtnMinecraftInfoItemName`, `MtnMinecraftInfoItemNameKind` and `MtnMinecraftInfoItemNameResolver`.
+- Item-name resolution returns every exact-locale conventional item/block translation candidate with source provenance and does not claim an authoritative runtime description ID.
+- Resolver searches discovered language namespaces without assuming that an asset namespace equals the item namespace or logical mod ID.
+- No implicit locale fallback, resource precedence, registry emulation or custom runtime description-ID guessing is applied.
+- Invalid language sources are isolated by the high-level item-name resolver so one unrelated malformed source does not hide valid candidates from other sources; low-level `readLanguages()` remains strict.
+- Matched Minecraft language loading semantics for JSON primitive values: string, number and boolean values are normalized to strings; object, array and null values remain invalid.
+- Matched Minecraft numeric-format normalization for language strings by converting unsupported `%d` / `%f` forms to `%s` while preserving positional indexes.
+- Relaxed Fabric metadata normalization to tolerate empty optional license and person strings observed in real Fabric JARs while retaining strict type/schema validation.
+- Added `example/item_names.dart` for real-profile conventional item-name lookup.
+- Real 54-JAR Fabric profile validation completed successfully.
+- Negative real-profile smoke returned a clean miss for stale/uninstalled `simplyswords:diamond_greataxe` and `sophisticatedbackpacks:gold_backpack`.
+- Positive real-profile smoke resolved `verity:flashlight` to `Flashlight` from `verity-4.0.0.jar`.
+- Final pre-closure validation: analyzer clean, Fabric metadata 21/21, language translation 9/9, item-name resolution 9/9, full suite 361/361.
+
 ## 1.0.0-dev.31
 
 Mod language/translation lookup foundation.
