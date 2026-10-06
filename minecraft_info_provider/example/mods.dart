@@ -18,6 +18,26 @@ Future<void> main(List<String> args) async {
 
   print('Mods: ${mods.length}');
   for (final MtnMinecraftInfoMod mod in mods) {
-    print(mod.fileName);
+    try {
+      final MtnMinecraftInfoModMetadata? metadata =
+          await provider.readModMetadata(mod);
+      if (metadata == null) {
+        print('[metadata=unknown] ${mod.fileName}');
+        continue;
+      }
+
+      print(
+        '[metadata=${metadata.type.name}] '
+        'id=${metadata.id} '
+        'name=${metadata.name} '
+        'version=${metadata.version} '
+        'authors=${metadata.authors.join(', ')} '
+        'file=${mod.fileName}',
+      );
+    } on MtnMinecraftInfoProviderException catch (error) {
+      print(
+        '[metadataError=${error.error.name}] ${mod.fileName}',
+      );
+    }
   }
 }
