@@ -25,15 +25,18 @@ final class MtnMinecraftInfoServer {
     this.onChange,
   });
 
-  factory MtnMinecraftInfoServer.clone(MtnMinecraftInfoServer source) =>
-      MtnMinecraftInfoServer(
-        name: source.name,
-        address: source.address,
-        icon: source.icon,
-        hidden: source.hidden,
-        acceptServerResourcePacks: source.acceptServerResourcePacks,
-        onChange: source.onChange,
-      );
+  factory MtnMinecraftInfoServer.clone(MtnMinecraftInfoServer source) {
+    final MtnMinecraftInfoServer clone = MtnMinecraftInfoServer(
+      name: source.name,
+      address: source.address,
+      icon: source.icon,
+      hidden: source.hidden,
+      acceptServerResourcePacks: source.acceptServerResourcePacks,
+      onChange: source.onChange,
+    );
+    clone.autoCheckSec = source.autoCheckSec;
+    return clone;
+  }
 
   final String name;
   final String address;
