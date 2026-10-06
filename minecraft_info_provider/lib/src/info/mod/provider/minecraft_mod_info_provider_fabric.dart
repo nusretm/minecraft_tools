@@ -31,9 +31,12 @@ final class MtnMinecraftModInfoProviderFabric
       );
     }
 
-    late final Archive archive;
+    Archive? archive;
     try {
       archive = ZipDecoder().decodeStream(input, verify: true);
+      return await _parseArchive(archive);
+    } on MtnMinecraftModInfoProviderException {
+      rethrow;
     } on ArchiveException {
       throw const MtnMinecraftModInfoProviderException(
         MtnMinecraftModInfoProviderError.invalidData,
@@ -43,13 +46,8 @@ final class MtnMinecraftModInfoProviderFabric
         MtnMinecraftModInfoProviderError.invalidData,
       );
     } finally {
+      archive?.clearSync();
       input.closeSync();
-    }
-
-    try {
-      return await _parseArchive(archive);
-    } finally {
-      archive.clearSync();
     }
   }
 
