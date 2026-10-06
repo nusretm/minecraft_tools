@@ -170,6 +170,11 @@ final class MtnMinecraftModList {
 
           normalized.addModType(provider.name);
           normalized.addAuthors(parsed.authors);
+          if (parsed.hasIcon) {
+            normalized.addIconLoader(
+              (int size) => parsed.getIcon(size: size),
+            );
+          }
           if (parsed.parentMods.isEmpty) {
             normalized.addInstalledFile(root.file);
           }
@@ -243,6 +248,7 @@ final class MtnMinecraftModList {
   ) {
     if (left.name != right.name ||
         left.description != right.description ||
+        left.hasIcon != right.hasIcon ||
         !_sameStrings(left.authors, right.authors) ||
         !_sameStrings(left.modTypes, right.modTypes)) {
       return false;
