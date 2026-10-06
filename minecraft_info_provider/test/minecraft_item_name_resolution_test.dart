@@ -231,6 +231,49 @@ void main() {
       );
     });
 
+    test('isolates invalid language sources while resolving names',
+        () async {
+      final File invalid = await _writeFabricJar(
+        directory,
+        'invalid-language.jar',
+        id: 'invalid_language',
+        entries: <String, List<int>>{
+          'assets/example/lang/en_us.json': utf8.encode(
+            '{"translation.invalid":{"text":"value"}}',
+          ),
+        },
+      );
+      final File valid = await _writeFabricJar(
+        directory,
+        'valid-language.jar',
+        id: 'valid_language',
+        entries: <String, List<int>>{
+          'assets/example/lang/en_us.json': utf8.encode(
+            '{"item.example.widget":"Valid Widget"}',
+          ),
+        },
+      );
+      final MtnMinecraftModList list = _fabricList();
+      await list.add(invalid);
+      await list.add(valid);
+
+      await _expectInvalidLanguageData(
+        list.readLanguages('example'),
+      );
+
+      final List<MtnMinecraftInfoItemName> names =
+          await MtnMinecraftInfoItemNameResolver(
+        modList: list,
+      ).resolve('example:widget');
+
+      expect(names, hasLength(1));
+      expect(names.single.value, 'Valid Widget');
+      expect(
+        p.basename(names.single.source.rootFile!.path),
+        'valid-language.jar',
+      );
+    });
+
     test('uses exact locale and does not guess custom description ids',
         () async {
       final File jar = await _writeFabricJar(
@@ -270,6 +313,21 @@ void main() {
       expect(english.single.value, 'English Widget');
     });
   });
+}
+
+Future<void> _expectInvalidLanguageData(
+  Future<List<MtnMinecraftInfoModLanguage>> future,
+) async {
+  await expectLater(
+    future,
+    throwsA(
+      isA<MtnMinecraftInfoModLanguageException>().having(
+        (MtnMinecraftInfoModLanguageException error) => error.error,
+        'error',
+        MtnMinecraftInfoModLanguageError.invalidData,
+      ),
+    ),
+  );
 }
 
 MtnMinecraftModList _fabricList() => MtnMinecraftModList(
