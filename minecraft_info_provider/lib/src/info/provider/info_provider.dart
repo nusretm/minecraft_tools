@@ -4,14 +4,13 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:archive/archive.dart';
 import 'package:path/path.dart' as p;
 
 import '../../nbt/minecraft_nbt.dart';
 import '../info_nbt_uuid_parser.dart';
 import '../mod/info_mod.dart';
+import '../mod/info_mod_list.dart';
 import '../mod/info_mod_loader.dart';
-import '../mod/info_mod_metadata.dart';
 import '../player/info_player.dart';
 import '../player/info_player_advancements.dart';
 import '../player/info_player_nbt_parser.dart';
@@ -353,11 +352,14 @@ final class MtnMinecraftInfoProvider {
     return _modLoaderFromVersionJson(decoded);
   }
 
-  /// Discovers direct JAR files under this profile's `mods` directory.
+  /// Discovers and parses direct JAR files under this profile's `mods` directory.
   ///
   /// A missing `mods` directory is equivalent to an empty mod list.
-  /// Nested directories and non-JAR files are ignored.
-  Future<List<MtnMinecraftInfoMod>> readMods() async {
+  /// Nested directories and non-JAR files are ignored. Every discovered root
+  /// JAR is offered to every provider registered in [modList].
+  Future<List<MtnMinecraftInfoMod>> readMods(
+    MtnMinecraftModList modList,
+  ) async {
     final FileSystemEntityType gameDirectoryType =
         await _entityType(gameDirectory.path, forWrite: false);
     if (gameDirectoryType != FileSystemEntityType.directory) {
@@ -372,7 +374,8 @@ final class MtnMinecraftInfoProvider {
     final FileSystemEntityType modsDirectoryType =
         await _entityType(modsDirectory.path, forWrite: false);
     if (modsDirectoryType == FileSystemEntityType.notFound) {
-      return const <MtnMinecraftInfoMod>[];
+      modList.clear();
+      return modList.mods;
     }
     if (modsDirectoryType != FileSystemEntityType.directory) {
       throw const MtnMinecraftInfoProviderException(
@@ -398,105 +401,11 @@ final class MtnMinecraftInfoProvider {
             p.basename(left.path).compareTo(p.basename(right.path)),
       );
 
-    return List<MtnMinecraftInfoMod>.unmodifiable(
-      files.map(
-        (File file) => MtnMinecraftInfoMod(
-          file: file,
-        ),
-      ),
-    );
-  }
-
-  /// Reads supported metadata from [mod].
-  ///
-  /// This checkpoint recognizes only root-level `fabric.mod.json` schema
-  /// version 1. A JAR without Fabric metadata returns null.
-  Future<MtnMinecraftInfoModMetadata?> readModMetadata(
-    MtnMinecraftInfoMod mod,
-  ) async {
-    final Directory modsDirectory = Directory(
-      p.join(gameDirectory.path, _modsDirectoryName),
-    );
-    final String modPath = p.normalize(p.absolute(mod.file.path));
-    if (!p.equals(p.dirname(modPath), modsDirectory.path) ||
-        p.extension(modPath).toLowerCase() != '.jar') {
-      throw const MtnMinecraftInfoProviderException(
-        MtnMinecraftInfoProviderError.invalidPath,
-      );
+    modList.clear();
+    for (final File file in files) {
+      await modList.add(file);
     }
-
-    final FileSystemEntityType modType =
-        await _entityType(modPath, forWrite: false);
-    if (modType != FileSystemEntityType.file) {
-      throw const MtnMinecraftInfoProviderException(
-        MtnMinecraftInfoProviderError.invalidPath,
-      );
-    }
-
-    late final Uint8List bytes;
-    try {
-      bytes = await File(modPath).readAsBytes();
-    } on FileSystemException {
-      throw const MtnMinecraftInfoProviderException(
-        MtnMinecraftInfoProviderError.readFailed,
-      );
-    }
-
-    if (!_hasZipSignature(bytes)) {
-      throw const MtnMinecraftInfoProviderException(
-        MtnMinecraftInfoProviderError.invalidData,
-      );
-    }
-
-    late final Archive archive;
-    try {
-      archive = ZipDecoder().decodeBytes(bytes, verify: true);
-    } on ArchiveException {
-      throw const MtnMinecraftInfoProviderException(
-        MtnMinecraftInfoProviderError.invalidData,
-      );
-    } on FormatException {
-      throw const MtnMinecraftInfoProviderException(
-        MtnMinecraftInfoProviderError.invalidData,
-      );
-    }
-
-    ArchiveFile? metadataFile;
-    for (final ArchiveFile entry in archive) {
-      if (entry.name == 'fabric.mod.json') {
-        metadataFile = entry;
-        break;
-      }
-    }
-    if (metadataFile == null) return null;
-    if (!metadataFile.isFile) {
-      throw const MtnMinecraftInfoProviderException(
-        MtnMinecraftInfoProviderError.invalidData,
-      );
-    }
-
-    final Uint8List? metadataBytes = metadataFile.readBytes();
-    if (metadataBytes == null) {
-      throw const MtnMinecraftInfoProviderException(
-        MtnMinecraftInfoProviderError.invalidData,
-      );
-    }
-
-    late final Object? decoded;
-    try {
-      decoded = jsonDecode(utf8.decode(metadataBytes));
-    } on FormatException {
-      throw const MtnMinecraftInfoProviderException(
-        MtnMinecraftInfoProviderError.invalidData,
-      );
-    }
-    if (decoded is! Map<String, dynamic>) {
-      throw const MtnMinecraftInfoProviderException(
-        MtnMinecraftInfoProviderError.invalidData,
-      );
-    }
-
-    return _fabricModMetadataFromJson(decoded);
+    return modList.mods;
   }
 
   Future<List<MtnMinecraftInfoPlayer>> _readPlayersFromDirectory(
@@ -1242,86 +1151,6 @@ final class MtnMinecraftInfoProvider {
       }
     }
   }
-}
-
-bool _hasZipSignature(Uint8List bytes) {
-  if (bytes.length < 4 || bytes[0] != 0x50 || bytes[1] != 0x4b) {
-    return false;
-  }
-
-  return (bytes[2] == 0x03 && bytes[3] == 0x04) ||
-      (bytes[2] == 0x05 && bytes[3] == 0x06) ||
-      (bytes[2] == 0x07 && bytes[3] == 0x08);
-}
-
-MtnMinecraftInfoModMetadata _fabricModMetadataFromJson(
-  Map<String, dynamic> json,
-) {
-  if (json['schemaVersion'] != 1) {
-    throw const MtnMinecraftInfoProviderException(
-      MtnMinecraftInfoProviderError.invalidData,
-    );
-  }
-
-  final Object? rawId = json['id'];
-  final Object? rawVersion = json['version'];
-  if (rawId is! String ||
-      rawId.isEmpty ||
-      rawVersion is! String ||
-      rawVersion.isEmpty) {
-    throw const MtnMinecraftInfoProviderException(
-      MtnMinecraftInfoProviderError.invalidData,
-    );
-  }
-
-  final Object? rawName = json['name'];
-  if (rawName != null && (rawName is! String || rawName.isEmpty)) {
-    throw const MtnMinecraftInfoProviderException(
-      MtnMinecraftInfoProviderError.invalidData,
-    );
-  }
-
-  final Object? rawDescription = json['description'];
-  if (rawDescription != null && rawDescription is! String) {
-    throw const MtnMinecraftInfoProviderException(
-      MtnMinecraftInfoProviderError.invalidData,
-    );
-  }
-
-  final List<String> authors = <String>[];
-  final Object? rawAuthors = json['authors'];
-  if (rawAuthors != null) {
-    if (rawAuthors is! List<dynamic>) {
-      throw const MtnMinecraftInfoProviderException(
-        MtnMinecraftInfoProviderError.invalidData,
-      );
-    }
-    for (final Object? rawAuthor in rawAuthors) {
-      if (rawAuthor is String && rawAuthor.isNotEmpty) {
-        authors.add(rawAuthor);
-        continue;
-      }
-      if (rawAuthor is Map<String, dynamic>) {
-        final Object? rawAuthorName = rawAuthor['name'];
-        if (rawAuthorName is String && rawAuthorName.isNotEmpty) {
-          authors.add(rawAuthorName);
-          continue;
-        }
-      }
-      throw const MtnMinecraftInfoProviderException(
-        MtnMinecraftInfoProviderError.invalidData,
-      );
-    }
-  }
-
-  return MtnMinecraftInfoModMetadata(
-    type: MtnMinecraftInfoModMetadataType.fabric,
-    id: rawId,
-    name: rawName is String ? rawName : rawId,
-    version: rawVersion,
-    description: rawDescription is String ? rawDescription : '',
-    authors: authors,
-  );
 }
 
 MtnMinecraftInfoModLoader? _modLoaderFromVersionJson(
