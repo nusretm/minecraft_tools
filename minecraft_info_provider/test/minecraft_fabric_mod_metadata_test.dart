@@ -238,6 +238,37 @@ void main() {
       );
     });
 
+    test('normalizes empty Fabric people metadata as unspecified', () async {
+      final File jar = await _writeJar(
+        directory,
+        'empty-people.jar',
+        <String, List<int>>{
+          'fabric.mod.json': _jsonBytes(
+            <String, Object?>{
+              'schemaVersion': 1,
+              'id': 'empty_people',
+              'version': '1',
+              'authors': <Object?>[
+                '',
+                <String, Object?>{'name': ''},
+                'Alice',
+              ],
+              'contributors': <Object?>[
+                '',
+                <String, Object?>{'name': ''},
+                'Bob',
+              ],
+            },
+          ),
+        },
+      );
+
+      final MtnMinecraftInfoMod mod = (await provider.parse(jar))!.single;
+
+      expect(mod.authors, <String>['Alice']);
+      expect(mod.contributors, <String>['Bob']);
+    });
+
     test('does not derive source URL from issue tracker metadata', () async {
       final File jar = await _writeJar(
         directory,
