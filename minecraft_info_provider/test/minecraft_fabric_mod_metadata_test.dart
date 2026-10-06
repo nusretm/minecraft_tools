@@ -91,6 +91,162 @@ void main() {
       expect(mod.authors, isEmpty);
     });
 
+    test('reads a single Fabric icon lazily', () async {
+      final Uint8List icon = Uint8List.fromList(
+        <int>[0x89, 0x50, 0x4e, 0x47, 1, 2, 3],
+      );
+      final File jar = await _writeJar(
+        directory,
+        'icon.jar',
+        <String, List<int>>{
+          'fabric.mod.json': _jsonBytes(
+            <String, Object?>{
+              'schemaVersion': 1,
+              'id': 'icon_mod',
+              'version': '1',
+              'icon': 'assets/icon_mod/icon.png',
+            },
+          ),
+          'assets/icon_mod/icon.png': icon,
+        },
+      );
+
+      final MtnMinecraftInfoMod mod = (await provider.parse(jar))!.single;
+
+      expect(mod.hasIcon, isTrue);
+      expect(await mod.getIcon(), icon);
+      expect(await mod.getIcon(size: 32), icon);
+    });
+
+    test('selects Fabric sized icons using loader preferred-size semantics', () async {
+      final Uint8List icon16 = Uint8List.fromList(<int>[16]);
+      final Uint8List icon64 = Uint8List.fromList(<int>[64]);
+      final Uint8List icon256 = Uint8List.fromList(<int>[2, 5, 6]);
+      final File jar = await _writeJar(
+        directory,
+        'sized-icons.jar',
+        <String, List<int>>{
+          'fabric.mod.json': _jsonBytes(
+            <String, Object?>{
+              'schemaVersion': 1,
+              'id': 'sized_icon_mod',
+              'version': '1',
+              'icon': <String, String>{
+                '16': 'assets/icon16.png',
+                '64': 'assets/icon64.png',
+                '256': 'assets/icon256.png',
+              },
+            },
+          ),
+          'assets/icon16.png': icon16,
+          'assets/icon64.png': icon64,
+          'assets/icon256.png': icon256,
+        },
+      );
+
+      final MtnMinecraftInfoMod mod = (await provider.parse(jar))!.single;
+
+      expect(await mod.getIcon(size: 16), icon16);
+      expect(await mod.getIcon(size: 32), icon64);
+      expect(await mod.getIcon(size: 128), icon256);
+      expect(await mod.getIcon(size: 512), icon256);
+    });
+
+    test('missing declared icon is unavailable without invalidating the mod', () async {
+      final File jar = await _writeJar(
+        directory,
+        'missing-icon.jar',
+        <String, List<int>>{
+          'fabric.mod.json': _jsonBytes(
+            <String, Object?>{
+              'schemaVersion': 1,
+              'id': 'missing_icon_mod',
+              'version': '1',
+              'icon': 'assets/missing.png',
+            },
+          ),
+        },
+      );
+
+      final MtnMinecraftInfoMod mod = (await provider.parse(jar))!.single;
+
+      expect(mod.hasIcon, isFalse);
+      expect(await mod.getIcon(), isNull);
+    });
+
+    test('embedded mod icon remains readable after root parsing completes', () async {
+      final Uint8List childIcon = Uint8List.fromList(
+        <int>[0x89, 0x50, 0x4e, 0x47, 9, 8, 7],
+      );
+      final Uint8List child = _jarBytes(
+        <String, List<int>>{
+          'fabric.mod.json': _jsonBytes(
+            <String, Object?>{
+              'schemaVersion': 1,
+              'id': 'child_with_icon',
+              'version': '1',
+              'icon': 'assets/child/icon.png',
+            },
+          ),
+          'assets/child/icon.png': childIcon,
+        },
+      );
+      final File rootJar = await _writeJar(
+        directory,
+        'root-with-icon-child.jar',
+        <String, List<int>>{
+          'fabric.mod.json': _jsonBytes(
+            <String, Object?>{
+              'schemaVersion': 1,
+              'id': 'root_with_icon_child',
+              'version': '1',
+              'jars': <Object?>[
+                <String, String>{
+                  'file': 'META-INF/jars/child.jar',
+                },
+              ],
+            },
+          ),
+          'META-INF/jars/child.jar': child,
+        },
+      );
+
+      final List<MtnMinecraftInfoMod> mods =
+          (await provider.parse(rootJar))!;
+      final MtnMinecraftInfoMod childMod = mods.singleWhere(
+        (MtnMinecraftInfoMod mod) => mod.id == 'child_with_icon',
+      );
+
+      expect(childMod.isEmbedded, isTrue);
+      expect(childMod.hasIcon, isTrue);
+      expect(await childMod.getIcon(), childIcon);
+    });
+
+    test('getIcon rejects non-positive preferred sizes', () async {
+      final File jar = await _writeJar(
+        directory,
+        'icon-size.jar',
+        <String, List<int>>{
+          'fabric.mod.json': _jsonBytes(
+            <String, Object?>{
+              'schemaVersion': 1,
+              'id': 'icon_size_mod',
+              'version': '1',
+              'icon': 'icon.png',
+            },
+          ),
+          'icon.png': <int>[1],
+        },
+      );
+
+      final MtnMinecraftInfoMod mod = (await provider.parse(jar))!.single;
+
+      await expectLater(
+        mod.getIcon(size: 0),
+        throwsArgumentError,
+      );
+    });
+
     test('JAR without root fabric.mod.json is not a Fabric result', () async {
       final File jar = await _writeJar(
         directory,
