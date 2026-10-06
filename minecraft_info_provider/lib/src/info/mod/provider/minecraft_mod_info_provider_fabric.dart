@@ -8,6 +8,7 @@ import '../info_mod.dart';
 import '../info_mod_dependency.dart';
 import '../info_mod_urls.dart';
 import 'minecraft_mod_info_provider.dart';
+import 'minecraft_mod_info_provider_archive.dart';
 
 /// Fabric `fabric.mod.json` implementation of [MtnMinecraftModInfoProvider].
 final class MtnMinecraftModInfoProviderFabric
@@ -22,7 +23,7 @@ final class MtnMinecraftModInfoProviderFabric
 
   @override
   Future<List<MtnMinecraftInfoMod>?> parse(File jarFile) async {
-    await _validateJarFile(jarFile);
+    await MtnMinecraftModInfoProviderArchive.validateFile(jarFile);
 
     late final InputFileStream input;
     try {
@@ -38,7 +39,7 @@ final class MtnMinecraftModInfoProviderFabric
       archive = ZipDecoder().decodeStream(input, verify: true);
       return await _parseArchive(
         archive,
-        source: _FabricJarSource.file(jarFile),
+        source: MtnMinecraftModInfoProviderArchiveSource.file(jarFile),
       );
     } on MtnMinecraftModInfoProviderException {
       rethrow;
@@ -63,17 +64,17 @@ final class MtnMinecraftModInfoProviderFabric
   }) async {
     return _parseJarContentWithSource(
       content,
-      source: _FabricJarSource.memory(content),
+      source: MtnMinecraftModInfoProviderArchiveSource.memory(content),
       parentMod: parentMod,
     );
   }
 
   Future<List<MtnMinecraftInfoMod>?> _parseJarContentWithSource(
     Uint8List content, {
-    required _FabricJarSource source,
+    required MtnMinecraftModInfoProviderArchiveSource source,
     MtnMinecraftInfoMod? parentMod,
   }) async {
-    if (!_hasZipSignature(content)) {
+    if (!MtnMinecraftModInfoProviderArchive.hasZipSignature(content)) {
       throw const MtnMinecraftModInfoProviderException(
         MtnMinecraftModInfoProviderError.invalidData,
       );
@@ -105,10 +106,10 @@ final class MtnMinecraftModInfoProviderFabric
 
   Future<List<MtnMinecraftInfoMod>?> _parseArchive(
     Archive archive, {
-    required _FabricJarSource source,
+    required MtnMinecraftModInfoProviderArchiveSource source,
     MtnMinecraftInfoMod? parentMod,
   }) async {
-    final ArchiveFile? metadataFile = _findArchiveFile(
+    final ArchiveFile? metadataFile = MtnMinecraftModInfoProviderArchive.findFile(
       archive,
       _metadataFileName,
     );
@@ -171,7 +172,7 @@ final class MtnMinecraftModInfoProviderFabric
         );
       }
 
-      final ArchiveFile? embeddedFile = _findArchiveFile(archive, rawFile);
+      final ArchiveFile? embeddedFile = MtnMinecraftModInfoProviderArchive.findFile(archive, rawFile);
       if (embeddedFile == null || !embeddedFile.isFile) {
         throw const MtnMinecraftModInfoProviderException(
           MtnMinecraftModInfoProviderError.invalidData,
@@ -202,7 +203,7 @@ final class MtnMinecraftModInfoProviderFabric
   MtnMinecraftInfoMod _modFromJson(
     Map<String, dynamic> json, {
     required Archive archive,
-    required _FabricJarSource source,
+    required MtnMinecraftModInfoProviderArchiveSource source,
     required MtnMinecraftInfoMod? parentMod,
   }) {
     if (json['schemaVersion'] != 1) {
@@ -290,34 +291,6 @@ final class MtnMinecraftModInfoProviderFabric
     );
   }
 
-  Future<void> _validateJarFile(File jarFile) async {
-    late final RandomAccessFile input;
-    try {
-      input = await jarFile.open();
-    } on FileSystemException {
-      throw const MtnMinecraftModInfoProviderException(
-        MtnMinecraftModInfoProviderError.readFailed,
-      );
-    }
-
-    late final Uint8List signature;
-    try {
-      signature = await input.read(4);
-    } on FileSystemException {
-      throw const MtnMinecraftModInfoProviderException(
-        MtnMinecraftModInfoProviderError.readFailed,
-      );
-    } finally {
-      await input.close();
-    }
-
-    if (!_hasZipSignature(signature)) {
-      throw const MtnMinecraftModInfoProviderException(
-        MtnMinecraftModInfoProviderError.invalidData,
-      );
-    }
-  }
-}
 
 List<String> _fabricPeopleFromJson(Object? rawPeople) {
   if (rawPeople == null) return const <String>[];
@@ -595,7 +568,7 @@ _FabricIcon? _fabricIconFromJson(
         MtnMinecraftModInfoProviderError.invalidData,
       );
     }
-    final ArchiveFile? file = _findArchiveFile(archive, rawIcon);
+    final ArchiveFile? file = MtnMinecraftModInfoProviderArchive.findFile(archive, rawIcon);
     return file != null && file.isFile
         ? _FabricIcon.single(rawIcon)
         : null;
@@ -621,7 +594,7 @@ _FabricIcon? _fabricIconFromJson(
       );
     }
 
-    final ArchiveFile? file = _findArchiveFile(archive, rawPath);
+    final ArchiveFile? file = MtnMinecraftModInfoProviderArchive.findFile(archive, rawPath);
     if (file != null && file.isFile) {
       paths[width] = rawPath;
     }
@@ -630,113 +603,3 @@ _FabricIcon? _fabricIconFromJson(
   return paths.isEmpty ? null : _FabricIcon.sized(paths);
 }
 
-final class _FabricJarSource {
-  _FabricJarSource.file(File file)
-      : _file = File(file.absolute.path),
-        _content = null,
-        _embeddedPaths = const <String>[];
-
-  _FabricJarSource.memory(Uint8List content)
-      : _file = null,
-        _content = Uint8List.fromList(content),
-        _embeddedPaths = const <String>[];
-
-  _FabricJarSource._({
-    required File? file,
-    required Uint8List? content,
-    required List<String> embeddedPaths,
-  })  : _file = file,
-        _content = content,
-        _embeddedPaths = List<String>.unmodifiable(embeddedPaths);
-
-  final File? _file;
-  final Uint8List? _content;
-  final List<String> _embeddedPaths;
-
-  _FabricJarSource embedded(String path) => _FabricJarSource._(
-        file: _file,
-        content: _content,
-        embeddedPaths: <String>[
-          ..._embeddedPaths,
-          path,
-        ],
-      );
-
-  Future<Uint8List?> readEntry(String path) async {
-    InputFileStream? input;
-    Archive? rootArchive;
-    final List<Archive> nestedArchives = <Archive>[];
-
-    try {
-      final File? file = _file;
-      if (file != null) {
-        input = InputFileStream(file.path);
-        rootArchive = ZipDecoder().decodeStream(input, verify: true);
-      } else {
-        rootArchive = ZipDecoder().decodeBytes(_content!, verify: true);
-      }
-
-      Archive currentArchive = rootArchive;
-      for (final String embeddedPath in _embeddedPaths) {
-        final ArchiveFile? embeddedFile = _findArchiveFile(
-          currentArchive,
-          embeddedPath,
-        );
-        if (embeddedFile == null || !embeddedFile.isFile) return null;
-
-        final Uint8List? embeddedBytes = embeddedFile.readBytes();
-        if (embeddedBytes == null || !_hasZipSignature(embeddedBytes)) {
-          return null;
-        }
-
-        final Archive nestedArchive = ZipDecoder().decodeBytes(
-          embeddedBytes,
-          verify: true,
-        );
-        nestedArchives.add(nestedArchive);
-        currentArchive = nestedArchive;
-      }
-
-      final ArchiveFile? target = _findArchiveFile(currentArchive, path);
-      if (target == null || !target.isFile) return null;
-
-      final Uint8List? bytes = target.readBytes();
-      return bytes == null ? null : Uint8List.fromList(bytes);
-    } on FileSystemException {
-      throw const MtnMinecraftModInfoProviderException(
-        MtnMinecraftModInfoProviderError.readFailed,
-      );
-    } on ArchiveException {
-      throw const MtnMinecraftModInfoProviderException(
-        MtnMinecraftModInfoProviderError.invalidData,
-      );
-    } on FormatException {
-      throw const MtnMinecraftModInfoProviderException(
-        MtnMinecraftModInfoProviderError.invalidData,
-      );
-    } finally {
-      for (final Archive archive in nestedArchives.reversed) {
-        archive.clearSync();
-      }
-      rootArchive?.clearSync();
-      input?.closeSync();
-    }
-  }
-}
-
-ArchiveFile? _findArchiveFile(Archive archive, String name) {
-  for (final ArchiveFile file in archive) {
-    if (file.name == name) return file;
-  }
-  return null;
-}
-
-bool _hasZipSignature(List<int> bytes) {
-  if (bytes.length < 4 || bytes[0] != 0x50 || bytes[1] != 0x4b) {
-    return false;
-  }
-
-  return (bytes[2] == 0x03 && bytes[3] == 0x04) ||
-      (bytes[2] == 0x05 && bytes[3] == 0x06) ||
-      (bytes[2] == 0x07 && bytes[3] == 0x08);
-}
