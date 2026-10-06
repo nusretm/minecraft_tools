@@ -92,15 +92,20 @@ void main() {
       await list.add(first);
       await list.add(second);
 
-      expect(list.remove(first), isTrue);
-      MtnMinecraftInfoMod dependency =
+      final MtnMinecraftInfoMod firstMod =
+          list.mods.singleWhere((MtnMinecraftInfoMod mod) => mod.id == 'first');
+      expect(list.remove(firstMod), isTrue);
+
+      final MtnMinecraftInfoMod dependency =
           list.mods.singleWhere((MtnMinecraftInfoMod mod) => mod.id == 'shared');
       expect(
         dependency.parentMods.map((MtnMinecraftInfoMod mod) => mod.id),
         <String>['second'],
       );
 
-      expect(list.remove(second), isTrue);
+      final MtnMinecraftInfoMod secondMod =
+          list.mods.singleWhere((MtnMinecraftInfoMod mod) => mod.id == 'second');
+      expect(list.remove(secondMod), isTrue);
       expect(list.mods, isEmpty);
     });
 
@@ -117,18 +122,88 @@ void main() {
       await list.add(parent);
       await list.add(dependencyFile);
 
-      MtnMinecraftInfoMod dependency =
+      final MtnMinecraftInfoMod dependencyBefore =
           list.mods.singleWhere((MtnMinecraftInfoMod mod) => mod.id == 'shared');
-      expect(dependency.isInstalled, isTrue);
+      expect(dependencyBefore.isInstalled, isTrue);
+      expect(dependencyBefore.isEmbedded, isTrue);
+
+      final MtnMinecraftInfoMod parentMod =
+          list.mods.singleWhere((MtnMinecraftInfoMod mod) => mod.id == 'first');
+      expect(list.remove(parentMod), isTrue);
+
+      final MtnMinecraftInfoMod dependencyAfter =
+          list.mods.singleWhere((MtnMinecraftInfoMod mod) => mod.id == 'shared');
+      expect(dependencyAfter.isInstalled, isTrue);
+      expect(dependencyAfter.isEmbedded, isFalse);
+      expect(dependencyAfter.installedFiles.single.path, dependencyFile.path);
+    });
+
+    test('remove rejects an embedded-only mod', () async {
+      final MtnMinecraftModList list = MtnMinecraftModList(
+        providers: <MtnMinecraftModInfoProvider>[
+          _DependencyGraphModInfoProvider(),
+        ],
+      );
+      final File parent = File(p.join(Directory.systemTemp.path, 'first.jar'));
+
+      await list.add(parent);
+
+      final MtnMinecraftInfoMod dependency =
+          list.mods.singleWhere((MtnMinecraftInfoMod mod) => mod.id == 'shared');
       expect(dependency.isEmbedded, isTrue);
+      expect(dependency.isInstalled, isFalse);
 
-      list.remove(parent);
+      expect(list.remove(dependency), isFalse);
+      expect(list.mods, hasLength(2));
+      expect(
+        list.mods.singleWhere((MtnMinecraftInfoMod mod) => mod.id == 'shared').parentMods,
+        hasLength(1),
+      );
+    });
 
-      dependency =
-          list.mods.singleWhere((MtnMinecraftInfoMod mod) => mod.id == 'shared');
-      expect(dependency.isInstalled, isTrue);
-      expect(dependency.isEmbedded, isFalse);
-      expect(dependency.installedFiles.single.path, dependencyFile.path);
+    test('onItem emits add update and remove for normalized list changes', () async {
+      final List<String> events = <String>[];
+      final MtnMinecraftModList list = MtnMinecraftModList(
+        providers: <MtnMinecraftModInfoProvider>[
+          _DependencyGraphModInfoProvider(),
+        ],
+        onItem: (
+          MtnMinecraftModList list,
+          MtnMinecraftInfoMod mod,
+          MtnListEvent event,
+        ) {
+          events.add('${event.name}:${mod.id}@${mod.version}');
+        },
+      );
+
+      final File first = File(p.join(Directory.systemTemp.path, 'first.jar'));
+      final File second = File(p.join(Directory.systemTemp.path, 'second.jar'));
+
+      await list.add(first);
+      expect(
+        events,
+        <String>[
+          'add:first@1',
+          'add:shared@1',
+        ],
+      );
+
+      events.clear();
+      await list.add(second);
+      expect(events, contains('add:second@1'));
+      expect(events, contains('update:shared@1'));
+
+      events.clear();
+      final MtnMinecraftInfoMod firstMod =
+          list.mods.singleWhere((MtnMinecraftInfoMod mod) => mod.id == 'first');
+      expect(list.remove(firstMod), isTrue);
+      expect(events, contains('remove:first@1'));
+      expect(events, contains('update:shared@1'));
+
+      events.clear();
+      list.clear();
+      expect(events, contains('remove:second@1'));
+      expect(events, contains('remove:shared@1'));
     });
 
     test('unregister removes that provider contribution from existing roots', () async {
