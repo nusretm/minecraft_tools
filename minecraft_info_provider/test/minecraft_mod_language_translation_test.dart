@@ -218,7 +218,7 @@ void main() {
           'assets/primitive_values/lang/en_us.json': utf8.encode(
             jsonEncode(
               <String, Object?>{
-                'translation.string': 'Value %d / %2$.2f',
+                'translation.string': 'Value %d / %2\$.2f',
                 'translation.integer': 42,
                 'translation.double': 1.5,
                 'translation.boolean': true,
@@ -233,7 +233,7 @@ void main() {
       final MtnMinecraftInfoModLanguage language =
           (await list.readLanguages('primitive_values')).single;
 
-      expect(language['translation.string'], 'Value %s / %2$s');
+      expect(language['translation.string'], 'Value %s / %2\$s');
       expect(language['translation.integer'], '42');
       expect(language['translation.double'], '1.5');
       expect(language['translation.boolean'], 'true');
