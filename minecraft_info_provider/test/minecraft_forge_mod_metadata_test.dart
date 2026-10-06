@@ -142,22 +142,22 @@ side = "CLIENT"
       expect(mod.dependencies.single.serverSide, isFalse);
     });
 
-    test('normalizes explicit Forge side compatibility signals', () async {
+    test('does not infer mod side from Forge displayTest', () async {
       final File jar = await _writeJar(
         directory,
-        'sides.jar',
+        'display-tests.jar',
         <String, List<int>>{
           'META-INF/mods.toml': utf8.encode(
             '''
 modLoader = "javafml"
 
 [[mods]]
-modId = "client_only"
+modId = "ignore_all"
 version = "1"
 displayTest = "IGNORE_ALL_VERSION"
 
 [[mods]]
-modId = "server_only"
+modId = "ignore_server"
 version = "1"
 displayTest = "IGNORE_SERVER_VERSION"
 
@@ -173,22 +173,10 @@ displayTest = "NONE"
       final List<MtnMinecraftInfoMod> mods =
           (await provider.parse(jar))!;
 
-      final MtnMinecraftInfoMod clientOnly = mods.singleWhere(
-        (MtnMinecraftInfoMod mod) => mod.id == 'client_only',
-      );
-      final MtnMinecraftInfoMod serverOnly = mods.singleWhere(
-        (MtnMinecraftInfoMod mod) => mod.id == 'server_only',
-      );
-      final MtnMinecraftInfoMod customTest = mods.singleWhere(
-        (MtnMinecraftInfoMod mod) => mod.id == 'custom_test',
-      );
-
-      expect(clientOnly.clientSide, isTrue);
-      expect(clientOnly.serverSide, isFalse);
-      expect(serverOnly.clientSide, isFalse);
-      expect(serverOnly.serverSide, isTrue);
-      expect(customTest.clientSide, isTrue);
-      expect(customTest.serverSide, isTrue);
+      for (final MtnMinecraftInfoMod mod in mods) {
+        expect(mod.clientSide, isTrue);
+        expect(mod.serverSide, isTrue);
+      }
     });
 
     test('file-level clientSideOnly marks every declared mod client-only', () async {
