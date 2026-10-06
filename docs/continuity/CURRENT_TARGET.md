@@ -31,7 +31,7 @@ squash merge
 Package version:
 
 ```text
-1.0.0-dev.23
+1.0.0-dev.24
 ```
 
 Working milestone state:
@@ -95,6 +95,65 @@ Mod loader: fabric
 Loader version: 0.19.5
 Minecraft version: 26.1.2
 ```
+
+
+## Installed mod-file discovery checkpoint
+
+```text
+Branch: feature/installed-mod-file-discovery
+Status: IMPLEMENTED / VALIDATED / REAL PROFILE SMOKE PASSED
+```
+
+Public surface:
+
+- `MtnMinecraftInfoMod`
+- `MtnMinecraftInfoProvider.readMods()`
+
+Locked behavior:
+
+- scans only direct files under `<gameDirectory>/mods/`
+- accepts `.jar` extension case-insensitively
+- missing `mods/` returns an empty immutable list
+- nested directories are not traversed
+- non-JAR files are ignored
+- results are sorted deterministically by file name
+- `MtnMinecraftInfoMod.file` is the model authority; `fileName` is derived from it
+- JAR contents and metadata are not read in this checkpoint
+
+Final validation on 2026-10-06:
+
+```text
+dart analyze
+No issues found!
+
+focused installed mod-file discovery
+7/7 passed
+
+full package test suite
+272/272 passed
+
+git diff --check
+PASS
+
+working tree
+clean
+```
+
+Real-profile smoke target:
+
+```text
+C:\Provanas\profiles\02766803-f0e2-4101-a3b8-962e1f520bcb
+```
+
+Observed:
+
+```text
+54 direct mod JAR files discovered
+```
+
+The real profile includes mixed naming conventions, reinforcing that file names
+are discovery labels only and must not be treated as authoritative mod metadata
+or loader compatibility.
 
 
 ## Completed server-list management
@@ -306,7 +365,6 @@ Remaining major areas include:
 
 ### Installed content / launcher presentation
 
-- installed mod list
 - mod metadata discovery
 - mod namespace -> owning mod mapping
 - localization/resource lookup
@@ -394,4 +452,4 @@ In particular:
 
 There is no automatically selected next implementation checkpoint.
 
-Choose the next narrow area explicitly before implementation. Based on the current launcher-facing priorities, installed mod-file discovery under `mods/` is the natural next candidate, followed by mod metadata discovery. Neither is approved merely by appearing here.
+Choose the next narrow area explicitly before implementation. Based on the current launcher-facing priorities, mod metadata discovery is the natural next candidate. It is not approved merely by appearing here.
