@@ -13,6 +13,7 @@ import '../player/info_player_advancements.dart';
 import '../player/info_player_nbt_parser.dart';
 import '../player/info_player_stats.dart';
 import '../server/info_server.dart';
+import '../server/info_server_address.dart';
 import '../world/info_world.dart';
 
 const String _serversFileName = 'servers.dat';
@@ -381,6 +382,95 @@ final class MtnMinecraftInfoProvider {
         );
         final Uint8List encoded = const MtnMinecraftNbtCodec().encode(updated);
         await _writeUnlocked(encoded);
+      });
+
+  /// Updates the first saved server matching [server.address].
+  ///
+  /// Address matching uses Minecraft's canonical server identity, so the
+  /// default port is treated consistently. The entry keeps its current list
+  /// position and unknown NBT tags are preserved.
+  ///
+  /// Returns false when no matching server exists.
+  Future<bool> updateServer(MtnMinecraftInfoServer server) =>
+      _inTargetLane<bool>(serversFile.path, () async {
+        final MtnMinecraftInfoServerAddress target =
+            MtnMinecraftInfoServerAddress.parse(server.address);
+        final MtnMinecraftNbtDocument document = await _loadDocumentForWrite();
+        final Map<String, MtnMinecraftNbtValue> root =
+            Map<String, MtnMinecraftNbtValue>.from(document.root.asCompound);
+        final MtnMinecraftNbtValue? servers = root[_serversTagName];
+        if (servers == null) return false;
+        if (servers.type != MtnMinecraftNbtType.list ||
+            servers.asList.elementType != MtnMinecraftNbtType.compound) {
+          throw const MtnMinecraftInfoProviderException(
+            MtnMinecraftInfoProviderError.invalidData,
+          );
+        }
+
+        final List<MtnMinecraftNbtValue> values =
+            List<MtnMinecraftNbtValue>.of(servers.asList.values);
+        final int index = _findServerIndex(values, target);
+        if (index < 0) return false;
+
+        values[index] = _updateServerNbt(values[index], server);
+        root[_serversTagName] = MtnMinecraftNbtValue.list(
+          MtnMinecraftNbtList(
+            elementType: MtnMinecraftNbtType.compound,
+            values: values,
+          ),
+        );
+
+        final MtnMinecraftNbtDocument updated = MtnMinecraftNbtDocument(
+          name: document.name,
+          root: MtnMinecraftNbtValue.compound(root),
+        );
+        final Uint8List encoded = const MtnMinecraftNbtCodec().encode(updated);
+        await _writeUnlocked(encoded);
+        return true;
+      });
+
+  /// Removes the first saved server matching [address].
+  ///
+  /// Address matching uses Minecraft's canonical server identity. Remaining
+  /// servers keep their original order and all untouched NBT tags.
+  ///
+  /// Returns false when no matching server exists.
+  Future<bool> removeServer(String address) =>
+      _inTargetLane<bool>(serversFile.path, () async {
+        final MtnMinecraftInfoServerAddress target =
+            MtnMinecraftInfoServerAddress.parse(address);
+        final MtnMinecraftNbtDocument document = await _loadDocumentForWrite();
+        final Map<String, MtnMinecraftNbtValue> root =
+            Map<String, MtnMinecraftNbtValue>.from(document.root.asCompound);
+        final MtnMinecraftNbtValue? servers = root[_serversTagName];
+        if (servers == null) return false;
+        if (servers.type != MtnMinecraftNbtType.list ||
+            servers.asList.elementType != MtnMinecraftNbtType.compound) {
+          throw const MtnMinecraftInfoProviderException(
+            MtnMinecraftInfoProviderError.invalidData,
+          );
+        }
+
+        final List<MtnMinecraftNbtValue> values =
+            List<MtnMinecraftNbtValue>.of(servers.asList.values);
+        final int index = _findServerIndex(values, target);
+        if (index < 0) return false;
+
+        values.removeAt(index);
+        root[_serversTagName] = MtnMinecraftNbtValue.list(
+          MtnMinecraftNbtList(
+            elementType: MtnMinecraftNbtType.compound,
+            values: values,
+          ),
+        );
+
+        final MtnMinecraftNbtDocument updated = MtnMinecraftNbtDocument(
+          name: document.name,
+          root: MtnMinecraftNbtValue.compound(root),
+        );
+        final Uint8List encoded = const MtnMinecraftNbtCodec().encode(updated);
+        await _writeUnlocked(encoded);
+        return true;
       });
 
   Future<List<MtnMinecraftInfoServer>> _readServersUnlocked() async {
@@ -1369,6 +1459,61 @@ MtnMinecraftInfoServer _serverFromNbt(MtnMinecraftNbtValue value) {
                 ? false
                 : null,
   );
+}
+
+int _findServerIndex(
+  List<MtnMinecraftNbtValue> values,
+  MtnMinecraftInfoServerAddress target,
+) {
+  for (var index = 0; index < values.length; index++) {
+    final MtnMinecraftNbtValue value = values[index];
+    if (value.type != MtnMinecraftNbtType.compound) continue;
+    final MtnMinecraftNbtValue? address = value.asCompound['ip'];
+    if (address?.type != MtnMinecraftNbtType.string) continue;
+
+    try {
+      if (MtnMinecraftInfoServerAddress.parse(address!.asString)
+          .sameIdentity(target)) {
+        return index;
+      }
+    } on ArgumentError {
+      // Ignore malformed unrelated addresses while targeting another entry.
+    }
+  }
+  return -1;
+}
+
+MtnMinecraftNbtValue _updateServerNbt(
+  MtnMinecraftNbtValue existing,
+  MtnMinecraftInfoServer server,
+) {
+  if (existing.type != MtnMinecraftNbtType.compound) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+
+  final Map<String, MtnMinecraftNbtValue> map =
+      Map<String, MtnMinecraftNbtValue>.from(existing.asCompound);
+  map['name'] = MtnMinecraftNbtValue.string(server.name);
+  map['ip'] = MtnMinecraftNbtValue.string(server.address);
+  map['hidden'] = MtnMinecraftNbtValue.byte(server.hidden ? 1 : 0);
+
+  if (server.icon == null) {
+    map.remove('icon');
+  } else {
+    map['icon'] = MtnMinecraftNbtValue.string(server.icon!);
+  }
+
+  if (server.acceptServerResourcePacks == null) {
+    map.remove('acceptTextures');
+  } else {
+    map['acceptTextures'] = MtnMinecraftNbtValue.byte(
+      server.acceptServerResourcePacks! ? 1 : 0,
+    );
+  }
+
+  return MtnMinecraftNbtValue.compound(map);
 }
 
 MtnMinecraftNbtValue _serverToNbt(MtnMinecraftInfoServer server) {
