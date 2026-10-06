@@ -117,8 +117,9 @@ Locked behavior:
 - nested directories are not traversed
 - non-JAR files are ignored
 - results are sorted deterministically by file name
-- `MtnMinecraftInfoMod.file` is the model authority; `fileName` is derived from it
-- JAR contents and metadata are not read in this checkpoint
+- At this historical checkpoint, the discovered file was the only modeled source.
+- This file-only model was superseded by the dev.25 provider/graph checkpoint below; `MtnMinecraftInfoMod` now represents normalized logical mods with installed and embedded provenance.
+- JAR contents and metadata were not read during the dev.24 checkpoint
 
 Final validation on 2026-10-06:
 
