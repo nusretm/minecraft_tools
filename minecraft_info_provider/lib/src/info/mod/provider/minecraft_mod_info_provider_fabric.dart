@@ -290,7 +290,7 @@ final class MtnMinecraftModInfoProviderFabric
             ],
     );
   }
-
+}
 
 List<String> _fabricPeopleFromJson(Object? rawPeople) {
   if (rawPeople == null) return const <String>[];
