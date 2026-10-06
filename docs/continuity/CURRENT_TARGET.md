@@ -31,7 +31,7 @@ squash merge
 Package version:
 
 ```text
-1.0.0-dev.30
+1.0.0-dev.31
 ```
 
 Working milestone state:
@@ -702,6 +702,88 @@ minecraft_info_provider/example/mod_assets.dart
 ```
 
 Next intended layer after this foundation is locale/language resource parsing, followed by item client-definition/model/texture resolution in separate checkpoints.
+
+## Mod language/translation foundation checkpoint
+
+```text
+Branch: feature/mod-language-translation-foundation
+Status: IMPLEMENTED / VALIDATED / REAL JAR TRANSLATION SMOKE PASSED
+```
+
+Public surface:
+
+- `MtnMinecraftInfoModLanguage`
+- `MtnMinecraftInfoModTranslation`
+- `MtnMinecraftInfoModLanguageError`
+- `MtnMinecraftInfoModLanguageException`
+- `MtnMinecraftModList.readLanguages(namespace, locale: ...)`
+- `MtnMinecraftModList.getTranslations(namespace, key, locale: ...)`
+
+Locked behavior:
+
+- language files are read from exact `assets/<namespace>/lang/<locale>.json` paths
+- language JSON must be an object with string keys and string values
+- malformed JSON or non-string values normalize to `MtnMinecraftInfoModLanguageError.invalidData`
+- language maps are immutable snapshots
+- locale names are validated before archive reads
+- missing language files return no language candidate
+- missing translation keys return no translation candidate and are not synthesized
+- exact locale lookup does not silently fall back to `en_us`
+- higher-level code may add an explicit Minecraft-style locale fallback policy later
+- every translation result preserves its source, namespace, locale, key and value
+- multiple asset sources contributing the same namespace/key remain separate candidates
+- core does not select a resource winner or invent pack precedence
+- embedded archive language files are read lazily through the existing archive-chain source infrastructure
+- this checkpoint does not yet synthesize item translation keys or resolve item/model/texture resources
+
+Final validation on 2026-10-06:
+
+```text
+dart analyze
+No issues found!
+
+focused mod language/translation
+8/8 passed
+
+full package test suite
+349/349 passed
+
+git diff --check
+PASS
+
+working tree
+clean
+```
+
+Real JAR smoke target:
+
+```text
+D:\development\armor_hud-neoforge-3.5.0+26.3.jar
+```
+
+Observed exact-locale table:
+
+```text
+namespace: armor_hud
+locale: en_us
+language candidates: 1
+entries: 11
+```
+
+Observed real translation:
+
+```text
+key: armor_hud.config.title
+value: Armor HUD Configuration
+```
+
+Example:
+
+```text
+minecraft_info_provider/example/mod_translations.dart
+```
+
+Next intended layer is item identity to translation-key/name resolution, kept separate from client item model and texture rendering.
 
 ## Completed server-list management
 
