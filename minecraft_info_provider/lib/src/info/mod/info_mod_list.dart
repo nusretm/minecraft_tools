@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 
 import '../list_event.dart';
 import 'info_mod.dart';
+import 'info_mod_dependency.dart';
 import 'provider/minecraft_mod_info_provider.dart';
 
 typedef MtnMinecraftModListItemCallback = void Function(
