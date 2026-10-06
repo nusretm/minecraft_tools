@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
+import 'info_mod_asset_source.dart';
 import 'info_mod_dependency.dart';
 import 'info_mod_urls.dart';
 
@@ -32,6 +33,8 @@ final class MtnMinecraftInfoMod {
     Iterable<File> installedFiles = const <File>[],
     Iterable<MtnMinecraftInfoModIconLoader> iconLoaders =
         const <MtnMinecraftInfoModIconLoader>[],
+    Iterable<MtnMinecraftInfoModAssetSource> assetSources =
+        const <MtnMinecraftInfoModAssetSource>[],
   })  : _authors = List<String>.of(authors),
         _contributors = List<String>.of(contributors),
         _licenses = List<String>.of(licenses),
@@ -43,7 +46,8 @@ final class MtnMinecraftInfoMod {
         _modTypes = List<String>.of(modTypes),
         _parentMods = List<MtnMinecraftInfoMod>.of(parentMods),
         _installedFiles = List<File>.of(installedFiles),
-        _iconLoaders = List<MtnMinecraftInfoModIconLoader>.of(iconLoaders);
+        _iconLoaders = List<MtnMinecraftInfoModIconLoader>.of(iconLoaders),
+        _assetSources = List<MtnMinecraftInfoModAssetSource>.of(assetSources);
 
   final String id;
   final String name;
@@ -62,6 +66,7 @@ final class MtnMinecraftInfoMod {
   final List<MtnMinecraftInfoMod> _parentMods;
   final List<File> _installedFiles;
   final List<MtnMinecraftInfoModIconLoader> _iconLoaders;
+  final List<MtnMinecraftInfoModAssetSource> _assetSources;
 
   List<String> get authors => List<String>.unmodifiable(_authors);
 
@@ -96,6 +101,22 @@ final class MtnMinecraftInfoMod {
   bool get isEmbedded => _parentMods.isNotEmpty;
 
   bool get hasIcon => _iconLoaders.isNotEmpty;
+
+  /// Archive-level client asset sources associated with this logical mod.
+  ///
+  /// Namespace presence is not authoritative ownership. One archive may
+  /// contain multiple logical mods and namespaces, including `minecraft`.
+  List<MtnMinecraftInfoModAssetSource> get assetSources =>
+      List<MtnMinecraftInfoModAssetSource>.unmodifiable(_assetSources);
+
+  List<String> get assetNamespaces {
+    final Set<String> namespaces = <String>{};
+    for (final MtnMinecraftInfoModAssetSource source in _assetSources) {
+      namespaces.addAll(source.namespaces);
+    }
+    final List<String> result = namespaces.toList()..sort();
+    return List<String>.unmodifiable(result);
+  }
 
   /// Reads this mod's icon bytes lazily.
   ///
@@ -218,5 +239,23 @@ final class MtnMinecraftInfoMod {
 
   void addIconLoader(MtnMinecraftInfoModIconLoader loader) {
     _iconLoaders.add(loader);
+  }
+
+  void addAssetSource(MtnMinecraftInfoModAssetSource source) {
+    if (_assetSources.any(
+      (MtnMinecraftInfoModAssetSource current) =>
+          current.sameArchive(source),
+    )) {
+      return;
+    }
+    _assetSources.add(source);
+  }
+
+  void addAssetSources(
+    Iterable<MtnMinecraftInfoModAssetSource> sources,
+  ) {
+    for (final MtnMinecraftInfoModAssetSource source in sources) {
+      addAssetSource(source);
+    }
   }
 }
