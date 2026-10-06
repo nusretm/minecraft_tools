@@ -70,14 +70,6 @@ final class MtnMinecraftInfoProvider {
         p.join(gameDirectory.path, _savesDirectoryName),
       );
 
-  Directory get versionsDirectory => Directory(
-        p.join(gameDirectory.path, _versionsDirectoryName),
-      );
-
-  File get versionFile => File(
-        p.join(versionsDirectory.path, _versionFileName),
-      );
-
   /// Discovers direct Java Edition world directories under `saves`.
   ///
   /// A missing `saves` directory is equivalent to an empty world list.
@@ -293,7 +285,7 @@ final class MtnMinecraftInfoProvider {
   /// Reads the mod loader declared by this profile's `versions/version.json`.
   ///
   /// Only the profile `id` and `inheritsFrom` values are interpreted.
-  /// Missing profile data or an unrecognized loader returns null.
+  /// A missing profile or an unrecognized loader returns null.
   Future<MtnMinecraftInfoModLoader?> readModLoader() async {
     final FileSystemEntityType gameDirectoryType =
         await _entityType(gameDirectory.path, forWrite: false);
@@ -303,22 +295,24 @@ final class MtnMinecraftInfoProvider {
       );
     }
 
+    final Directory versionsDirectory = Directory(
+      p.join(gameDirectory.path, _versionsDirectoryName),
+    );
     final FileSystemEntityType versionsDirectoryType =
         await _entityType(versionsDirectory.path, forWrite: false);
-    if (versionsDirectoryType == FileSystemEntityType.notFound) {
-      return null;
-    }
+    if (versionsDirectoryType == FileSystemEntityType.notFound) return null;
     if (versionsDirectoryType != FileSystemEntityType.directory) {
       throw const MtnMinecraftInfoProviderException(
         MtnMinecraftInfoProviderError.invalidPath,
       );
     }
 
+    final File versionFile = File(
+      p.join(versionsDirectory.path, _versionFileName),
+    );
     final FileSystemEntityType versionFileType =
         await _entityType(versionFile.path, forWrite: false);
-    if (versionFileType == FileSystemEntityType.notFound) {
-      return null;
-    }
+    if (versionFileType == FileSystemEntityType.notFound) return null;
     if (versionFileType != FileSystemEntityType.file) {
       throw const MtnMinecraftInfoProviderException(
         MtnMinecraftInfoProviderError.invalidPath,
@@ -1110,8 +1104,18 @@ MtnMinecraftInfoModLoader? _modLoaderFromVersionJson(
     );
   }
 
-  final MtnMinecraftInfoModLoaderType? type = _modLoaderTypeFromId(rawId);
-  if (type == null) return null;
+  final MtnMinecraftInfoModLoaderType? type;
+  if (rawId.startsWith('fabric-loader-')) {
+    type = MtnMinecraftInfoModLoaderType.fabric;
+  } else if (rawId.startsWith('quilt-loader-')) {
+    type = MtnMinecraftInfoModLoaderType.quilt;
+  } else if (rawId.contains('-neoforge-')) {
+    type = MtnMinecraftInfoModLoaderType.neoForge;
+  } else if (rawId.contains('-forge-')) {
+    type = MtnMinecraftInfoModLoaderType.forge;
+  } else {
+    return null;
+  }
 
   final Object? rawMinecraftVersion = json['inheritsFrom'];
   if (rawMinecraftVersion is! String || rawMinecraftVersion.isEmpty) {
@@ -1120,12 +1124,34 @@ MtnMinecraftInfoModLoader? _modLoaderFromVersionJson(
     );
   }
 
-  final String? version = _modLoaderVersionFromId(
-    id: rawId,
-    minecraftVersion: rawMinecraftVersion,
-    type: type,
-  );
-  if (version == null || version.isEmpty) {
+  final String prefix;
+  final String? suffix;
+  switch (type) {
+    case MtnMinecraftInfoModLoaderType.fabric:
+      prefix = 'fabric-loader-';
+      suffix = '-$rawMinecraftVersion';
+    case MtnMinecraftInfoModLoaderType.quilt:
+      prefix = 'quilt-loader-';
+      suffix = '-$rawMinecraftVersion';
+    case MtnMinecraftInfoModLoaderType.forge:
+      prefix = '$rawMinecraftVersion-forge-';
+      suffix = null;
+    case MtnMinecraftInfoModLoaderType.neoForge:
+      prefix = '$rawMinecraftVersion-neoforge-';
+      suffix = null;
+  }
+
+  if (!rawId.startsWith(prefix) ||
+      (suffix != null && !rawId.endsWith(suffix))) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+
+  final int end = suffix == null
+      ? rawId.length
+      : rawId.length - suffix.length;
+  if (end <= prefix.length) {
     throw const MtnMinecraftInfoProviderException(
       MtnMinecraftInfoProviderError.invalidData,
     );
@@ -1133,93 +1159,9 @@ MtnMinecraftInfoModLoader? _modLoaderFromVersionJson(
 
   return MtnMinecraftInfoModLoader(
     type: type,
-    version: version,
+    version: rawId.substring(prefix.length, end),
     minecraftVersion: rawMinecraftVersion,
   );
-}
-
-MtnMinecraftInfoModLoaderType? _modLoaderTypeFromId(String id) {
-  if (id.startsWith('fabric-loader-')) {
-    return MtnMinecraftInfoModLoaderType.fabric;
-  }
-  if (id.startsWith('quilt-loader-')) {
-    return MtnMinecraftInfoModLoaderType.quilt;
-  }
-  if (id.startsWith('neoforge-') || id.contains('-neoforge-')) {
-    return MtnMinecraftInfoModLoaderType.neoForge;
-  }
-  if (id.startsWith('forge-') || id.contains('-forge-')) {
-    return MtnMinecraftInfoModLoaderType.forge;
-  }
-  return null;
-}
-
-String? _modLoaderVersionFromId({
-  required String id,
-  required String minecraftVersion,
-  required MtnMinecraftInfoModLoaderType type,
-}) {
-  switch (type) {
-    case MtnMinecraftInfoModLoaderType.fabric:
-      return _versionBetween(
-        id: id,
-        prefix: 'fabric-loader-',
-        suffix: '-$minecraftVersion',
-      );
-    case MtnMinecraftInfoModLoaderType.quilt:
-      return _versionBetween(
-        id: id,
-        prefix: 'quilt-loader-',
-        suffix: '-$minecraftVersion',
-      );
-    case MtnMinecraftInfoModLoaderType.forge:
-      return _versionAroundLoaderName(
-        id: id,
-        minecraftVersion: minecraftVersion,
-        loaderName: 'forge',
-      );
-    case MtnMinecraftInfoModLoaderType.neoForge:
-      return _versionAroundLoaderName(
-        id: id,
-        minecraftVersion: minecraftVersion,
-        loaderName: 'neoforge',
-      );
-  }
-}
-
-String? _versionAroundLoaderName({
-  required String id,
-  required String minecraftVersion,
-  required String loaderName,
-}) {
-  final String minecraftFirstPrefix = '$minecraftVersion-$loaderName-';
-  if (id.startsWith(minecraftFirstPrefix)) {
-    return id.substring(minecraftFirstPrefix.length);
-  }
-
-  final String loaderThenMinecraftPrefix = '$loaderName-$minecraftVersion-';
-  if (id.startsWith(loaderThenMinecraftPrefix)) {
-    return id.substring(loaderThenMinecraftPrefix.length);
-  }
-
-  return _versionBetween(
-    id: id,
-    prefix: '$loaderName-',
-    suffix: '-$minecraftVersion',
-  );
-}
-
-String? _versionBetween({
-  required String id,
-  required String prefix,
-  required String suffix,
-}) {
-  if (!id.startsWith(prefix) || !id.endsWith(suffix)) {
-    return null;
-  }
-  final int end = id.length - suffix.length;
-  if (end <= prefix.length) return null;
-  return id.substring(prefix.length, end);
 }
 
 const String _playerUuidPattern =
