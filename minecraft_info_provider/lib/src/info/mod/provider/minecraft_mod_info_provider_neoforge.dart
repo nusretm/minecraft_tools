@@ -188,12 +188,6 @@ final class MtnMinecraftModInfoProviderNeoForge
         metadata['iconFile'],
       ),
     );
-    final String? fileLogo = _emptyToNull(
-      _optionalString(
-        metadata['logoFile'],
-      ),
-    );
-
     final List<MtnMinecraftInfoMod> mods = <MtnMinecraftInfoMod>[];
     final Set<String> ids = <String>{};
 
@@ -247,13 +241,7 @@ final class MtnMinecraftModInfoProviderNeoForge
               modMetadata['iconFile'],
             ),
           ) ??
-          fileIcon ??
-          _emptyToNull(
-            _optionalString(
-              modMetadata['logoFile'],
-            ),
-          ) ??
-          fileLogo;
+          fileIcon;
       final bool hasIcon = iconFile != null &&
           _archiveHasFile(
             archive,
@@ -283,7 +271,7 @@ final class MtnMinecraftModInfoProviderNeoForge
           iconLoaders: !hasIcon
               ? const <MtnMinecraftInfoModIconLoader>[]
               : <MtnMinecraftInfoModIconLoader>[
-                  (int size) => source.readEntry(iconFile),
+                  (int size) => source.readEntry(iconFile!),
                 ],
         ),
       );
