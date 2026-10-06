@@ -20,10 +20,6 @@ final class MtnMinecraftInfoServerHealthCheck {
             : intervalSec;
 
   final List<MtnMinecraftInfoServer> _servers = <MtnMinecraftInfoServer>[];
-  final Map<MtnMinecraftInfoServer, MtnMinecraftInfoServerChangeCallback?>
-      _previousOnChange =
-      <MtnMinecraftInfoServer, MtnMinecraftInfoServerChangeCallback?>{};
-
   int _intervalSec;
   bool _active = false;
   bool _disposed = false;
@@ -58,8 +54,6 @@ final class MtnMinecraftInfoServerHealthCheck {
     if (_servers.contains(server)) return false;
 
     final MtnMinecraftInfoServerChangeCallback? previous = server.onChange;
-    _previousOnChange[server] = previous;
-
     server.autoCheck = false;
     server.autoCheckSec = _intervalSec;
     server.onChange = (MtnMinecraftInfoServer changed) {
@@ -81,7 +75,6 @@ final class MtnMinecraftInfoServerHealthCheck {
     if (_disposed) return false;
     if (!_servers.remove(server)) return false;
 
-    _previousOnChange.remove(server);
     server.dispose();
     onRemove?.call(this, server);
     return true;
@@ -116,7 +109,6 @@ final class MtnMinecraftInfoServerHealthCheck {
     final List<MtnMinecraftInfoServer> current =
         List<MtnMinecraftInfoServer>.of(_servers);
     _servers.clear();
-    _previousOnChange.clear();
 
     for (final MtnMinecraftInfoServer server in current) {
       server.dispose();
