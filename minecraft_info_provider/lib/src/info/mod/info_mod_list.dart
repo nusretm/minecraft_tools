@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 
 import '../list_event.dart';
 import 'info_mod.dart';
+import 'info_mod_asset_source.dart';
 import 'info_mod_dependency.dart';
 import 'provider/minecraft_mod_info_provider.dart';
 
@@ -38,6 +39,45 @@ final class MtnMinecraftModList {
 
   List<MtnMinecraftInfoMod> get mods =>
       List<MtnMinecraftInfoMod>.unmodifiable(_mods);
+
+  List<MtnMinecraftInfoModAssetSource> get assetSources {
+    final List<MtnMinecraftInfoModAssetSource> result =
+        <MtnMinecraftInfoModAssetSource>[];
+    for (final MtnMinecraftInfoMod mod in _mods) {
+      for (final MtnMinecraftInfoModAssetSource source in mod.assetSources) {
+        if (result.any(
+          (MtnMinecraftInfoModAssetSource current) =>
+              current.sameArchive(source),
+        )) {
+          continue;
+        }
+        result.add(source);
+      }
+    }
+    return List<MtnMinecraftInfoModAssetSource>.unmodifiable(result);
+  }
+
+  List<String> get assetNamespaces {
+    final Set<String> namespaces = <String>{};
+    for (final MtnMinecraftInfoModAssetSource source in assetSources) {
+      namespaces.addAll(source.namespaces);
+    }
+    final List<String> result = namespaces.toList()..sort();
+    return List<String>.unmodifiable(result);
+  }
+
+  List<MtnMinecraftInfoModAssetSource> getAssetSources(
+    String namespace,
+  ) {
+    final List<MtnMinecraftInfoModAssetSource> result =
+        <MtnMinecraftInfoModAssetSource>[];
+    for (final MtnMinecraftInfoModAssetSource source in assetSources) {
+      if (source.containsNamespace(namespace)) {
+        result.add(source);
+      }
+    }
+    return List<MtnMinecraftInfoModAssetSource>.unmodifiable(result);
+  }
 
   void register(MtnMinecraftModInfoProvider provider) {
     if (provider.name.isEmpty || provider.name.trim() != provider.name) {
@@ -173,6 +213,7 @@ final class MtnMinecraftModList {
               serverSide: parsed.serverSide,
               dependencies: parsed.dependencies,
               providedIds: parsed.providedIds,
+              assetSources: parsed.assetSources,
             ),
           );
 
@@ -187,6 +228,7 @@ final class MtnMinecraftModList {
           );
           normalized.addDependencies(parsed.dependencies);
           normalized.addProvidedIds(parsed.providedIds);
+          normalized.addAssetSources(parsed.assetSources);
           if (parsed.hasIcon) {
             normalized.addIconLoader(
               (int size) => parsed.getIcon(size: size),
@@ -274,7 +316,8 @@ final class MtnMinecraftModList {
         !_sameStrings(left.licenses, right.licenses) ||
         !_sameDependencies(left.dependencies, right.dependencies) ||
         !_sameStrings(left.providedIds, right.providedIds) ||
-        !_sameStrings(left.modTypes, right.modTypes)) {
+        !_sameStrings(left.modTypes, right.modTypes) ||
+        !_sameAssetSources(left.assetSources, right.assetSources)) {
       return false;
     }
 
@@ -299,6 +342,22 @@ final class MtnMinecraftModList {
     if (left.length != right.length) return false;
     for (int index = 0; index < left.length; index++) {
       if (left[index] != right[index]) return false;
+    }
+    return true;
+  }
+
+  bool _sameAssetSources(
+    List<MtnMinecraftInfoModAssetSource> left,
+    List<MtnMinecraftInfoModAssetSource> right,
+  ) {
+    if (left.length != right.length) return false;
+    for (int index = 0; index < left.length; index++) {
+      final MtnMinecraftInfoModAssetSource leftSource = left[index];
+      final MtnMinecraftInfoModAssetSource rightSource = right[index];
+      if (!leftSource.sameArchive(rightSource) ||
+          !_sameStrings(leftSource.namespaces, rightSource.namespaces)) {
+        return false;
+      }
     }
     return true;
   }
