@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'info_server.dart';
 
 typedef MtnMinecraftInfoServerHealthCheckCallback = void Function(
@@ -20,6 +22,9 @@ final class MtnMinecraftInfoServerHealthCheck {
             : intervalSec;
 
   final List<MtnMinecraftInfoServer> _servers = <MtnMinecraftInfoServer>[];
+  final Set<MtnMinecraftInfoServer> _initialChecks =
+      <MtnMinecraftInfoServer>{};
+
   int _intervalSec;
   bool _active = false;
   bool _disposed = false;
@@ -67,11 +72,10 @@ final class MtnMinecraftInfoServerHealthCheck {
     };
 
     _servers.add(server);
-    if (_active) {
-      server.autoCheck = true;
-    }
-
     onAdd?.call(this, server);
+
+    _initialChecks.add(server);
+    unawaited(_queryAddedServer(server));
     return true;
   }
 
@@ -79,6 +83,7 @@ final class MtnMinecraftInfoServerHealthCheck {
     if (_disposed) return false;
     if (!_servers.remove(server)) return false;
 
+    _initialChecks.remove(server);
     server.dispose();
     onRemove?.call(this, server);
     return true;
@@ -91,7 +96,9 @@ final class MtnMinecraftInfoServerHealthCheck {
     _active = true;
     for (final MtnMinecraftInfoServer server in _servers) {
       server.autoCheckSec = _intervalSec;
-      server.autoCheck = true;
+      if (!_initialChecks.contains(server)) {
+        server.autoCheck = true;
+      }
     }
   }
 
@@ -113,6 +120,7 @@ final class MtnMinecraftInfoServerHealthCheck {
     final List<MtnMinecraftInfoServer> current =
         List<MtnMinecraftInfoServer>.of(_servers);
     _servers.clear();
+    _initialChecks.clear();
 
     for (final MtnMinecraftInfoServer server in current) {
       server.dispose();
@@ -122,6 +130,23 @@ final class MtnMinecraftInfoServerHealthCheck {
     onAdd = null;
     onChange = null;
     onRemove = null;
+  }
+
+  Future<void> _queryAddedServer(MtnMinecraftInfoServer server) async {
+    try {
+      await server.queryStatus();
+    } on Object {
+      // One failed initial query must not prevent later automatic checks.
+    } finally {
+      final bool wasPending = _initialChecks.remove(server);
+      if (wasPending &&
+          !_disposed &&
+          _active &&
+          _servers.contains(server)) {
+        server.autoCheckSec = _intervalSec;
+        server.autoCheck = true;
+      }
+    }
   }
 
   void _ensureNotDisposed() {
