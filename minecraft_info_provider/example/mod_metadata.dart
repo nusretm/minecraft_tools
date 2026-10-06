@@ -21,6 +21,7 @@ Future<void> main(List<String> args) async {
   final MtnMinecraftModList modList = MtnMinecraftModList(
     providers: const <MtnMinecraftModInfoProvider>[
       MtnMinecraftModInfoProviderFabric(),
+      MtnMinecraftModInfoProviderForge(),
     ],
   );
 
@@ -56,6 +57,7 @@ Future<void> main(List<String> args) async {
           '    ${dependency.type.name}: '
           '${dependency.id} '
           '${dependency.versionConstraints.join(' || ')} '
+          'ordering=${dependency.ordering.name} '
           'client=${dependency.clientSide} '
           'server=${dependency.serverSide}',
         );
