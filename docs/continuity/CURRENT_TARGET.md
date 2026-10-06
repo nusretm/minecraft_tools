@@ -31,7 +31,7 @@ squash merge
 Package version:
 
 ```text
-1.0.0-dev.25
+1.0.0-dev.26
 ```
 
 Working milestone state:
@@ -238,6 +238,75 @@ Examples confirmed:
 - parent output disambiguated as `id@version`
 
 Next launcher-facing extension after this checkpoint is mod presentation data such as icon lookup, followed later by richer metadata/dependency interpretation and additional loader providers.
+
+
+## Mod icon lookup checkpoint
+
+```text
+Branch: feature/mod-icon-foundation
+Status: IMPLEMENTED / VALIDATED / REAL PROFILE SMOKE PASSED
+```
+
+Public surface:
+
+- `MtnMinecraftInfoMod.hasIcon`
+- `MtnMinecraftInfoMod.getIcon({int size = 128})`
+
+Locked behavior:
+
+- icon bytes are loaded lazily only when requested
+- generic mod/core code does not interpret provider-specific icon metadata
+- Fabric provider supports both a single icon path and size-to-path icon maps
+- multi-size lookup selects the smallest icon width >= requested size, or the largest available icon when none are large enough
+- installed mod icons reopen the root JAR lazily
+- embedded mod icons reopen the root JAR and follow the embedded archive chain in memory
+- embedded JARs and icons are never extracted to temporary files
+- normalized `MtnMinecraftModList` entries retain working provider-backed icon resolvers
+- missing icon files do not invalidate otherwise valid mods; icon lookup becomes unavailable instead
+- non-positive requested sizes are rejected
+
+Final validation on 2026-10-06:
+
+```text
+dart analyze
+No issues found!
+
+focused Fabric provider
+15/15 passed
+
+focused mod-list
+9/9 passed
+
+full package test suite
+296/296 passed
+
+git diff --check
+PASS
+
+working tree
+clean
+```
+
+Real-profile smoke target:
+
+```text
+C:\Provanas\profiles\02766803-f0e2-4101-a3b8-962e1f520bcb
+```
+
+Observed:
+
+```text
+116 mods declared usable icons
+116 icons loaded successfully
+```
+
+The successful reads included directly installed mods, embedded-only mods and mods that were both installed and embedded.
+
+Example:
+
+```text
+minecraft_info_provider/example/mod_icons.dart
+```
 
 
 ## Completed server-list management
@@ -535,4 +604,4 @@ In particular:
 
 There is no automatically selected next implementation checkpoint.
 
-The next approved narrow area is mod icon lookup from normalized mod information. Keep icon metadata/provider-specific archive rules outside the generic core where possible, and preserve in-memory archive access for embedded mods.
+There is no automatically selected next implementation checkpoint after mod icon lookup. Likely launcher-facing follow-ups include richer Fabric metadata, namespace ownership/localization/resource lookup, or additional loader providers.

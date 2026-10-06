@@ -206,6 +206,33 @@ void main() {
       expect(events, contains('remove:shared@1'));
     });
 
+    test('normalized list preserves provider-backed lazy icon access', () async {
+      final Uint8List icon = Uint8List.fromList(<int>[1, 2, 3, 4]);
+      final MtnMinecraftModList list = MtnMinecraftModList(
+        providers: <MtnMinecraftModInfoProvider>[
+          _CallbackModInfoProvider(
+            name: 'fabric',
+            onParse: (File file) => <MtnMinecraftInfoMod>[
+              MtnMinecraftInfoMod(
+                id: 'icon_mod',
+                name: 'Icon Mod',
+                version: '1',
+                iconLoaders: <MtnMinecraftInfoModIconLoader>[
+                  (int size) async => icon,
+                ],
+              ),
+            ],
+          ),
+        ],
+      );
+
+      await list.add(File(p.join(Directory.systemTemp.path, 'icon-mod.jar')));
+
+      final MtnMinecraftInfoMod mod = list.mods.single;
+      expect(mod.hasIcon, isTrue);
+      expect(await mod.getIcon(), icon);
+    });
+
     test('unregister removes that provider contribution from existing roots', () async {
       final _CallbackModInfoProvider fabric = _CallbackModInfoProvider(
         name: 'fabric',

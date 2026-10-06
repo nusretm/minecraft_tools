@@ -1,6 +1,11 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
+
+typedef MtnMinecraftInfoModIconLoader = Future<Uint8List?> Function(
+  int size,
+);
 
 /// One normalized Minecraft mod discovered from an installed or embedded JAR.
 final class MtnMinecraftInfoMod {
@@ -14,10 +19,13 @@ final class MtnMinecraftInfoMod {
     Iterable<MtnMinecraftInfoMod> parentMods =
         const <MtnMinecraftInfoMod>[],
     Iterable<File> installedFiles = const <File>[],
+    Iterable<MtnMinecraftInfoModIconLoader> iconLoaders =
+        const <MtnMinecraftInfoModIconLoader>[],
   })  : _authors = List<String>.of(authors),
         _modTypes = List<String>.of(modTypes),
         _parentMods = List<MtnMinecraftInfoMod>.of(parentMods),
-        _installedFiles = List<File>.of(installedFiles);
+        _installedFiles = List<File>.of(installedFiles),
+        _iconLoaders = List<MtnMinecraftInfoModIconLoader>.of(iconLoaders);
 
   final String id;
   final String name;
@@ -28,6 +36,7 @@ final class MtnMinecraftInfoMod {
   final List<String> _modTypes;
   final List<MtnMinecraftInfoMod> _parentMods;
   final List<File> _installedFiles;
+  final List<MtnMinecraftInfoModIconLoader> _iconLoaders;
 
   List<String> get authors => List<String>.unmodifiable(_authors);
 
@@ -44,6 +53,26 @@ final class MtnMinecraftInfoMod {
   bool get isInstalled => _installedFiles.isNotEmpty;
 
   bool get isEmbedded => _parentMods.isNotEmpty;
+
+  bool get hasIcon => _iconLoaders.isNotEmpty;
+
+  /// Reads this mod's icon bytes lazily.
+  ///
+  /// [size] is the preferred square icon width. Providers may expose multiple
+  /// icon sizes and choose the closest suitable source for the request.
+  Future<Uint8List?> getIcon({
+    int size = 128,
+  }) async {
+    if (size <= 0) {
+      throw ArgumentError.value(size, 'size', 'must be greater than zero');
+    }
+
+    for (final MtnMinecraftInfoModIconLoader loader in _iconLoaders) {
+      final Uint8List? icon = await loader(size);
+      if (icon != null) return Uint8List.fromList(icon);
+    }
+    return null;
+  }
 
   void addAuthor(String author) {
     if (!_authors.contains(author)) _authors.add(author);
@@ -90,5 +119,9 @@ final class MtnMinecraftInfoMod {
     if (index < 0) return false;
     _installedFiles.removeAt(index);
     return true;
+  }
+
+  void addIconLoader(MtnMinecraftInfoModIconLoader loader) {
+    _iconLoaders.add(loader);
   }
 }
