@@ -57,9 +57,13 @@ final class MtnMinecraftInfoServerHealthCheck {
     server.autoCheck = false;
     server.autoCheckSec = _intervalSec;
     server.onChange = (MtnMinecraftInfoServer changed) {
-      previous?.call(changed);
-      if (_disposed || !_servers.contains(changed)) return;
-      onChange?.call(this, changed);
+      try {
+        previous?.call(changed);
+      } finally {
+        if (!_disposed && _servers.contains(changed)) {
+          onChange?.call(this, changed);
+        }
+      }
     };
 
     _servers.add(server);
