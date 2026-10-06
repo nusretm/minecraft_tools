@@ -3,6 +3,9 @@ import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
+import 'info_mod_dependency.dart';
+import 'info_mod_urls.dart';
+
 typedef MtnMinecraftInfoModIconLoader = Future<Uint8List?> Function(
   int size,
 );
@@ -15,6 +18,14 @@ final class MtnMinecraftInfoMod {
     required this.version,
     this.description = '',
     Iterable<String> authors = const <String>[],
+    Iterable<String> contributors = const <String>[],
+    Iterable<String> licenses = const <String>[],
+    MtnMinecraftInfoModUrls urls = const MtnMinecraftInfoModUrls(),
+    bool clientSide = true,
+    bool serverSide = true,
+    Iterable<MtnMinecraftInfoModDependency> dependencies =
+        const <MtnMinecraftInfoModDependency>[],
+    Iterable<String> providedIds = const <String>[],
     Iterable<String> modTypes = const <String>[],
     Iterable<MtnMinecraftInfoMod> parentMods =
         const <MtnMinecraftInfoMod>[],
@@ -22,6 +33,13 @@ final class MtnMinecraftInfoMod {
     Iterable<MtnMinecraftInfoModIconLoader> iconLoaders =
         const <MtnMinecraftInfoModIconLoader>[],
   })  : _authors = List<String>.of(authors),
+        _contributors = List<String>.of(contributors),
+        _licenses = List<String>.of(licenses),
+        _urls = urls,
+        _clientSide = clientSide,
+        _serverSide = serverSide,
+        _dependencies = List<MtnMinecraftInfoModDependency>.of(dependencies),
+        _providedIds = List<String>.of(providedIds),
         _modTypes = List<String>.of(modTypes),
         _parentMods = List<MtnMinecraftInfoMod>.of(parentMods),
         _installedFiles = List<File>.of(installedFiles),
@@ -33,12 +51,35 @@ final class MtnMinecraftInfoMod {
   final String description;
 
   final List<String> _authors;
+  final List<String> _contributors;
+  final List<String> _licenses;
+  MtnMinecraftInfoModUrls _urls;
+  bool _clientSide;
+  bool _serverSide;
+  final List<MtnMinecraftInfoModDependency> _dependencies;
+  final List<String> _providedIds;
   final List<String> _modTypes;
   final List<MtnMinecraftInfoMod> _parentMods;
   final List<File> _installedFiles;
   final List<MtnMinecraftInfoModIconLoader> _iconLoaders;
 
   List<String> get authors => List<String>.unmodifiable(_authors);
+
+  List<String> get contributors => List<String>.unmodifiable(_contributors);
+
+  List<String> get licenses => List<String>.unmodifiable(_licenses);
+
+  MtnMinecraftInfoModUrls get urls => _urls;
+
+  bool get clientSide => _clientSide;
+
+  bool get serverSide => _serverSide;
+
+  List<MtnMinecraftInfoModDependency> get dependencies =>
+      List<MtnMinecraftInfoModDependency>.unmodifiable(_dependencies);
+
+  /// Other mod IDs that this logical mod declares it provides.
+  List<String> get providedIds => List<String>.unmodifiable(_providedIds);
 
   /// Registered provider names that recognized this logical mod.
   List<String> get modTypes => List<String>.unmodifiable(_modTypes);
@@ -81,6 +122,60 @@ final class MtnMinecraftInfoMod {
   void addAuthors(Iterable<String> authors) {
     for (final String author in authors) {
       addAuthor(author);
+    }
+  }
+
+  void addContributor(String contributor) {
+    if (!_contributors.contains(contributor)) _contributors.add(contributor);
+  }
+
+  void addContributors(Iterable<String> contributors) {
+    for (final String contributor in contributors) {
+      addContributor(contributor);
+    }
+  }
+
+  void addLicense(String license) {
+    if (!_licenses.contains(license)) _licenses.add(license);
+  }
+
+  void addLicenses(Iterable<String> licenses) {
+    for (final String license in licenses) {
+      addLicense(license);
+    }
+  }
+
+  void mergeUrls(MtnMinecraftInfoModUrls other) {
+    _urls = _urls.mergeMissing(other);
+  }
+
+  void addSideSupport({
+    required bool clientSide,
+    required bool serverSide,
+  }) {
+    _clientSide = _clientSide || clientSide;
+    _serverSide = _serverSide || serverSide;
+  }
+
+  void addDependency(MtnMinecraftInfoModDependency dependency) {
+    if (!_dependencies.contains(dependency)) _dependencies.add(dependency);
+  }
+
+  void addDependencies(
+    Iterable<MtnMinecraftInfoModDependency> dependencies,
+  ) {
+    for (final MtnMinecraftInfoModDependency dependency in dependencies) {
+      addDependency(dependency);
+    }
+  }
+
+  void addProvidedId(String providedId) {
+    if (!_providedIds.contains(providedId)) _providedIds.add(providedId);
+  }
+
+  void addProvidedIds(Iterable<String> providedIds) {
+    for (final String providedId in providedIds) {
+      addProvidedId(providedId);
     }
   }
 

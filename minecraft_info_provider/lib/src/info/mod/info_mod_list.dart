@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 
 import '../list_event.dart';
 import 'info_mod.dart';
+import 'info_mod_dependency.dart';
 import 'provider/minecraft_mod_info_provider.dart';
 
 typedef MtnMinecraftModListItemCallback = void Function(
@@ -165,11 +166,27 @@ final class MtnMinecraftModList {
               version: parsed.version,
               description: parsed.description,
               authors: parsed.authors,
+              contributors: parsed.contributors,
+              licenses: parsed.licenses,
+              urls: parsed.urls,
+              clientSide: parsed.clientSide,
+              serverSide: parsed.serverSide,
+              dependencies: parsed.dependencies,
+              providedIds: parsed.providedIds,
             ),
           );
 
           normalized.addModType(provider.name);
           normalized.addAuthors(parsed.authors);
+          normalized.addContributors(parsed.contributors);
+          normalized.addLicenses(parsed.licenses);
+          normalized.mergeUrls(parsed.urls);
+          normalized.addSideSupport(
+            clientSide: parsed.clientSide,
+            serverSide: parsed.serverSide,
+          );
+          normalized.addDependencies(parsed.dependencies);
+          normalized.addProvidedIds(parsed.providedIds);
           if (parsed.hasIcon) {
             normalized.addIconLoader(
               (int size) => parsed.getIcon(size: size),
@@ -248,8 +265,15 @@ final class MtnMinecraftModList {
   ) {
     if (left.name != right.name ||
         left.description != right.description ||
+        left.urls != right.urls ||
+        left.clientSide != right.clientSide ||
+        left.serverSide != right.serverSide ||
         left.hasIcon != right.hasIcon ||
         !_sameStrings(left.authors, right.authors) ||
+        !_sameStrings(left.contributors, right.contributors) ||
+        !_sameStrings(left.licenses, right.licenses) ||
+        !_sameDependencies(left.dependencies, right.dependencies) ||
+        !_sameStrings(left.providedIds, right.providedIds) ||
         !_sameStrings(left.modTypes, right.modTypes)) {
       return false;
     }
@@ -272,6 +296,17 @@ final class MtnMinecraftModList {
   }
 
   bool _sameStrings(List<String> left, List<String> right) {
+    if (left.length != right.length) return false;
+    for (int index = 0; index < left.length; index++) {
+      if (left[index] != right[index]) return false;
+    }
+    return true;
+  }
+
+  bool _sameDependencies(
+    List<MtnMinecraftInfoModDependency> left,
+    List<MtnMinecraftInfoModDependency> right,
+  ) {
     if (left.length != right.length) return false;
     for (int index = 0; index < left.length; index++) {
       if (left[index] != right[index]) return false;

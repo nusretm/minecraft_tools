@@ -8,8 +8,10 @@ export 'item/info_item_stack.dart';
 export 'list_event.dart';
 
 export 'mod/info_mod.dart';
+export 'mod/info_mod_dependency.dart';
 export 'mod/info_mod_list.dart';
 export 'mod/info_mod_loader.dart';
+export 'mod/info_mod_urls.dart';
 export 'mod/provider/minecraft_mod_info_provider.dart';
 export 'mod/provider/minecraft_mod_info_provider_fabric.dart';
 

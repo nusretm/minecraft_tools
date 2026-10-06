@@ -31,7 +31,7 @@ squash merge
 Package version:
 
 ```text
-1.0.0-dev.26
+1.0.0-dev.27
 ```
 
 Working milestone state:
@@ -306,6 +306,110 @@ Example:
 
 ```text
 minecraft_info_provider/example/mod_icons.dart
+```
+
+
+## Generic mod metadata checkpoint
+
+```text
+Branch: feature/generic-mod-metadata-foundation
+Status: IMPLEMENTED / VALIDATED / REAL JAR SMOKE PASSED
+```
+
+Public surface added to the provider-independent mod model:
+
+- `MtnMinecraftInfoMod.contributors`
+- `MtnMinecraftInfoMod.licenses`
+- `MtnMinecraftInfoMod.urls`
+- `MtnMinecraftInfoMod.clientSide`
+- `MtnMinecraftInfoMod.serverSide`
+- `MtnMinecraftInfoMod.dependencies`
+- `MtnMinecraftInfoMod.providedIds`
+- `MtnMinecraftInfoModUrls`
+- `MtnMinecraftInfoModDependency`
+- `MtnMinecraftInfoModDependencyType`
+
+Locked generic metadata rules:
+
+- `MtnMinecraftInfoMod` stays loader/provider independent.
+- Provider-specific metadata tokens are normalized inside their provider implementation.
+- URL metadata exposes first-class `homepage`, `source` and `issues` fields.
+- Local metadata providers do not guess missing source URLs from issue-tracker or homepage URLs.
+- Future Modrinth/CurseForge integration may enrich missing remote/project metadata only after a real remote match.
+- `clientSide` and `serverSide` are independent booleans so client-only, server-only and both-side mods are representable.
+- Fabric `environment` maps to those booleans; default/missing Fabric environment supports both sides.
+- Dependency types are generic: required, recommended, suggested, conflict and incompatible.
+- Provider version syntax remains raw in `versionConstraints`; multiple entries represent OR alternatives.
+- `providedIds` stores provider-declared aliases without turning them into separate logical mods.
+- The normalized mod list unions list metadata and side capabilities across providers and fills only missing URL fields.
+- Forge/NeoForge-specific metadata parsing remains outside this checkpoint.
+
+Fabric fields normalized in this checkpoint:
+
+```text
+authors
+contributors
+license
+contact.homepage
+contact.sources
+contact.issues
+environment
+provides
+depends
+recommends
+suggests
+conflicts
+breaks
+```
+
+Final validation on 2026-10-06:
+
+```text
+dart analyze
+No issues found!
+
+focused Fabric metadata
+19/19 passed
+
+focused mod-list
+10/10 passed
+
+full package test suite
+301/301 passed
+
+git diff --check
+PASS
+
+working tree
+clean
+```
+
+Real JAR smoke target:
+
+```text
+armor_hud-fabric-3.5.0+26.3.jar
+```
+
+Observed normalized metadata:
+
+```text
+id: armor_hud
+version: 3.5.0
+license: MIT
+homepage: https://modrinth.com/mod/armor-hud
+source: https://github.com/SaolGhra/Armor-Hud
+issues: https://github.com/SaolGhra/Armor-Hud/issues
+clientSide: true
+serverSide: false
+required: fabricloader >=0.15.0
+required: minecraft ~26.3
+required: fabric-api *
+```
+
+Example:
+
+```text
+minecraft_info_provider/example/mod_metadata.dart
 ```
 
 
