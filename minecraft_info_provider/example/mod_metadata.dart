@@ -11,13 +11,20 @@ Future<void> main(List<String> args) async {
     return;
   }
 
+  final File jarFile = File(args.single);
+  if (!await jarFile.exists()) {
+    stderr.writeln('Mod JAR does not exist: ${jarFile.path}');
+    exitCode = 66;
+    return;
+  }
+
   final MtnMinecraftModList modList = MtnMinecraftModList(
     providers: const <MtnMinecraftModInfoProvider>[
       MtnMinecraftModInfoProviderFabric(),
     ],
   );
 
-  await modList.add(File(args.single));
+  await modList.add(jarFile);
 
   if (modList.mods.isEmpty) {
     print('No registered provider recognized this JAR.');
