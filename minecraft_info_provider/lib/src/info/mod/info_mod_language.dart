@@ -29,12 +29,30 @@ final class MtnMinecraftInfoModLanguage {
           Map<String, String>.of(translations),
         );
 
+  static void validateLocale(String locale) {
+    if (!_localePattern.hasMatch(locale)) {
+      throw ArgumentError.value(
+        locale,
+        'locale',
+        'must be a lowercase Minecraft language locale',
+      );
+    }
+  }
+
   factory MtnMinecraftInfoModLanguage.parse({
     required MtnMinecraftInfoModAssetSource source,
     required String namespace,
     required String locale,
     required Uint8List bytes,
   }) {
+    validateLocale(locale);
+    if (!source.containsNamespace(namespace)) {
+      throw ArgumentError.value(
+        namespace,
+        'namespace',
+        'is not exposed by the asset source',
+      );
+    }
     late final Object? decoded;
     try {
       decoded = jsonDecode(
@@ -80,3 +98,5 @@ final class MtnMinecraftInfoModLanguage {
 
   String? operator [](String key) => translations[key];
 }
+
+final RegExp _localePattern = RegExp(r'^[a-z0-9_-]+$');
