@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 
+import '../info_mod_asset_source.dart';
 import 'minecraft_mod_info_provider.dart';
 
 final class MtnMinecraftModInfoProviderArchive {
@@ -26,6 +27,26 @@ final class MtnMinecraftModInfoProviderArchive {
     return (bytes[2] == 0x03 && bytes[3] == 0x04) ||
         (bytes[2] == 0x05 && bytes[3] == 0x06) ||
         (bytes[2] == 0x07 && bytes[3] == 0x08);
+  }
+
+  static List<String> assetNamespaces(Archive archive) {
+    final Set<String> namespaces = <String>{};
+    final RegExp namespacePattern = RegExp(r'^[a-z0-9_.-]+$');
+
+    for (final ArchiveFile file in archive) {
+      if (!file.isFile || !file.name.startsWith('assets/')) continue;
+
+      final List<String> parts = file.name.split('/');
+      if (parts.length < 3) continue;
+
+      final String namespace = parts[1];
+      if (namespacePattern.hasMatch(namespace)) {
+        namespaces.add(namespace);
+      }
+    }
+
+    final List<String> result = namespaces.toList()..sort();
+    return result;
   }
 
   static Future<void> validateFile(File jarFile) async {
@@ -79,6 +100,26 @@ final class MtnMinecraftModInfoProviderArchiveSource {
   final File? _file;
   final Uint8List? _content;
   final List<String> _embeddedPaths;
+
+  File? get rootFile => _file == null ? null : File(_file.path);
+
+  List<String> get embeddedPaths =>
+      List<String>.unmodifiable(_embeddedPaths);
+
+  MtnMinecraftInfoModAssetSource? assetSource(Archive archive) {
+    final List<String> namespaces =
+        MtnMinecraftModInfoProviderArchive.assetNamespaces(
+      archive,
+    );
+    if (namespaces.isEmpty) return null;
+
+    return MtnMinecraftInfoModAssetSource(
+      rootFile: rootFile,
+      embeddedArchivePaths: _embeddedPaths,
+      namespaces: namespaces,
+      loader: readEntry,
+    );
+  }
 
   MtnMinecraftModInfoProviderArchiveSource embedded(String path) =>
       MtnMinecraftModInfoProviderArchiveSource._(

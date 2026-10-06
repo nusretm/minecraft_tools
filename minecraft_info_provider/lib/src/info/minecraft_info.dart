@@ -8,6 +8,7 @@ export 'item/info_item_stack.dart';
 export 'list_event.dart';
 
 export 'mod/info_mod.dart';
+export 'mod/info_mod_asset_source.dart';
 export 'mod/info_mod_dependency.dart';
 export 'mod/info_mod_list.dart';
 export 'mod/info_mod_loader.dart';

@@ -31,7 +31,7 @@ squash merge
 Package version:
 
 ```text
-1.0.0-dev.29
+1.0.0-dev.30
 ```
 
 Working milestone state:
@@ -608,6 +608,100 @@ Example:
 minecraft_info_provider/example/mod_metadata.dart
 ```
 
+
+## Mod asset/resource foundation checkpoint
+
+```text
+Branch: feature/mod-asset-resource-foundation
+Status: IMPLEMENTED / VALIDATED / REAL JAR SMOKE PASSED
+```
+
+Public surface:
+
+- `MtnMinecraftInfoModAssetSource`
+- `MtnMinecraftInfoMod.assetSources`
+- `MtnMinecraftInfoMod.assetNamespaces`
+- `MtnMinecraftModList.assetSources`
+- `MtnMinecraftModList.assetNamespaces`
+- `MtnMinecraftModList.getAssetSources(namespace)`
+
+Locked architecture:
+
+- Client resources are modeled at archive-source level rather than as authoritative logical-mod ownership.
+- Namespace discovery scans `assets/<namespace>/...` entries in recognized mod archives.
+- A namespace is never assumed to equal `MtnMinecraftInfoMod.id`.
+- One archive may expose multiple namespaces, including `minecraft` or namespaces unrelated to a declared logical mod ID.
+- One archive may contain multiple logical mods, so the same discovered asset source may be associated with multiple parsed mods.
+- The normalized mod list deduplicates identical archive sources when multiple metadata providers recognize the same physical archive.
+- `getAssetSources(namespace)` returns all candidate sources and does not invent resource-pack precedence.
+- Namespace lists are validated, unique and sorted.
+- Raw asset paths are validated as relative Minecraft resource paths.
+- Asset bytes are loaded lazily only when `read(namespace, path)` is called.
+- Installed root sources reopen their JAR lazily.
+- Embedded sources retain the root path plus embedded archive chain and traverse it in memory without disk extraction.
+- Fabric, Forge and NeoForge providers share the same archive-level asset discovery/read infrastructure.
+- This checkpoint deliberately does not parse language files, client item definitions, models, textures or pack precedence.
+
+Final validation on 2026-10-06:
+
+```text
+dart analyze
+No issues found!
+
+focused mod asset/resource
+7/7 passed
+
+focused Fabric provider
+19/19 passed
+
+focused Forge provider
+15/15 passed
+
+focused NeoForge provider
+18/18 passed
+
+focused mod-list
+10/10 passed
+
+full package test suite
+341/341 passed
+
+git diff --check
+PASS
+
+working tree
+clean
+```
+
+Real JAR smoke target:
+
+```text
+armor_hud-neoforge-3.5.0+26.3.jar
+```
+
+Observed namespace/source:
+
+```text
+Asset namespaces: armor_hud
+armor_hud@3.5.0: armor_hud
+  D:\development\armor_hud-neoforge-3.5.0+26.3.jar
+```
+
+Observed lazy raw asset read:
+
+```text
+armor_hud
+textures/gui/hotbar_texture.png
+source[0]: 1197 bytes
+```
+
+Example:
+
+```text
+minecraft_info_provider/example/mod_assets.dart
+```
+
+Next intended layer after this foundation is locale/language resource parsing, followed by item client-definition/model/texture resolution in separate checkpoints.
 
 ## Completed server-list management
 

@@ -6,6 +6,7 @@ import 'package:archive/archive.dart';
 import 'package:toml/toml.dart';
 
 import '../info_mod.dart';
+import '../info_mod_asset_source.dart';
 import '../info_mod_dependency.dart';
 import '../info_mod_urls.dart';
 import 'minecraft_mod_info_provider.dart';
@@ -188,6 +189,7 @@ final class MtnMinecraftModInfoProviderNeoForge
         metadata['iconFile'],
       ),
     );
+    final assetSource = source.assetSource(archive);
     final List<MtnMinecraftInfoMod> mods = <MtnMinecraftInfoMod>[];
     final Set<String> ids = <String>{};
 
@@ -274,6 +276,9 @@ final class MtnMinecraftModInfoProviderNeoForge
             dependencyGroups[id],
           ),
           parentMods: parentMods,
+          assetSources: assetSource == null
+              ? const <MtnMinecraftInfoModAssetSource>[]
+              : <MtnMinecraftInfoModAssetSource>[assetSource],
           iconLoaders: iconLoaders,
         ),
       );
