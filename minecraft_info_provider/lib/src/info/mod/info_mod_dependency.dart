@@ -1,9 +1,16 @@
 enum MtnMinecraftInfoModDependencyType {
   required,
+  optional,
   recommended,
   suggested,
   conflict,
   incompatible,
+}
+
+enum MtnMinecraftInfoModDependencyOrdering {
+  none,
+  before,
+  after,
 }
 
 /// One provider-independent relationship from a mod to another mod/runtime ID.
@@ -12,6 +19,7 @@ final class MtnMinecraftInfoModDependency {
     required this.id,
     required this.type,
     Iterable<String> versionConstraints = const <String>[],
+    this.ordering = MtnMinecraftInfoModDependencyOrdering.none,
     this.clientSide = true,
     this.serverSide = true,
   }) : versionConstraints =
@@ -22,6 +30,8 @@ final class MtnMinecraftInfoModDependency {
 
   /// Alternative accepted constraints. Multiple entries are OR alternatives.
   final List<String> versionConstraints;
+
+  final MtnMinecraftInfoModDependencyOrdering ordering;
 
   /// Whether this relationship applies on the physical client side.
   final bool clientSide;
@@ -34,6 +44,7 @@ final class MtnMinecraftInfoModDependency {
     if (other is! MtnMinecraftInfoModDependency ||
         id != other.id ||
         type != other.type ||
+        ordering != other.ordering ||
         clientSide != other.clientSide ||
         serverSide != other.serverSide ||
         versionConstraints.length != other.versionConstraints.length) {
@@ -52,6 +63,7 @@ final class MtnMinecraftInfoModDependency {
   int get hashCode => Object.hash(
         id,
         type,
+        ordering,
         clientSide,
         serverSide,
         Object.hashAll(versionConstraints),

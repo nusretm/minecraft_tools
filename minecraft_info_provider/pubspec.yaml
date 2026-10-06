@@ -1,6 +1,6 @@
 name: minecraft_info_provider
 description: Pure Dart Minecraft local information provider and Java Edition NBT toolkit.
-version: 1.0.0-dev.27
+version: 1.0.0-dev.28
 publish_to: none
 
 environment:
@@ -9,6 +9,7 @@ environment:
 dependencies:
   archive: ^4.3.0
   path: ^1.9.1
+  toml: ^0.16.0
 
 dev_dependencies:
   lints: ^5.0.0

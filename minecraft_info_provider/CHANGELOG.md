@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.0.0-dev.28
+
+Forge mod metadata provider foundation.
+
+- Added `MtnMinecraftModInfoProviderForge` for modern `META-INF/mods.toml` metadata.
+- Added TOML parsing with a Dart 3.3-compatible `toml` dependency.
+- Normalized Forge mod ID, version, display name, description, authors, license, homepage, issue tracker and lazy `logoFile` icon access into the existing generic mod model.
+- Added generic optional dependency support and provider-independent dependency ordering: none, before and after.
+- Preserved Forge Maven-style `versionRange` strings without forcing them through Fabric semantic-version rules.
+- Kept Forge dependency `side` scoped to the dependency relationship instead of guessing mod-level side support.
+- Only explicit file-level `clientSideOnly=true` narrows Forge mod-level side support; `displayTest` is not treated as an environment declaration.
+- Added `${file.jarVersion}` resolution from `META-INF/MANIFEST.MF` and `${file.*}` substitution from Forge file properties.
+- Added recursive Forge JarJar discovery through `META-INF/jarjar/metadata.json` without extracting embedded JARs to disk.
+- JarJar entries that do not contain Forge mod metadata are treated as libraries and do not create logical mods.
+- Extracted shared lazy archive traversal/read helpers used by both Fabric and Forge providers.
+- Updated `example/mod_metadata.dart` to register both Fabric and Forge providers and show dependency ordering.
+- Real Armor HUD Forge validation discovered root `armor_hud@3.5.0` plus embedded `mixinextras@0.4.1`, preserved null source URL, and normalized Forge/Minecraft dependency scopes.
+- Final validation: analyzer clean, Forge provider tests 15/15, Fabric regression tests 19/19, full suite 316/316, diff-check clean and working tree clean.
+
 ## 1.0.0-dev.27
 
 Generic mod metadata foundation.
