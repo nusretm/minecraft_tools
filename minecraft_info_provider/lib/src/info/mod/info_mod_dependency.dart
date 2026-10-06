@@ -5,6 +5,7 @@ enum MtnMinecraftInfoModDependencyType {
   suggested,
   conflict,
   incompatible,
+  discouraged,
 }
 
 enum MtnMinecraftInfoModDependencyOrdering {

@@ -15,6 +15,7 @@ export 'mod/info_mod_urls.dart';
 export 'mod/provider/minecraft_mod_info_provider.dart';
 export 'mod/provider/minecraft_mod_info_provider_fabric.dart';
 export 'mod/provider/minecraft_mod_info_provider_forge.dart';
+export 'mod/provider/minecraft_mod_info_provider_neoforge.dart';
 
 export 'player/info_player.dart';
 export 'player/info_player_advancements.dart';
