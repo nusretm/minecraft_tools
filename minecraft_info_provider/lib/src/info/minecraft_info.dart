@@ -3,6 +3,8 @@ export 'effect/info_potion_contents.dart';
 
 export 'item/info_item_attribute_modifier.dart';
 export 'item/info_item_custom_model_data.dart';
+export 'item/info_item_name.dart';
+export 'item/info_item_name_resolver.dart';
 export 'item/info_item_stack.dart';
 
 export 'list_event.dart';
