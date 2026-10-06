@@ -312,15 +312,19 @@ List<String> _fabricPeopleFromJson(Object? rawPeople) {
       name = rawPerson;
     } else if (rawPerson is Map<String, dynamic>) {
       final Object? rawName = rawPerson['name'];
-      if (rawName is String) name = rawName;
-    }
-
-    if (name == null || name.isEmpty) {
+      if (rawName is! String) {
+        throw const MtnMinecraftModInfoProviderException(
+          MtnMinecraftModInfoProviderError.invalidData,
+        );
+      }
+      name = rawName;
+    } else {
       throw const MtnMinecraftModInfoProviderException(
         MtnMinecraftModInfoProviderError.invalidData,
       );
     }
-    if (!people.contains(name)) people.add(name);
+
+    if (name.isNotEmpty && !people.contains(name)) people.add(name);
   }
   return people;
 }
@@ -329,12 +333,9 @@ List<String> _fabricLicensesFromJson(Object? rawLicense) {
   if (rawLicense == null) return const <String>[];
 
   if (rawLicense is String) {
-    if (rawLicense.isEmpty) {
-      throw const MtnMinecraftModInfoProviderException(
-        MtnMinecraftModInfoProviderError.invalidData,
-      );
-    }
-    return <String>[rawLicense];
+    return rawLicense.isEmpty
+        ? const <String>[]
+        : <String>[rawLicense];
   }
 
   if (rawLicense is! List<dynamic>) {
@@ -345,12 +346,12 @@ List<String> _fabricLicensesFromJson(Object? rawLicense) {
 
   final List<String> licenses = <String>[];
   for (final Object? value in rawLicense) {
-    if (value is! String || value.isEmpty) {
+    if (value is! String) {
       throw const MtnMinecraftModInfoProviderException(
         MtnMinecraftModInfoProviderError.invalidData,
       );
     }
-    if (!licenses.contains(value)) licenses.add(value);
+    if (value.isNotEmpty && !licenses.contains(value)) licenses.add(value);
   }
   return licenses;
 }

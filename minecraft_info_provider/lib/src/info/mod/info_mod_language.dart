@@ -63,12 +63,21 @@ final class MtnMinecraftInfoModLanguage {
     final Map<String, String> translations = <String, String>{};
     for (final MapEntry<String, dynamic> entry in decoded.entries) {
       final Object? value = entry.value;
-      if (value is! String) {
+      final String text;
+      if (value is String) {
+        text = value;
+      } else if (value is num || value is bool) {
+        text = value.toString();
+      } else {
         throw const MtnMinecraftInfoModLanguageException(
           MtnMinecraftInfoModLanguageError.invalidData,
         );
       }
-      translations[entry.key] = value;
+      translations[entry.key] =
+          text.replaceAllMapped(
+        _unsupportedFormatPattern,
+        (Match match) => '%${match.group(1) ?? ''}s',
+      );
     }
 
     return MtnMinecraftInfoModLanguage._(
@@ -130,3 +139,5 @@ final class MtnMinecraftInfoModTranslation {
 }
 
 final RegExp _localePattern = RegExp(r'^[a-z0-9_-]+$');
+final RegExp _unsupportedFormatPattern =
+    RegExp(r'%(\d+\$)?[\d.]*[df]');

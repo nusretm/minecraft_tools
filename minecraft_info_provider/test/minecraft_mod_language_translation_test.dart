@@ -208,24 +208,69 @@ void main() {
       );
     });
 
-    test('rejects non-string language values as invalid data', () async {
+    test('matches Minecraft primitive language value semantics', () async {
       final File jar = await _writeFabricJar(
         directory,
-        'non-string.jar',
-        id: 'non_string',
+        'primitive-values.jar',
+        id: 'primitive_values',
         version: '1',
         entries: <String, List<int>>{
-          'assets/non_string/lang/en_us.json': utf8.encode(
-            '{"item.non_string.test":42}',
+          'assets/primitive_values/lang/en_us.json': utf8.encode(
+            jsonEncode(
+              <String, Object?>{
+                'translation.string': 'Value %d / %2\$.2f',
+                'translation.integer': 42,
+                'translation.double': 1.5,
+                'translation.boolean': true,
+              },
+            ),
           ),
         },
       );
       final MtnMinecraftModList list = _fabricList();
       await list.add(jar);
 
-      await _expectInvalidLanguageData(
-        list.readLanguages('non_string'),
-      );
+      final MtnMinecraftInfoModLanguage language =
+          (await list.readLanguages('primitive_values')).single;
+
+      expect(language['translation.string'], 'Value %s / %2\$s');
+      expect(language['translation.integer'], '42');
+      expect(language['translation.double'], '1.5');
+      expect(language['translation.boolean'], 'true');
+    });
+
+    test('rejects composite language values as invalid data', () async {
+      final List<(String, Object?)> cases = <(String, Object?)>[
+        ('null', null),
+        ('array', <Object?>['value']),
+        ('object', <String, Object?>{'text': 'value'}),
+      ];
+
+      for (final (String name, Object? invalidValue) in cases) {
+        final File jar = await _writeFabricJar(
+          directory,
+          'composite-$name.jar',
+          id: 'composite_value',
+          version: '1',
+          entries: <String, List<int>>{
+            'assets/composite_value/lang/en_us.json': utf8.encode(
+              jsonEncode(
+                <String, Object?>{
+                  'translation.invalid': invalidValue,
+                },
+              ),
+            ),
+          },
+        );
+        final MtnMinecraftModList list = _fabricList();
+        await list.add(jar);
+
+        await _expectInvalidLanguageData(
+          list.readLanguages('composite_value'),
+        );
+
+        await jar.delete();
+      }
     });
 
     test('rejects invalid locale names before reading assets', () async {
