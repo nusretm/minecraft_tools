@@ -193,6 +193,51 @@ void main() {
       expect(mod.providedIds, isEmpty);
     });
 
+    test('normalizes empty Fabric license metadata as unspecified', () async {
+      final File emptyStringJar = await _writeJar(
+        directory,
+        'empty-license-string.jar',
+        <String, List<int>>{
+          'fabric.mod.json': _jsonBytes(
+            <String, Object?>{
+              'schemaVersion': 1,
+              'id': 'empty_license_string',
+              'version': '1',
+              'license': '',
+            },
+          ),
+        },
+      );
+      final File emptyEntriesJar = await _writeJar(
+        directory,
+        'empty-license-entries.jar',
+        <String, List<int>>{
+          'fabric.mod.json': _jsonBytes(
+            <String, Object?>{
+              'schemaVersion': 1,
+              'id': 'empty_license_entries',
+              'version': '1',
+              'license': <String>[
+                '',
+                'MIT',
+                '',
+                'MIT',
+              ],
+            },
+          ),
+        },
+      );
+
+      expect(
+        (await provider.parse(emptyStringJar))!.single.licenses,
+        isEmpty,
+      );
+      expect(
+        (await provider.parse(emptyEntriesJar))!.single.licenses,
+        <String>['MIT'],
+      );
+    });
+
     test('does not derive source URL from issue tracker metadata', () async {
       final File jar = await _writeJar(
         directory,
