@@ -44,7 +44,7 @@ Future<void> main(List<String> args) async {
       final String root = source.rootFile?.path ?? '<memory>';
       final String embedded = source.embeddedArchivePaths.isEmpty
           ? ''
-          : '!/${source.embeddedArchivePaths.join('!/') }';
+          : '!/${source.embeddedArchivePaths.join('!/')}';
       print('  $root$embedded');
     }
   }
