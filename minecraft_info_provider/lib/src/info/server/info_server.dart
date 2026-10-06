@@ -14,8 +14,6 @@ typedef MtnMinecraftInfoServerChangeCallback = void Function(
 
 /// One server entry from the Java Edition `servers.dat` list.
 final class MtnMinecraftInfoServer {
-  static const int minimumAutoCheckSec = 15;
-
   MtnMinecraftInfoServer({
     required this.name,
     required this.address,
@@ -37,6 +35,8 @@ final class MtnMinecraftInfoServer {
     clone.autoCheckSec = source.autoCheckSec;
     return clone;
   }
+
+  static const int minimumAutoCheckSec = 15;
 
   final String name;
   final String address;
