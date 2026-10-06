@@ -6,6 +6,7 @@ import '../list_event.dart';
 import 'info_mod.dart';
 import 'info_mod_asset_source.dart';
 import 'info_mod_dependency.dart';
+import 'info_mod_language.dart';
 import 'provider/minecraft_mod_info_provider.dart';
 
 typedef MtnMinecraftModListItemCallback = void Function(
@@ -77,6 +78,62 @@ final class MtnMinecraftModList {
       }
     }
     return List<MtnMinecraftInfoModAssetSource>.unmodifiable(result);
+  }
+
+  /// Reads exact-locale language tables from every candidate asset source.
+  ///
+  /// No locale fallback or resource-pack precedence is applied.
+  Future<List<MtnMinecraftInfoModLanguage>> readLanguages(
+    String namespace, {
+    String locale = 'en_us',
+  }) async {
+    MtnMinecraftInfoModLanguage.validateLocale(locale);
+
+    final List<MtnMinecraftInfoModLanguage> result =
+        <MtnMinecraftInfoModLanguage>[];
+    for (final MtnMinecraftInfoModAssetSource source
+        in getAssetSources(namespace)) {
+      final bytes = await source.read(
+        namespace,
+        'lang/$locale.json',
+      );
+      if (bytes == null) continue;
+
+      result.add(
+        MtnMinecraftInfoModLanguage.parse(
+          source: source,
+          namespace: namespace,
+          locale: locale,
+          bytes: bytes,
+        ),
+      );
+    }
+    return List<MtnMinecraftInfoModLanguage>.unmodifiable(result);
+  }
+
+  /// Returns every exact-locale candidate for [key].
+  ///
+  /// Candidate order follows asset-source discovery order. This method does
+  /// not choose a resource winner and does not fall back to another locale.
+  Future<List<MtnMinecraftInfoModTranslation>> getTranslations(
+    String namespace,
+    String key, {
+    String locale = 'en_us',
+  }) async {
+    final List<MtnMinecraftInfoModTranslation> result =
+        <MtnMinecraftInfoModTranslation>[];
+    final List<MtnMinecraftInfoModLanguage> languages =
+        await readLanguages(
+      namespace,
+      locale: locale,
+    );
+
+    for (final MtnMinecraftInfoModLanguage language in languages) {
+      final MtnMinecraftInfoModTranslation? translation =
+          language.translation(key);
+      if (translation != null) result.add(translation);
+    }
+    return List<MtnMinecraftInfoModTranslation>.unmodifiable(result);
   }
 
   void register(MtnMinecraftModInfoProvider provider) {
