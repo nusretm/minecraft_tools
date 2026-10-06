@@ -2,19 +2,29 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../list_event.dart';
 import 'info_mod.dart';
 import 'provider/minecraft_mod_info_provider.dart';
+
+typedef MtnMinecraftModListItemCallback = void Function(
+  MtnMinecraftModList list,
+  MtnMinecraftInfoMod mod,
+  MtnListEvent event,
+);
 
 /// Registry and normalized graph authority for discovered Minecraft mods.
 final class MtnMinecraftModList {
   MtnMinecraftModList({
     Iterable<MtnMinecraftModInfoProvider> providers =
         const <MtnMinecraftModInfoProvider>[],
+    this.onItem,
   }) {
     for (final MtnMinecraftModInfoProvider provider in providers) {
       register(provider);
     }
   }
+
+  final MtnMinecraftModListItemCallback? onItem;
 
   final List<MtnMinecraftModInfoProvider> _providers =
       <MtnMinecraftModInfoProvider>[];
@@ -75,17 +85,28 @@ final class MtnMinecraftModList {
     _rebuild();
   }
 
-  /// Removes one directly installed JAR and every now-unreferenced embedded mod.
-  bool remove(File jarFile) {
-    final String path = p.normalize(p.absolute(jarFile.path));
-    final bool removed = _roots.remove(path) != null;
+  /// Removes the directly installed source(s) that provide [mod].
+  ///
+  /// Embedded-only mods cannot be removed directly. If [mod] is also embedded
+  /// by another installed mod, it remains in the list as an embedded mod.
+  bool remove(MtnMinecraftInfoMod mod) {
+    final MtnMinecraftInfoMod? current = _findMod(mod.id, mod.version);
+    if (current == null || !current.isInstalled) return false;
+
+    bool removed = false;
+    for (final File file in current.installedFiles) {
+      final String path = p.normalize(p.absolute(file.path));
+      removed = _roots.remove(path) != null || removed;
+    }
+
     if (removed) _rebuild();
     return removed;
   }
 
   void clear() {
+    if (_roots.isEmpty && _mods.isEmpty) return;
     _roots.clear();
-    _mods.clear();
+    _rebuild();
   }
 
   /// Returns mods embedded directly or recursively by [mod].
@@ -121,8 +142,8 @@ final class MtnMinecraftModList {
   }
 
   void _rebuild() {
-    _mods.clear();
-
+    final List<MtnMinecraftInfoMod> previous =
+        List<MtnMinecraftInfoMod>.of(_mods);
     final Map<(String, String), MtnMinecraftInfoMod> canonical =
         <(String, String), MtnMinecraftInfoMod>{};
     final Map<MtnMinecraftInfoMod, MtnMinecraftInfoMod> parsedToCanonical =
@@ -177,7 +198,79 @@ final class MtnMinecraftModList {
       }
     }
 
-    _mods.addAll(canonical.values);
+    _mods
+      ..clear()
+      ..addAll(canonical.values);
+
+    _emitChanges(previous);
+  }
+
+  void _emitChanges(List<MtnMinecraftInfoMod> previous) {
+    final MtnMinecraftModListItemCallback? callback = onItem;
+    if (callback == null) return;
+
+    final Map<(String, String), MtnMinecraftInfoMod> oldByKey =
+        <(String, String), MtnMinecraftInfoMod>{
+      for (final MtnMinecraftInfoMod mod in previous)
+        (mod.id, mod.version): mod,
+    };
+    final Map<(String, String), MtnMinecraftInfoMod> newByKey =
+        <(String, String), MtnMinecraftInfoMod>{
+      for (final MtnMinecraftInfoMod mod in _mods)
+        (mod.id, mod.version): mod,
+    };
+
+    for (final MtnMinecraftInfoMod oldMod in previous) {
+      if (!newByKey.containsKey((oldMod.id, oldMod.version))) {
+        callback(this, oldMod, MtnListEvent.remove);
+      }
+    }
+
+    for (final MtnMinecraftInfoMod newMod in _mods) {
+      final MtnMinecraftInfoMod? oldMod =
+          oldByKey[(newMod.id, newMod.version)];
+      if (oldMod == null) {
+        callback(this, newMod, MtnListEvent.add);
+      } else if (!_sameModState(oldMod, newMod)) {
+        callback(this, newMod, MtnListEvent.update);
+      }
+    }
+  }
+
+  bool _sameModState(
+    MtnMinecraftInfoMod left,
+    MtnMinecraftInfoMod right,
+  ) {
+    if (left.name != right.name ||
+        left.description != right.description ||
+        !_sameStrings(left.authors, right.authors) ||
+        !_sameStrings(left.modTypes, right.modTypes)) {
+      return false;
+    }
+
+    final List<String> leftParents = left.parentMods
+        .map((MtnMinecraftInfoMod mod) => '${mod.id}@${mod.version}')
+        .toList();
+    final List<String> rightParents = right.parentMods
+        .map((MtnMinecraftInfoMod mod) => '${mod.id}@${mod.version}')
+        .toList();
+    if (!_sameStrings(leftParents, rightParents)) return false;
+
+    final List<String> leftFiles = left.installedFiles
+        .map((File file) => p.normalize(p.absolute(file.path)))
+        .toList();
+    final List<String> rightFiles = right.installedFiles
+        .map((File file) => p.normalize(p.absolute(file.path)))
+        .toList();
+    return _sameStrings(leftFiles, rightFiles);
+  }
+
+  bool _sameStrings(List<String> left, List<String> right) {
+    if (left.length != right.length) return false;
+    for (int index = 0; index < left.length; index++) {
+      if (left[index] != right[index]) return false;
+    }
+    return true;
   }
 }
 
