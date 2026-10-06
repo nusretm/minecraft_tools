@@ -5,6 +5,8 @@ export 'item/info_item_attribute_modifier.dart';
 export 'item/info_item_custom_model_data.dart';
 export 'item/info_item_stack.dart';
 
+export 'list_event.dart';
+
 export 'mod/info_mod.dart';
 export 'mod/info_mod_list.dart';
 export 'mod/info_mod_loader.dart';
