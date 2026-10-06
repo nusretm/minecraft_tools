@@ -14,6 +14,7 @@ export 'provider/info_provider.dart';
 export 'server/info_known_server.dart';
 export 'server/info_server.dart';
 export 'server/info_server_address.dart';
+export 'server/info_server_health_check.dart';
 export 'server/info_server_srv.dart';
 export 'server/info_server_status.dart';
 export 'server/info_server_status_client.dart';
