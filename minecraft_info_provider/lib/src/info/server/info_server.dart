@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -13,6 +14,8 @@ typedef MtnMinecraftInfoServerChangeCallback = void Function(
 
 /// One server entry from the Java Edition `servers.dat` list.
 final class MtnMinecraftInfoServer {
+  static const int minimumAutoCheckSec = 15;
+
   MtnMinecraftInfoServer({
     required this.name,
     required this.address,
@@ -52,6 +55,51 @@ final class MtnMinecraftInfoServer {
   /// Runtime-only callback invoked when the effective public status changes.
   MtnMinecraftInfoServerChangeCallback? onChange;
 
+  bool _autoCheck = false;
+  int _autoCheckSec = minimumAutoCheckSec;
+  Timer? _autoCheckTimer;
+  bool _autoCheckRunning = false;
+  bool _disposed = false;
+
+  /// Whether this server automatically refreshes its runtime status.
+  ///
+  /// Enabling auto-check schedules the first query after [autoCheckSec].
+  bool get autoCheck => _autoCheck;
+
+  set autoCheck(bool value) {
+    if (_disposed && value) {
+      throw StateError('Cannot enable auto-check on a disposed server');
+    }
+    if (_autoCheck == value) return;
+
+    _autoCheck = value;
+    if (value) {
+      _scheduleAutoCheck();
+    } else {
+      _cancelAutoCheckTimer();
+    }
+  }
+
+  /// Delay between completed automatic status checks.
+  ///
+  /// Values below [minimumAutoCheckSec] are clamped to that minimum.
+  int get autoCheckSec => _autoCheckSec;
+
+  set autoCheckSec(int value) {
+    if (_disposed) {
+      throw StateError('Cannot change auto-check interval on a disposed server');
+    }
+
+    final int next =
+        value < minimumAutoCheckSec ? minimumAutoCheckSec : value;
+    if (_autoCheckSec == next) return;
+
+    _autoCheckSec = next;
+    if (_autoCheck && !_autoCheckRunning) {
+      _scheduleAutoCheck();
+    }
+  }
+
   /// Most recent effective runtime status for this server instance.
   ///
   /// This field is not persisted to `servers.dat`.
@@ -75,6 +123,9 @@ final class MtnMinecraftInfoServer {
     bool allowLegacyFallback = true,
     MtnMinecraftInfoSrvResolver? srvResolver,
   }) async {
+    if (_disposed) {
+      throw StateError('Cannot query a disposed server');
+    }
     if (offlineAfter <= Duration.zero) {
       throw ArgumentError.value(
         offlineAfter,
@@ -228,12 +279,61 @@ final class MtnMinecraftInfoServer {
       next = queried;
     }
 
+    if (_disposed) return next;
+
     final bool changed = !_sameEffectiveStatus(previous, next);
     _status = next;
     if (changed) {
       onChange?.call(this);
     }
     return next;
+  }
+
+  void _scheduleAutoCheck() {
+    _cancelAutoCheckTimer();
+    if (_disposed || !_autoCheck || _autoCheckRunning) return;
+
+    _autoCheckTimer = Timer(
+      Duration(seconds: _autoCheckSec),
+      () {
+        _autoCheckTimer = null;
+        unawaited(_runAutoCheck());
+      },
+    );
+  }
+
+  Future<void> _runAutoCheck() async {
+    if (_disposed || !_autoCheck || _autoCheckRunning) return;
+
+    _autoCheckRunning = true;
+    try {
+      await queryStatus();
+    } on Object {
+      // Automatic monitoring must remain alive even if one query fails.
+    } finally {
+      _autoCheckRunning = false;
+      if (!_disposed && _autoCheck) {
+        _scheduleAutoCheck();
+      }
+    }
+  }
+
+  void _cancelAutoCheckTimer() {
+    _autoCheckTimer?.cancel();
+    _autoCheckTimer = null;
+  }
+
+  /// Stops automatic checks and releases runtime callbacks.
+  ///
+  /// An in-flight query may finish its transport work, but cannot publish a
+  /// new status or schedule another automatic check after disposal.
+  void dispose() {
+    if (_disposed) return;
+
+    _disposed = true;
+    _autoCheck = false;
+    _cancelAutoCheckTimer();
+    onChange = null;
   }
 
   Map<String, Object?> toMap() => <String, Object?>{
