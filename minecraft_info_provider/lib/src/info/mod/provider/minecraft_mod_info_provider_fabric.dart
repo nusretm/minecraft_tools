@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 
 import '../info_mod.dart';
+import '../info_mod_asset_source.dart';
 import '../info_mod_dependency.dart';
 import '../info_mod_urls.dart';
 import 'minecraft_mod_info_provider.dart';
@@ -266,6 +267,7 @@ final class MtnMinecraftModInfoProviderFabric
       json['icon'],
       archive,
     );
+    final assetSource = source.assetSource(archive);
 
     return MtnMinecraftInfoMod(
       id: rawId,
@@ -288,6 +290,9 @@ final class MtnMinecraftModInfoProviderFabric
           : <MtnMinecraftInfoModIconLoader>[
               (int size) => source.readEntry(icon.pathForSize(size)),
             ],
+      assetSources: assetSource == null
+          ? const <MtnMinecraftInfoModAssetSource>[]
+          : <MtnMinecraftInfoModAssetSource>[assetSource],
     );
   }
 }
