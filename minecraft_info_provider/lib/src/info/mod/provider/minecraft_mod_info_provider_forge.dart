@@ -165,8 +165,10 @@ final class MtnMinecraftModInfoProviderForge
     final String? license = _optionalNonEmptyString(
       metadata['license'],
     );
-    final String? issueTrackerUrl = _optionalNonEmptyString(
-      metadata['issueTrackerURL'],
+    final String? issueTrackerUrl = _emptyToNull(
+      _optionalString(
+        metadata['issueTrackerURL'],
+      ),
     );
     final bool clientSideOnly = _optionalBool(
           metadata['clientSideOnly'],
@@ -203,19 +205,25 @@ final class MtnMinecraftModInfoProviderForge
         jarVersion: jarVersion,
         properties: fileProperties,
       );
-      final String name = _optionalNonEmptyString(
-            modMetadata['displayName'],
+      final String name = _emptyToNull(
+            _optionalString(
+              modMetadata['displayName'],
+            ),
           ) ??
           id;
       final String description = _optionalString(
             modMetadata['description'],
           ) ??
           '';
-      final String? authors = _optionalNonEmptyString(
-        modMetadata['authors'],
+      final String? authors = _emptyToNull(
+        _optionalString(
+          modMetadata['authors'],
+        ),
       );
-      final String? homepage = _optionalNonEmptyString(
-        modMetadata['displayURL'],
+      final String? homepage = _emptyToNull(
+        _optionalString(
+          modMetadata['displayURL'],
+        ),
       );
       final ({bool clientSide, bool serverSide}) sideSupport =
           _forgeModSideSupport(
@@ -224,8 +232,10 @@ final class MtnMinecraftModInfoProviderForge
           modMetadata['displayTest'],
         ),
       );
-      final String? logoFile = _optionalNonEmptyString(
-        modMetadata['logoFile'],
+      final String? logoFile = _emptyToNull(
+        _optionalString(
+          modMetadata['logoFile'],
+        ),
       );
       final bool hasLogo = logoFile != null &&
           _archiveHasFile(
@@ -599,6 +609,9 @@ String? _optionalNonEmptyString(Object? value) {
   if (value == null) return null;
   return _requiredNonEmptyString(value);
 }
+
+String? _emptyToNull(String? value) =>
+    value == null || value.isEmpty ? null : value;
 
 String? _optionalString(Object? value) {
   if (value == null) return null;
