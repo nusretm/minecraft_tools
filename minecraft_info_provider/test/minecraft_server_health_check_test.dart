@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:minecraft_info_provider/minecraft_info_provider.dart';
 import 'package:test/test.dart';
 
@@ -24,15 +27,24 @@ void main() {
       server.dispose();
     });
 
-    test('checker coordinates add change remove and server lifecycle', () {
+    test('checker queries immediately on add and coordinates lifecycle',
+        () async {
+      final ServerSocket reserved = await ServerSocket.bind(
+        InternetAddress.loopbackIPv4,
+        0,
+      );
+      final int unavailablePort = reserved.port;
+      await reserved.close();
+
       var originalChanges = 0;
       var adds = 0;
       var changes = 0;
       var removes = 0;
+      final Completer<void> firstChange = Completer<void>();
 
       final MtnMinecraftInfoServer server = MtnMinecraftInfoServer(
         name: 'Server',
-        address: 'example.invalid',
+        address: '127.0.0.1:$unavailablePort',
         onChange: (MtnMinecraftInfoServer server) {
           originalChanges++;
         },
@@ -51,6 +63,7 @@ void main() {
           MtnMinecraftInfoServer server,
         ) {
           changes++;
+          if (!firstChange.isCompleted) firstChange.complete();
         },
         onRemove: (
           MtnMinecraftInfoServerHealthCheck checker,
@@ -77,12 +90,14 @@ void main() {
         throwsUnsupportedError,
       );
 
-      server.onChange?.call(server);
-      expect(originalChanges, 1);
-      expect(changes, 1);
-
       checker.start();
       expect(checker.active, isTrue);
+
+      await firstChange.future.timeout(const Duration(seconds: 5));
+
+      expect(originalChanges, 1);
+      expect(changes, 1);
+      expect(server.status, isNotNull);
       expect(server.autoCheck, isTrue);
 
       checker.intervalSec = 30;
