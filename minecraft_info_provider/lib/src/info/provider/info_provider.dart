@@ -1104,7 +1104,7 @@ MtnMinecraftInfoModLoader? _modLoaderFromVersionJson(
     );
   }
 
-  final MtnMinecraftInfoModLoaderType? type;
+  late final MtnMinecraftInfoModLoaderType type;
   if (rawId.startsWith('fabric-loader-')) {
     type = MtnMinecraftInfoModLoaderType.fabric;
   } else if (rawId.startsWith('quilt-loader-')) {
@@ -1124,22 +1124,18 @@ MtnMinecraftInfoModLoader? _modLoaderFromVersionJson(
     );
   }
 
-  final String prefix;
-  final String? suffix;
-  switch (type) {
-    case MtnMinecraftInfoModLoaderType.fabric:
-      prefix = 'fabric-loader-';
-      suffix = '-$rawMinecraftVersion';
-    case MtnMinecraftInfoModLoaderType.quilt:
-      prefix = 'quilt-loader-';
-      suffix = '-$rawMinecraftVersion';
-    case MtnMinecraftInfoModLoaderType.forge:
-      prefix = '$rawMinecraftVersion-forge-';
-      suffix = null;
-    case MtnMinecraftInfoModLoaderType.neoForge:
-      prefix = '$rawMinecraftVersion-neoforge-';
-      suffix = null;
-  }
+  final (String prefix, String? suffix) pattern = switch (type) {
+    MtnMinecraftInfoModLoaderType.fabric =>
+      ('fabric-loader-', '-$rawMinecraftVersion'),
+    MtnMinecraftInfoModLoaderType.quilt =>
+      ('quilt-loader-', '-$rawMinecraftVersion'),
+    MtnMinecraftInfoModLoaderType.forge =>
+      ('$rawMinecraftVersion-forge-', null),
+    MtnMinecraftInfoModLoaderType.neoForge =>
+      ('$rawMinecraftVersion-neoforge-', null),
+  };
+  final String prefix = pattern.$1;
+  final String? suffix = pattern.$2;
 
   if (!rawId.startsWith(prefix) ||
       (suffix != null && !rawId.endsWith(suffix))) {
