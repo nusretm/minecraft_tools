@@ -109,7 +109,5 @@ List<String> _normalizeNamespaces(Iterable<String> namespaces) {
   return sorted;
 }
 
-final RegExp _namespacePattern = RegExp(r'^[a-z0-9_.-]+
-);
-final RegExp _assetPathPattern = RegExp(r'^[a-z0-9/._-]+
-);
+final RegExp _namespacePattern = RegExp(r'^[a-z0-9_.-]+$');
+final RegExp _assetPathPattern = RegExp(r'^[a-z0-9/._-]+$');
