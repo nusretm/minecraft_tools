@@ -242,11 +242,17 @@ final class MtnMinecraftModInfoProviderNeoForge
             ),
           ) ??
           fileIcon;
-      final bool hasIcon = iconFile != null &&
+      final List<MtnMinecraftInfoModIconLoader> iconLoaders =
+          <MtnMinecraftInfoModIconLoader>[];
+      if (iconFile != null &&
           _archiveHasFile(
             archive,
             iconFile,
-          );
+          )) {
+        iconLoaders.add(
+          (int size) => source.readEntry(iconFile),
+        );
+      }
 
       mods.add(
         MtnMinecraftInfoMod(
@@ -268,11 +274,7 @@ final class MtnMinecraftModInfoProviderNeoForge
             dependencyGroups[id],
           ),
           parentMods: parentMods,
-          iconLoaders: !hasIcon
-              ? const <MtnMinecraftInfoModIconLoader>[]
-              : <MtnMinecraftInfoModIconLoader>[
-                  (int size) => source.readEntry(iconFile!),
-                ],
+          iconLoaders: iconLoaders,
         ),
       );
     }
