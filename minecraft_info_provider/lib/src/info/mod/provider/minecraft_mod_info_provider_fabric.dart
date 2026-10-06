@@ -428,7 +428,7 @@ final class _FabricJarSource {
         rootArchive = ZipDecoder().decodeBytes(_content!, verify: true);
       }
 
-      Archive currentArchive = rootArchive!;
+      Archive currentArchive = rootArchive;
       for (final String embeddedPath in _embeddedPaths) {
         final ArchiveFile? embeddedFile = _findArchiveFile(
           currentArchive,
