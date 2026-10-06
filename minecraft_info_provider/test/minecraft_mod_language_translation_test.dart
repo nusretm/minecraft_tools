@@ -240,14 +240,16 @@ void main() {
     });
 
     test('rejects composite language values as invalid data', () async {
-      for (final Object? invalidValue in <Object?>[
-        null,
-        <Object?>['value'],
-        <String, Object?>{'text': 'value'},
-      ]) {
+      final List<(String, Object?)> cases = <(String, Object?)>[
+        ('null', null),
+        ('array', <Object?>['value']),
+        ('object', <String, Object?>{'text': 'value'}),
+      ];
+
+      for (final (String name, Object? invalidValue) in cases) {
         final File jar = await _writeFabricJar(
           directory,
-          'composite-${invalidValue.runtimeType}.jar',
+          'composite-$name.jar',
           id: 'composite_value',
           version: '1',
           entries: <String, List<int>>{
