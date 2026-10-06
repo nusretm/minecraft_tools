@@ -42,12 +42,48 @@ void main() {
                 <String, Object?>{
                   'name': 'Bob',
                   'contact': <String, String>{
-                    'homepage': 'https://example.com',
+                    'homepage': 'https://example.com/bob',
                   },
                 },
               ],
-              'depends': <String, String>{
+              'contributors': <Object?>[
+                'Carol',
+                <String, Object?>{
+                  'name': 'Dave',
+                },
+              ],
+              'contact': <String, String>{
+                'homepage': 'https://modrinth.com/mod/example',
+                'sources': 'https://github.com/example/example',
+                'issues': 'https://github.com/example/example/issues',
+                'email': 'ignored@example.com',
+              },
+              'license': <String>[
+                'MIT',
+                'Apache-2.0',
+              ],
+              'environment': 'client',
+              'provides': <String>[
+                'example_alias',
+              ],
+              'depends': <String, Object?>{
                 'fabricloader': '>=0.19.0',
+                'minecraft': <String>[
+                  '26.1',
+                  '26.1.1',
+                ],
+              },
+              'recommends': <String, String>{
+                'modmenu': '*',
+              },
+              'suggests': <String, String>{
+                'rei': '>=20',
+              },
+              'conflicts': <String, String>{
+                'conflicting_mod': '*',
+              },
+              'breaks': <String, String>{
+                'broken_mod': '<2.0.0',
               },
             },
           ),
@@ -64,9 +100,68 @@ void main() {
       expect(mod.version, '1.2.3');
       expect(mod.description, 'Example description');
       expect(mod.authors, <String>['Alice', 'Bob']);
+      expect(mod.contributors, <String>['Carol', 'Dave']);
+      expect(mod.licenses, <String>['MIT', 'Apache-2.0']);
+      expect(mod.urls.homepage, 'https://modrinth.com/mod/example');
+      expect(mod.urls.source, 'https://github.com/example/example');
+      expect(mod.urls.issues, 'https://github.com/example/example/issues');
+      expect(mod.clientSide, isTrue);
+      expect(mod.serverSide, isFalse);
+      expect(mod.providedIds, <String>['example_alias']);
+      expect(
+        mod.dependencies,
+        <MtnMinecraftInfoModDependency>[
+          MtnMinecraftInfoModDependency(
+            id: 'fabricloader',
+            type: MtnMinecraftInfoModDependencyType.requiredDependency,
+            versionConstraints: <String>['>=0.19.0'],
+            clientSide: true,
+            serverSide: false,
+          ),
+          MtnMinecraftInfoModDependency(
+            id: 'minecraft',
+            type: MtnMinecraftInfoModDependencyType.requiredDependency,
+            versionConstraints: <String>['26.1', '26.1.1'],
+            clientSide: true,
+            serverSide: false,
+          ),
+          MtnMinecraftInfoModDependency(
+            id: 'modmenu',
+            type: MtnMinecraftInfoModDependencyType.recommended,
+            versionConstraints: <String>['*'],
+            clientSide: true,
+            serverSide: false,
+          ),
+          MtnMinecraftInfoModDependency(
+            id: 'rei',
+            type: MtnMinecraftInfoModDependencyType.suggested,
+            versionConstraints: <String>['>=20'],
+            clientSide: true,
+            serverSide: false,
+          ),
+          MtnMinecraftInfoModDependency(
+            id: 'conflicting_mod',
+            type: MtnMinecraftInfoModDependencyType.conflicting,
+            versionConstraints: <String>['*'],
+            clientSide: true,
+            serverSide: false,
+          ),
+          MtnMinecraftInfoModDependency(
+            id: 'broken_mod',
+            type: MtnMinecraftInfoModDependencyType.incompatible,
+            versionConstraints: <String>['<2.0.0'],
+            clientSide: true,
+            serverSide: false,
+          ),
+        ],
+      );
       expect(mod.parentMods, isEmpty);
       expect(mod.modTypes, isEmpty);
       expect(() => mod.authors.add('Carol'), throwsUnsupportedError);
+      expect(() => mod.contributors.add('Eve'), throwsUnsupportedError);
+      expect(() => mod.licenses.add('GPL-3.0'), throwsUnsupportedError);
+      expect(() => mod.dependencies.clear(), throwsUnsupportedError);
+      expect(() => mod.providedIds.clear(), throwsUnsupportedError);
     });
 
     test('uses Fabric defaults for optional normalized fields', () async {
@@ -89,6 +184,89 @@ void main() {
       expect(mod.name, 'minimal_mod');
       expect(mod.description, '');
       expect(mod.authors, isEmpty);
+      expect(mod.contributors, isEmpty);
+      expect(mod.licenses, isEmpty);
+      expect(mod.urls.isEmpty, isTrue);
+      expect(mod.clientSide, isTrue);
+      expect(mod.serverSide, isTrue);
+      expect(mod.dependencies, isEmpty);
+      expect(mod.providedIds, isEmpty);
+    });
+
+    test('does not derive source URL from issue tracker metadata', () async {
+      final File jar = await _writeJar(
+        directory,
+        'issues-only.jar',
+        <String, List<int>>{
+          'fabric.mod.json': _jsonBytes(
+            <String, Object?>{
+              'schemaVersion': 1,
+              'id': 'issues_only',
+              'version': '1',
+              'contact': <String, String>{
+                'issues': 'https://github.com/example/project/issues',
+              },
+            },
+          ),
+        },
+      );
+
+      final MtnMinecraftInfoMod mod = (await provider.parse(jar))!.single;
+
+      expect(mod.urls.issues, 'https://github.com/example/project/issues');
+      expect(mod.urls.source, isNull);
+    });
+
+    test('normalizes Fabric server-only environment', () async {
+      final File jar = await _writeJar(
+        directory,
+        'server-only.jar',
+        <String, List<int>>{
+          'fabric.mod.json': _jsonBytes(
+            <String, Object?>{
+              'schemaVersion': 1,
+              'id': 'server_only',
+              'version': '1',
+              'environment': 'server',
+              'depends': <String, String>{
+                'minecraft': '*',
+              },
+            },
+          ),
+        },
+      );
+
+      final MtnMinecraftInfoMod mod = (await provider.parse(jar))!.single;
+
+      expect(mod.clientSide, isFalse);
+      expect(mod.serverSide, isTrue);
+      expect(mod.dependencies.single.clientSide, isFalse);
+      expect(mod.dependencies.single.serverSide, isTrue);
+    });
+
+    test('accepts Fabric environment arrays and normalizes both sides', () async {
+      final File jar = await _writeJar(
+        directory,
+        'both-sides.jar',
+        <String, List<int>>{
+          'fabric.mod.json': _jsonBytes(
+            <String, Object?>{
+              'schemaVersion': 1,
+              'id': 'both_sides',
+              'version': '1',
+              'environment': <String>[
+                'client',
+                'server',
+              ],
+            },
+          ),
+        },
+      );
+
+      final MtnMinecraftInfoMod mod = (await provider.parse(jar))!.single;
+
+      expect(mod.clientSide, isTrue);
+      expect(mod.serverSide, isTrue);
     });
 
     test('reads a single Fabric icon lazily', () async {
@@ -333,6 +511,27 @@ void main() {
               'authors': <Object?>[
                 <String, Object?>{'contact': <String, String>{}},
               ],
+            },
+          ),
+        },
+      );
+
+      await _expectInvalidData(provider.parse(jar));
+    });
+
+    test('malformed rich Fabric metadata is invalid data', () async {
+      final File jar = await _writeJar(
+        directory,
+        'invalid-rich-metadata.jar',
+        <String, List<int>>{
+          'fabric.mod.json': _jsonBytes(
+            <String, Object?>{
+              'schemaVersion': 1,
+              'id': 'invalid_rich_metadata',
+              'version': '1',
+              'depends': <String, Object?>{
+                'minecraft': <Object?>['26.1', 26],
+              },
             },
           ),
         },
