@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import '../../nbt/minecraft_nbt.dart';
 import '../info_nbt_uuid_parser.dart';
 import '../mod/info_mod.dart';
+import '../mod/info_mod_list.dart';
 import '../mod/info_mod_loader.dart';
 import '../player/info_player.dart';
 import '../player/info_player_advancements.dart';
@@ -351,11 +352,14 @@ final class MtnMinecraftInfoProvider {
     return _modLoaderFromVersionJson(decoded);
   }
 
-  /// Discovers direct JAR files under this profile's `mods` directory.
+  /// Discovers and parses direct JAR files under this profile's `mods` directory.
   ///
   /// A missing `mods` directory is equivalent to an empty mod list.
-  /// Nested directories and non-JAR files are ignored.
-  Future<List<MtnMinecraftInfoMod>> readMods() async {
+  /// Nested directories and non-JAR files are ignored. Every discovered root
+  /// JAR is offered to every provider registered in [modList].
+  Future<List<MtnMinecraftInfoMod>> readMods(
+    MtnMinecraftModList modList,
+  ) async {
     final FileSystemEntityType gameDirectoryType =
         await _entityType(gameDirectory.path, forWrite: false);
     if (gameDirectoryType != FileSystemEntityType.directory) {
@@ -370,7 +374,8 @@ final class MtnMinecraftInfoProvider {
     final FileSystemEntityType modsDirectoryType =
         await _entityType(modsDirectory.path, forWrite: false);
     if (modsDirectoryType == FileSystemEntityType.notFound) {
-      return const <MtnMinecraftInfoMod>[];
+      modList.clear();
+      return modList.mods;
     }
     if (modsDirectoryType != FileSystemEntityType.directory) {
       throw const MtnMinecraftInfoProviderException(
@@ -396,13 +401,11 @@ final class MtnMinecraftInfoProvider {
             p.basename(left.path).compareTo(p.basename(right.path)),
       );
 
-    return List<MtnMinecraftInfoMod>.unmodifiable(
-      files.map(
-        (File file) => MtnMinecraftInfoMod(
-          file: file,
-        ),
-      ),
-    );
+    modList.clear();
+    for (final File file in files) {
+      await modList.add(file);
+    }
+    return modList.mods;
   }
 
   Future<List<MtnMinecraftInfoPlayer>> _readPlayersFromDirectory(
