@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:minecraft_info_provider/minecraft_info_provider.dart';
