@@ -31,7 +31,7 @@ squash merge
 Package version:
 
 ```text
-1.0.0-dev.28
+1.0.0-dev.29
 ```
 
 Working milestone state:
@@ -504,6 +504,103 @@ required: minecraft [1.20.1] client=true server=false
 ```
 
 The Forge dependency `CLIENT` scopes intentionally do not imply that the whole mod is client-only.
+
+Example:
+
+```text
+minecraft_info_provider/example/mod_metadata.dart
+```
+
+
+## NeoForge mod metadata checkpoint
+
+```text
+Branch: feature/neoforge-mod-metadata-foundation
+Status: IMPLEMENTED / VALIDATED / REAL JAR SMOKE PASSED
+```
+
+Public/provider surface:
+
+- `MtnMinecraftModInfoProviderNeoForge`
+- `MtnMinecraftInfoModDependencyType.discouraged`
+
+Locked NeoForge scope:
+
+- modern NeoForge metadata is read from root `META-INF/neoforge.mods.toml`
+- one JAR may declare multiple `[[mods]]` entries
+- generic fields include ID, version, display name, description, authors, license, homepage and issue tracker
+- local metadata does not invent a source repository URL
+- `iconFile` uses the existing lazy provider-backed icon API
+- mod-level `iconFile` takes precedence over file-level `iconFile`
+- NeoForge `logoFile` is not reinterpreted as `iconFile`
+- missing icon files do not invalidate otherwise valid mod metadata
+- dependency `type=required` maps to generic required
+- dependency `type=optional` maps to generic optional
+- dependency `type=incompatible` maps to generic incompatible
+- dependency `type=discouraged` maps to generic discouraged
+- dependency `ordering=NONE/BEFORE/AFTER` maps to generic dependency ordering
+- dependency `side=CLIENT/SERVER/BOTH` applies only to the dependency relationship
+- dependency side is never promoted into mod-level `clientSide/serverSide`
+- this checkpoint does not scan NeoForge `@Mod(dist=...)` bytecode annotations
+- without authoritative mod-level dist metadata, NeoForge mods remain conservatively `clientSide=true, serverSide=true`
+- NeoForge `versionRange` syntax is preserved as raw generic `versionConstraints`
+- `${file.jarVersion}` resolves from manifest `Implementation-Version`
+- `${file.<property>}` resolves from file-level `properties`
+- declared JarJar entries are read from `META-INF/jarjar/metadata.json`
+- embedded NeoForge mods are recursively parsed in memory
+- JarJar libraries without NeoForge metadata do not become logical mods
+
+Final validation on 2026-10-06:
+
+```text
+dart analyze
+No issues found!
+
+focused NeoForge provider
+18/18 passed
+
+focused Forge provider
+15/15 passed
+
+focused Fabric provider
+19/19 passed
+
+focused mod-list
+10/10 passed
+
+full package test suite
+334/334 passed
+
+git diff --check
+PASS
+
+working tree
+clean
+```
+
+Real JAR smoke target:
+
+```text
+armor_hud-neoforge-3.5.0+26.3.jar
+```
+
+Observed normalization:
+
+```text
+armor_hud@3.5.0
+name: Armor HUD
+license: MIT
+homepage: https://modrinth.com/mod/armor-hud
+source: null
+issues: https://github.com/SaolGhra/Armor-Hud/issues
+clientSide: true
+serverSide: true
+modTypes: neoforge
+required: neoforge [26.3,) client=true server=false
+required: minecraft [26.3] client=true server=false
+```
+
+The dependency `CLIENT` scopes intentionally do not imply that the whole mod is client-only.
 
 Example:
 
