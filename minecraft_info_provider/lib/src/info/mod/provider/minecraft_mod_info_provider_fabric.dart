@@ -34,7 +34,10 @@ final class MtnMinecraftModInfoProviderFabric
     Archive? archive;
     try {
       archive = ZipDecoder().decodeStream(input, verify: true);
-      return await _parseArchive(archive);
+      return await _parseArchive(
+        archive,
+        source: _FabricJarSource.file(jarFile),
+      );
     } on MtnMinecraftModInfoProviderException {
       rethrow;
     } on ArchiveException {
@@ -54,6 +57,18 @@ final class MtnMinecraftModInfoProviderFabric
   @override
   Future<List<MtnMinecraftInfoMod>?> parseJarContent(
     Uint8List content, {
+    MtnMinecraftInfoMod? parentMod,
+  }) async {
+    return _parseJarContentWithSource(
+      content,
+      source: _FabricJarSource.memory(content),
+      parentMod: parentMod,
+    );
+  }
+
+  Future<List<MtnMinecraftInfoMod>?> _parseJarContentWithSource(
+    Uint8List content, {
+    required _FabricJarSource source,
     MtnMinecraftInfoMod? parentMod,
   }) async {
     if (!_hasZipSignature(content)) {
@@ -78,6 +93,7 @@ final class MtnMinecraftModInfoProviderFabric
     try {
       return await _parseArchive(
         archive,
+        source: source,
         parentMod: parentMod,
       );
     } finally {
@@ -87,9 +103,10 @@ final class MtnMinecraftModInfoProviderFabric
 
   Future<List<MtnMinecraftInfoMod>?> _parseArchive(
     Archive archive, {
+    required _FabricJarSource source,
     MtnMinecraftInfoMod? parentMod,
   }) async {
-    final ArchiveFile? metadataFile = _findFile(
+    final ArchiveFile? metadataFile = _findArchiveFile(
       archive,
       _metadataFileName,
     );
@@ -123,6 +140,8 @@ final class MtnMinecraftModInfoProviderFabric
 
     final MtnMinecraftInfoMod mod = _modFromJson(
       decoded,
+      archive: archive,
+      source: source,
       parentMod: parentMod,
     );
     final List<MtnMinecraftInfoMod> result = <MtnMinecraftInfoMod>[mod];
@@ -150,7 +169,7 @@ final class MtnMinecraftModInfoProviderFabric
         );
       }
 
-      final ArchiveFile? embeddedFile = _findFile(archive, rawFile);
+      final ArchiveFile? embeddedFile = _findArchiveFile(archive, rawFile);
       if (embeddedFile == null || !embeddedFile.isFile) {
         throw const MtnMinecraftModInfoProviderException(
           MtnMinecraftModInfoProviderError.invalidData,
@@ -165,8 +184,9 @@ final class MtnMinecraftModInfoProviderFabric
       }
 
       final List<MtnMinecraftInfoMod>? embeddedMods =
-          await parseJarContent(
+          await _parseJarContentWithSource(
         embeddedBytes,
+        source: source.embedded(rawFile),
         parentMod: mod,
       );
       if (embeddedMods != null) {
@@ -179,6 +199,8 @@ final class MtnMinecraftModInfoProviderFabric
 
   MtnMinecraftInfoMod _modFromJson(
     Map<String, dynamic> json, {
+    required Archive archive,
+    required _FabricJarSource source,
     required MtnMinecraftInfoMod? parentMod,
   }) {
     if (json['schemaVersion'] != 1) {
@@ -238,6 +260,11 @@ final class MtnMinecraftModInfoProviderFabric
       }
     }
 
+    final _FabricIcon? icon = _fabricIconFromJson(
+      json['icon'],
+      archive,
+    );
+
     return MtnMinecraftInfoMod(
       id: rawId,
       name: rawName is String ? rawName : rawId,
@@ -247,14 +274,12 @@ final class MtnMinecraftModInfoProviderFabric
       parentMods: parentMod == null
           ? const <MtnMinecraftInfoMod>[]
           : <MtnMinecraftInfoMod>[parentMod],
+      iconLoaders: icon == null
+          ? const <MtnMinecraftInfoModIconLoader>[]
+          : <MtnMinecraftInfoModIconLoader>[
+              (int size) => source.readEntry(icon.pathForSize(size)),
+            ],
     );
-  }
-
-  ArchiveFile? _findFile(Archive archive, String name) {
-    for (final ArchiveFile file in archive) {
-      if (file.name == name) return file;
-    }
-    return null;
   }
 
   Future<void> _validateJarFile(File jarFile) async {
@@ -284,14 +309,185 @@ final class MtnMinecraftModInfoProviderFabric
       );
     }
   }
+}
 
-  bool _hasZipSignature(List<int> bytes) {
-    if (bytes.length < 4 || bytes[0] != 0x50 || bytes[1] != 0x4b) {
-      return false;
+final class _FabricIcon {
+  _FabricIcon.single(String path)
+      : _singlePath = path,
+        _paths = const <int, String>{};
+
+  _FabricIcon.sized(Map<int, String> paths)
+      : _singlePath = null,
+        _paths = Map<int, String>.unmodifiable(paths);
+
+  final String? _singlePath;
+  final Map<int, String> _paths;
+
+  String pathForSize(int size) {
+    final String? singlePath = _singlePath;
+    if (singlePath != null) return singlePath;
+
+    final List<int> widths = _paths.keys.toList()..sort();
+    for (final int width in widths) {
+      if (width >= size) return _paths[width]!;
+    }
+    return _paths[widths.last]!;
+  }
+}
+
+_FabricIcon? _fabricIconFromJson(
+  Object? rawIcon,
+  Archive archive,
+) {
+  if (rawIcon == null) return null;
+
+  if (rawIcon is String) {
+    if (rawIcon.isEmpty) {
+      throw const MtnMinecraftModInfoProviderException(
+        MtnMinecraftModInfoProviderError.invalidData,
+      );
+    }
+    final ArchiveFile? file = _findArchiveFile(archive, rawIcon);
+    return file != null && file.isFile
+        ? _FabricIcon.single(rawIcon)
+        : null;
+  }
+
+  if (rawIcon is! Map<String, dynamic>) {
+    throw const MtnMinecraftModInfoProviderException(
+      MtnMinecraftModInfoProviderError.invalidData,
+    );
+  }
+
+  final Map<int, String> paths = <int, String>{};
+  for (final MapEntry<String, dynamic> entry in rawIcon.entries) {
+    final int? width = int.tryParse(entry.key);
+    final Object? rawPath = entry.value;
+    if (width == null ||
+        width <= 0 ||
+        rawPath is! String ||
+        rawPath.isEmpty) {
+      throw const MtnMinecraftModInfoProviderException(
+        MtnMinecraftModInfoProviderError.invalidData,
+      );
     }
 
-    return (bytes[2] == 0x03 && bytes[3] == 0x04) ||
-        (bytes[2] == 0x05 && bytes[3] == 0x06) ||
-        (bytes[2] == 0x07 && bytes[3] == 0x08);
+    final ArchiveFile? file = _findArchiveFile(archive, rawPath);
+    if (file != null && file.isFile) {
+      paths[width] = rawPath;
+    }
   }
+
+  return paths.isEmpty ? null : _FabricIcon.sized(paths);
+}
+
+final class _FabricJarSource {
+  _FabricJarSource.file(File file)
+      : _file = File(file.absolute.path),
+        _content = null,
+        _embeddedPaths = const <String>[];
+
+  _FabricJarSource.memory(Uint8List content)
+      : _file = null,
+        _content = Uint8List.fromList(content),
+        _embeddedPaths = const <String>[];
+
+  _FabricJarSource._({
+    required File? file,
+    required Uint8List? content,
+    required List<String> embeddedPaths,
+  })  : _file = file,
+        _content = content,
+        _embeddedPaths = List<String>.unmodifiable(embeddedPaths);
+
+  final File? _file;
+  final Uint8List? _content;
+  final List<String> _embeddedPaths;
+
+  _FabricJarSource embedded(String path) => _FabricJarSource._(
+        file: _file,
+        content: _content,
+        embeddedPaths: <String>[
+          ..._embeddedPaths,
+          path,
+        ],
+      );
+
+  Future<Uint8List?> readEntry(String path) async {
+    InputFileStream? input;
+    Archive? rootArchive;
+    final List<Archive> nestedArchives = <Archive>[];
+
+    try {
+      final File? file = _file;
+      if (file != null) {
+        input = InputFileStream(file.path);
+        rootArchive = ZipDecoder().decodeStream(input, verify: true);
+      } else {
+        rootArchive = ZipDecoder().decodeBytes(_content!, verify: true);
+      }
+
+      Archive currentArchive = rootArchive;
+      for (final String embeddedPath in _embeddedPaths) {
+        final ArchiveFile? embeddedFile = _findArchiveFile(
+          currentArchive,
+          embeddedPath,
+        );
+        if (embeddedFile == null || !embeddedFile.isFile) return null;
+
+        final Uint8List? embeddedBytes = embeddedFile.readBytes();
+        if (embeddedBytes == null || !_hasZipSignature(embeddedBytes)) {
+          return null;
+        }
+
+        final Archive nestedArchive = ZipDecoder().decodeBytes(
+          embeddedBytes,
+          verify: true,
+        );
+        nestedArchives.add(nestedArchive);
+        currentArchive = nestedArchive;
+      }
+
+      final ArchiveFile? target = _findArchiveFile(currentArchive, path);
+      if (target == null || !target.isFile) return null;
+
+      final Uint8List? bytes = target.readBytes();
+      return bytes == null ? null : Uint8List.fromList(bytes);
+    } on FileSystemException {
+      throw const MtnMinecraftModInfoProviderException(
+        MtnMinecraftModInfoProviderError.readFailed,
+      );
+    } on ArchiveException {
+      throw const MtnMinecraftModInfoProviderException(
+        MtnMinecraftModInfoProviderError.invalidData,
+      );
+    } on FormatException {
+      throw const MtnMinecraftModInfoProviderException(
+        MtnMinecraftModInfoProviderError.invalidData,
+      );
+    } finally {
+      for (final Archive archive in nestedArchives.reversed) {
+        archive.clearSync();
+      }
+      rootArchive?.clearSync();
+      input?.closeSync();
+    }
+  }
+}
+
+ArchiveFile? _findArchiveFile(Archive archive, String name) {
+  for (final ArchiveFile file in archive) {
+    if (file.name == name) return file;
+  }
+  return null;
+}
+
+bool _hasZipSignature(List<int> bytes) {
+  if (bytes.length < 4 || bytes[0] != 0x50 || bytes[1] != 0x4b) {
+    return false;
+  }
+
+  return (bytes[2] == 0x03 && bytes[3] == 0x04) ||
+      (bytes[2] == 0x05 && bytes[3] == 0x06) ||
+      (bytes[2] == 0x07 && bytes[3] == 0x08);
 }
