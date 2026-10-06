@@ -118,6 +118,33 @@ void main() {
       expect(values.last.asCompound['acceptTextures']?.asByte, 0);
     });
 
+    test('addServer can insert at the first position', () async {
+      await provider.addServer(
+        MtnMinecraftInfoServer(
+          name: 'Existing',
+          address: 'existing.invalid',
+        ),
+      );
+      await provider.addServer(
+        MtnMinecraftInfoServer(
+          name: 'First',
+          address: 'first.invalid',
+          acceptServerResourcePacks: true,
+        ),
+        first: true,
+      );
+
+      final List<MtnMinecraftInfoServer> servers =
+          await provider.readServers();
+
+      expect(servers, hasLength(2));
+      expect(servers.first.name, 'First');
+      expect(servers.first.address, 'first.invalid');
+      expect(servers.first.acceptServerResourcePacks, isTrue);
+      expect(servers.last.name, 'Existing');
+      expect(servers.last.address, 'existing.invalid');
+    });
+
     test('concurrent adds are serialized and none are lost', () async {
       await Future.wait(
         List<Future<void>>.generate(
