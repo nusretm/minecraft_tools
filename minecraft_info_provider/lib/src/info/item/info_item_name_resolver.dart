@@ -25,49 +25,40 @@ final class MtnMinecraftInfoItemNameResolver {
 
     final List<MtnMinecraftInfoItemName> result =
         <MtnMinecraftInfoItemName>[];
-
-    await _addMatches(
-      result,
-      identity,
-      MtnMinecraftInfoItemNameKind.item,
-      identity.itemTranslationKey,
-      locale,
-    );
-    await _addMatches(
-      result,
-      identity,
-      MtnMinecraftInfoItemNameKind.block,
-      identity.blockTranslationKey,
-      locale,
-    );
-
-    return List<MtnMinecraftInfoItemName>.unmodifiable(result);
-  }
-
-  Future<void> _addMatches(
-    List<MtnMinecraftInfoItemName> result,
-    MtnMinecraftInfoItemIdentity identity,
-    MtnMinecraftInfoItemNameKind kind,
-    String translationKey,
-    String locale,
-  ) async {
     for (final String languageNamespace in modList.assetNamespaces) {
-      final List<MtnMinecraftInfoModTranslation> translations =
-          await modList.getTranslations(
+      final List<MtnMinecraftInfoModLanguage> languages =
+          await modList.readLanguages(
         languageNamespace,
-        translationKey,
         locale: locale,
       );
 
-      for (final MtnMinecraftInfoModTranslation translation in translations) {
-        result.add(
-          MtnMinecraftInfoItemName(
-            identity: identity,
-            kind: kind,
-            translation: translation,
-          ),
-        );
+      for (final MtnMinecraftInfoModLanguage language in languages) {
+        final MtnMinecraftInfoModTranslation? itemTranslation =
+            language.translation(identity.itemTranslationKey);
+        if (itemTranslation != null) {
+          result.add(
+            MtnMinecraftInfoItemName(
+              identity: identity,
+              kind: MtnMinecraftInfoItemNameKind.item,
+              translation: itemTranslation,
+            ),
+          );
+        }
+
+        final MtnMinecraftInfoModTranslation? blockTranslation =
+            language.translation(identity.blockTranslationKey);
+        if (blockTranslation != null) {
+          result.add(
+            MtnMinecraftInfoItemName(
+              identity: identity,
+              kind: MtnMinecraftInfoItemNameKind.block,
+              translation: blockTranslation,
+            ),
+          );
+        }
       }
     }
+
+    return List<MtnMinecraftInfoItemName>.unmodifiable(result);
   }
 }
