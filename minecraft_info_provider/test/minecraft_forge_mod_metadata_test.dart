@@ -414,6 +414,45 @@ version = "1"
       expect(await childMod.getIcon(), icon);
     });
 
+    test('JarJar libraries without Forge mod metadata are ignored', () async {
+      final Uint8List library = _jarBytes(
+        <String, List<int>>{
+          'META-INF/library.txt': utf8.encode('library only'),
+        },
+      );
+      final File root = await _writeJar(
+        directory,
+        'root-with-library.jar',
+        <String, List<int>>{
+          'META-INF/mods.toml': utf8.encode(
+            '''
+modLoader = "javafml"
+
+[[mods]]
+modId = "root"
+version = "1"
+''',
+          ),
+          'META-INF/jarjar/metadata.json': _jsonBytes(
+            <String, Object?>{
+              'jars': <Object?>[
+                <String, Object?>{
+                  'path': 'META-INF/jars/library.jar',
+                },
+              ],
+            },
+          ),
+          'META-INF/jars/library.jar': library,
+        },
+      );
+
+      final List<MtnMinecraftInfoMod> mods =
+          (await provider.parse(root))!;
+
+      expect(mods, hasLength(1));
+      expect(mods.single.id, 'root');
+    });
+
     test('JAR without root META-INF/mods.toml is not a Forge result', () async {
       final File jar = await _writeJar(
         directory,
