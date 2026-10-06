@@ -45,7 +45,7 @@ Working mod-loader discovery checkpoint:
 
 ```text
 Branch: feature/mod-loader-discovery-foundation
-Status: IMPLEMENTED / DETERMINISTICALLY VALIDATED / REAL PROFILE SMOKE PENDING
+Status: IMPLEMENTED / VALIDATED / REAL PROFILE SMOKE PASSED
 ```
 
 Public surface:
@@ -63,7 +63,7 @@ Locked scope:
 - does not parse libraries, launcher arguments, assets, downloads or runtime metadata
 - does not inspect loader JARs or the `mods/` directory
 
-Deterministic validation on 2026-10-06:
+Final validation on 2026-10-06:
 
 ```text
 dart analyze
@@ -88,11 +88,12 @@ Real-profile smoke target:
 C:\Provanas\profiles\02766803-f0e2-4101-a3b8-962e1f520bcb
 ```
 
-Expected active profile signal:
+Observed active profile signal:
 
 ```text
-Fabric Loader 0.19.5
-Minecraft 26.1.2
+Mod loader: fabric
+Loader version: 0.19.5
+Minecraft version: 26.1.2
 ```
 
 
@@ -305,7 +306,6 @@ Remaining major areas include:
 
 ### Installed content / launcher presentation
 
-- Minecraft version mod-loader discovery
 - installed mod list
 - mod metadata discovery
 - mod namespace -> owning mod mapping
@@ -394,4 +394,4 @@ In particular:
 
 There is no automatically selected next implementation checkpoint.
 
-Choose the next narrow area explicitly before implementation. Based on the current launcher-facing priorities, installed mod-loader/mod metadata discovery is a natural candidate, but it is not approved merely by appearing here.
+Choose the next narrow area explicitly before implementation. Based on the current launcher-facing priorities, installed mod-file discovery under `mods/` is the natural next candidate, followed by mod metadata discovery. Neither is approved merely by appearing here.
