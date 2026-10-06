@@ -1,4 +1,4 @@
-import '../nbt/minecraft_nbt.dart';
+import '../../nbt/minecraft_nbt.dart';
 import 'info_mob_effect.dart';
 
 /// Internal parser for the shared persisted Minecraft mob-effect instance.

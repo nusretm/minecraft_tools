@@ -1,4 +1,4 @@
-import '../nbt/minecraft_nbt.dart';
+import '../../nbt/minecraft_nbt.dart';
 import 'info_item_stack.dart';
 import 'info_item_stack_components_nbt_parser.dart';
 

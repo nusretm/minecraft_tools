@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import '../nbt/minecraft_nbt.dart';
-import 'info_mob_effect.dart';
-import 'info_mob_effect_nbt_parser.dart';
+import '../../nbt/minecraft_nbt.dart';
+import '../effect/info_mob_effect.dart';
+import '../effect/info_mob_effect_nbt_parser.dart';
 import 'info_player.dart';
 import 'info_player_inventory_nbt_parser.dart';
 

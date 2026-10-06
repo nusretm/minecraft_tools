@@ -1,4 +1,4 @@
-import '../text/minecraft_text.dart';
+import '../../text/minecraft_text.dart';
 
 /// Semantic operation used by a Minecraft attribute modifier.
 enum MtnMinecraftInfoAttributeModifierOperation {

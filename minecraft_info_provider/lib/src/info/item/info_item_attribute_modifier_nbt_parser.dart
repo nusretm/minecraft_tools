@@ -1,7 +1,7 @@
-import '../nbt/minecraft_nbt.dart';
-import '../text/minecraft_text.dart';
+import '../../nbt/minecraft_nbt.dart';
+import '../../text/minecraft_text.dart';
+import '../info_nbt_uuid_parser.dart';
 import 'info_item_attribute_modifier.dart';
-import 'info_nbt_uuid_parser.dart';
 
 /// Internal cross-version parser for explicitly persisted item attribute
 /// modifiers.

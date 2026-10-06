@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'info_item_stack.dart';
-import 'info_mob_effect.dart';
+import '../effect/info_mob_effect.dart';
+import '../item/info_item_stack.dart';
 
 /// On-disk Java Edition player-data layout used by the discovered file.
 enum MtnMinecraftInfoPlayerStorageLayout {

@@ -1,13 +1,13 @@
-import '../nbt/minecraft_nbt.dart';
-import '../text/minecraft_text.dart';
+import '../../nbt/minecraft_nbt.dart';
+import '../../text/minecraft_text.dart';
+import '../effect/info_potion_contents.dart';
+import '../effect/info_potion_contents_nbt_parser.dart';
 import 'info_item_attribute_modifier.dart';
 import 'info_item_attribute_modifier_nbt_parser.dart';
 import 'info_item_custom_model_data.dart';
 import 'info_item_custom_model_data_nbt_parser.dart';
 import 'info_item_nested_stack_nbt_parser.dart';
 import 'info_item_stack.dart';
-import 'info_potion_contents.dart';
-import 'info_potion_contents_nbt_parser.dart';
 
 /// Internal cross-version parser for persisted item-stack properties.
 ///

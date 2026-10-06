@@ -1,4 +1,4 @@
-import '../nbt/minecraft_nbt.dart';
+import '../../nbt/minecraft_nbt.dart';
 import 'info_mob_effect.dart';
 import 'info_mob_effect_nbt_parser.dart';
 import 'info_potion_contents.dart';

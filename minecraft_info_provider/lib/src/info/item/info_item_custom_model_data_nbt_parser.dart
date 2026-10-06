@@ -1,4 +1,4 @@
-import '../nbt/minecraft_nbt.dart';
+import '../../nbt/minecraft_nbt.dart';
 import 'info_item_custom_model_data.dart';
 
 /// Internal cross-version parser for explicitly persisted item custom-model

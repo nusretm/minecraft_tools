@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../text/minecraft_text.dart';
+import '../../text/minecraft_text.dart';
 
 enum MtnMinecraftInfoServerState {
   online,

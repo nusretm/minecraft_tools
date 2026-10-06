@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import '../text/minecraft_text.dart';
+import '../../text/minecraft_text.dart';
 import 'info_server_status.dart';
 
 enum _LegacyPingVariant {

@@ -1,4 +1,4 @@
-import '../nbt/minecraft_nbt.dart';
+import '../../nbt/minecraft_nbt.dart';
 import 'info_item_stack.dart';
 
 /// Internal cross-version parser for item stacks nested inside persisted item

@@ -1,6 +1,6 @@
-import '../nbt/minecraft_nbt.dart';
-import 'info_item_stack.dart';
-import 'info_item_stack_nbt_parser.dart';
+import '../../nbt/minecraft_nbt.dart';
+import '../item/info_item_stack.dart';
+import '../item/info_item_stack_nbt_parser.dart';
 import 'info_player.dart';
 
 final class MtnMinecraftInfoPlayerInventoryData {

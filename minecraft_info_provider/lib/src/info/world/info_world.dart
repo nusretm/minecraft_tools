@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
-import 'info_player.dart';
+import '../player/info_player.dart';
 
 /// Discovery state for one Java Edition world directory.
 enum MtnMinecraftInfoWorldState {

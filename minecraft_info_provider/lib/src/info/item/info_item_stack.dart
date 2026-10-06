@@ -1,8 +1,8 @@
-import '../nbt/minecraft_nbt.dart';
-import '../text/minecraft_text.dart';
+import '../../nbt/minecraft_nbt.dart';
+import '../../text/minecraft_text.dart';
+import '../effect/info_potion_contents.dart';
 import 'info_item_attribute_modifier.dart';
 import 'info_item_custom_model_data.dart';
-import 'info_potion_contents.dart';
 
 /// Normalized persisted item-stack component overrides.
 ///

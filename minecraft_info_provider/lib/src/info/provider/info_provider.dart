@@ -6,14 +6,14 @@ import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
-import '../nbt/minecraft_nbt.dart';
-import 'info_nbt_uuid_parser.dart';
-import 'info_player.dart';
-import 'info_player_advancements.dart';
-import 'info_player_nbt_parser.dart';
-import 'info_player_stats.dart';
-import 'info_server.dart';
-import 'info_world.dart';
+import '../../nbt/minecraft_nbt.dart';
+import '../info_nbt_uuid_parser.dart';
+import '../player/info_player.dart';
+import '../player/info_player_advancements.dart';
+import '../player/info_player_nbt_parser.dart';
+import '../player/info_player_stats.dart';
+import '../server/info_server.dart';
+import '../world/info_world.dart';
 
 const String _serversFileName = 'servers.dat';
 const String _serversTagName = 'servers';
