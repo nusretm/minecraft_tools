@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 
 import '../../nbt/minecraft_nbt.dart';
 import '../info_nbt_uuid_parser.dart';
+import '../mod/info_mod.dart';
 import '../mod/info_mod_loader.dart';
 import '../player/info_player.dart';
 import '../player/info_player_advancements.dart';
@@ -20,6 +21,7 @@ import '../world/info_world.dart';
 const String _serversFileName = 'servers.dat';
 const String _serversTagName = 'servers';
 const String _savesDirectoryName = 'saves';
+const String _modsDirectoryName = 'mods';
 const String _versionsDirectoryName = 'versions';
 const String _versionFileName = 'version.json';
 const String _legacyPlayerDataDirectoryName = 'playerdata';
@@ -347,6 +349,61 @@ final class MtnMinecraftInfoProvider {
     }
 
     return _modLoaderFromVersionJson(decoded);
+  }
+
+  /// Discovers direct JAR files under this profile's `mods` directory.
+  ///
+  /// A missing `mods` directory is equivalent to an empty mod list.
+  /// Nested directories and non-JAR files are ignored.
+  Future<List<MtnMinecraftInfoMod>> readMods() async {
+    final FileSystemEntityType gameDirectoryType =
+        await _entityType(gameDirectory.path, forWrite: false);
+    if (gameDirectoryType != FileSystemEntityType.directory) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidPath,
+      );
+    }
+
+    final Directory modsDirectory = Directory(
+      p.join(gameDirectory.path, _modsDirectoryName),
+    );
+    final FileSystemEntityType modsDirectoryType =
+        await _entityType(modsDirectory.path, forWrite: false);
+    if (modsDirectoryType == FileSystemEntityType.notFound) {
+      return const <MtnMinecraftInfoMod>[];
+    }
+    if (modsDirectoryType != FileSystemEntityType.directory) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidPath,
+      );
+    }
+
+    late final List<FileSystemEntity> entries;
+    try {
+      entries = await modsDirectory.list(followLinks: false).toList();
+    } on FileSystemException {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.readFailed,
+      );
+    }
+
+    final List<File> files = entries
+        .whereType<File>()
+        .where((File file) => p.extension(file.path).toLowerCase() == '.jar')
+        .toList()
+      ..sort(
+        (File left, File right) =>
+            p.basename(left.path).compareTo(p.basename(right.path)),
+      );
+
+    return List<MtnMinecraftInfoMod>.unmodifiable(
+      files.map(
+        (File file) => MtnMinecraftInfoMod(
+          file: file,
+          fileName: p.basename(file.path),
+        ),
+      ),
+    );
   }
 
   Future<List<MtnMinecraftInfoPlayer>> _readPlayersFromDirectory(
