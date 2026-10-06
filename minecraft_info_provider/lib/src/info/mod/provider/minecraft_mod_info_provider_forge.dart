@@ -265,7 +265,7 @@ final class MtnMinecraftModInfoProviderForge
           iconLoaders: !hasLogo
               ? const <MtnMinecraftInfoModIconLoader>[]
               : <MtnMinecraftInfoModIconLoader>[
-                  (int size) => source.readEntry(logoFile!),
+                  (int size) => source.readEntry(logoFile),
                 ],
         ),
       );
