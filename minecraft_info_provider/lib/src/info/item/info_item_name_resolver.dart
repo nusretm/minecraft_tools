@@ -42,6 +42,8 @@ final class MtnMinecraftInfoItemNameResolver {
             bytes: bytes,
           );
         } on MtnMinecraftInfoModLanguageException {
+          // Candidate sources are independent. One malformed language table
+          // must not hide valid names exposed by other sources.
           continue;
         }
 
