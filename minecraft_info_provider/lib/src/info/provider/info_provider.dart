@@ -4,12 +4,14 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
 import 'package:path/path.dart' as p;
 
 import '../../nbt/minecraft_nbt.dart';
 import '../info_nbt_uuid_parser.dart';
 import '../mod/info_mod.dart';
 import '../mod/info_mod_loader.dart';
+import '../mod/info_mod_metadata.dart';
 import '../player/info_player.dart';
 import '../player/info_player_advancements.dart';
 import '../player/info_player_nbt_parser.dart';
@@ -403,6 +405,88 @@ final class MtnMinecraftInfoProvider {
         ),
       ),
     );
+  }
+
+  /// Reads supported metadata from [mod].
+  ///
+  /// This checkpoint recognizes only root-level `fabric.mod.json` schema
+  /// version 1. A JAR without Fabric metadata returns null.
+  Future<MtnMinecraftInfoModMetadata?> readModMetadata(
+    MtnMinecraftInfoMod mod,
+  ) async {
+    final Directory modsDirectory = Directory(
+      p.join(gameDirectory.path, _modsDirectoryName),
+    );
+    final String modPath = p.normalize(p.absolute(mod.file.path));
+    if (!p.equals(p.dirname(modPath), modsDirectory.path) ||
+        p.extension(modPath).toLowerCase() != '.jar') {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidPath,
+      );
+    }
+
+    final FileSystemEntityType modType =
+        await _entityType(modPath, forWrite: false);
+    if (modType != FileSystemEntityType.file) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidPath,
+      );
+    }
+
+    late final Uint8List bytes;
+    try {
+      bytes = await File(modPath).readAsBytes();
+    } on FileSystemException {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.readFailed,
+      );
+    }
+
+    late final Archive archive;
+    try {
+      archive = ZipDecoder().decodeBytes(bytes);
+    } on FormatException {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidData,
+      );
+    }
+
+    ArchiveFile? metadataFile;
+    for (final ArchiveFile entry in archive) {
+      if (entry.name == 'fabric.mod.json') {
+        metadataFile = entry;
+        break;
+      }
+    }
+    if (metadataFile == null) return null;
+    if (!metadataFile.isFile) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidData,
+      );
+    }
+
+    final Uint8List? metadataBytes = metadataFile.readBytes();
+    if (metadataBytes == null) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidData,
+      );
+    }
+
+    late final Object? decoded;
+    try {
+      decoded = jsonDecode(utf8.decode(metadataBytes));
+    } on FormatException {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidData,
+      );
+    }
+    if (decoded is! Map<String, dynamic>) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidData,
+      );
+    }
+
+    return _fabricModMetadataFromJson(decoded);
   }
 
   Future<List<MtnMinecraftInfoPlayer>> _readPlayersFromDirectory(
@@ -1148,6 +1232,76 @@ final class MtnMinecraftInfoProvider {
       }
     }
   }
+}
+
+MtnMinecraftInfoModMetadata _fabricModMetadataFromJson(
+  Map<String, dynamic> json,
+) {
+  if (json['schemaVersion'] != 1) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+
+  final Object? rawId = json['id'];
+  final Object? rawVersion = json['version'];
+  if (rawId is! String ||
+      rawId.isEmpty ||
+      rawVersion is! String ||
+      rawVersion.isEmpty) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+
+  final Object? rawName = json['name'];
+  if (rawName != null && (rawName is! String || rawName.isEmpty)) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+
+  final Object? rawDescription = json['description'];
+  if (rawDescription != null && rawDescription is! String) {
+    throw const MtnMinecraftInfoProviderException(
+      MtnMinecraftInfoProviderError.invalidData,
+    );
+  }
+
+  final List<String> authors = <String>[];
+  final Object? rawAuthors = json['authors'];
+  if (rawAuthors != null) {
+    if (rawAuthors is! List<dynamic>) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidData,
+      );
+    }
+    for (final Object? rawAuthor in rawAuthors) {
+      if (rawAuthor is String && rawAuthor.isNotEmpty) {
+        authors.add(rawAuthor);
+        continue;
+      }
+      if (rawAuthor is Map<String, dynamic>) {
+        final Object? rawAuthorName = rawAuthor['name'];
+        if (rawAuthorName is String && rawAuthorName.isNotEmpty) {
+          authors.add(rawAuthorName);
+          continue;
+        }
+      }
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidData,
+      );
+    }
+  }
+
+  return MtnMinecraftInfoModMetadata(
+    type: MtnMinecraftInfoModMetadataType.fabric,
+    id: rawId,
+    name: rawName is String ? rawName : rawId,
+    version: rawVersion,
+    description: rawDescription is String ? rawDescription : '',
+    authors: authors,
+  );
 }
 
 MtnMinecraftInfoModLoader? _modLoaderFromVersionJson(
