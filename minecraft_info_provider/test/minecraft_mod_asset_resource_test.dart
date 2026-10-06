@@ -29,12 +29,14 @@ void main() {
       final MtnMinecraftInfoModAssetSource source =
           MtnMinecraftInfoModAssetSource(
         rootFile: File(p.join(directory.path, 'example.jar')),
-        namespaces: <String>['example'],
+        namespaces: <String>['zeta', 'example', 'example'],
         loader: (String path) async {
           requested.add(path);
           return original;
         },
       );
+
+      expect(source.namespaces, <String>['example', 'zeta']);
 
       final Uint8List? read = await source.read(
         'example',
@@ -60,6 +62,14 @@ void main() {
       expect(
         await source.read('missing', 'lang/en_us.json'),
         isNull,
+      );
+      expect(
+        () => MtnMinecraftInfoModAssetSource(
+          rootFile: null,
+          namespaces: <String>['Invalid'],
+          loader: (String path) async => null,
+        ),
+        throwsArgumentError,
       );
     });
 
