@@ -50,6 +50,85 @@ void main() {
       expect(list.mods.single.installedFiles, hasLength(1));
     });
 
+    test('merges generic metadata from every provider without loader-specific core fields', () async {
+      final MtnMinecraftModList list = MtnMinecraftModList(
+        providers: <MtnMinecraftModInfoProvider>[
+          _CallbackModInfoProvider(
+            name: 'fabric',
+            onParse: (File file) => <MtnMinecraftInfoMod>[
+              MtnMinecraftInfoMod(
+                id: 'example',
+                name: 'Example',
+                version: '1.0.0',
+                authors: <String>['Alice'],
+                contributors: <String>['Carol'],
+                licenses: <String>['MIT'],
+                urls: const MtnMinecraftInfoModUrls(
+                  homepage: 'https://modrinth.com/mod/example',
+                  issues: 'https://github.com/example/example/issues',
+                ),
+                clientSide: true,
+                serverSide: false,
+                dependencies: <MtnMinecraftInfoModDependency>[
+                  MtnMinecraftInfoModDependency(
+                    id: 'minecraft',
+                    type: MtnMinecraftInfoModDependencyType.requiredDependency,
+                    versionConstraints: <String>['~26.3'],
+                    clientSide: true,
+                    serverSide: false,
+                  ),
+                ],
+                providedIds: <String>['example_alias'],
+              ),
+            ],
+          ),
+          _CallbackModInfoProvider(
+            name: 'forge',
+            onParse: (File file) => <MtnMinecraftInfoMod>[
+              MtnMinecraftInfoMod(
+                id: 'example',
+                name: 'Example',
+                version: '1.0.0',
+                authors: <String>['Bob'],
+                contributors: <String>['Dave'],
+                licenses: <String>['Apache-2.0'],
+                urls: const MtnMinecraftInfoModUrls(
+                  source: 'https://github.com/example/example',
+                ),
+                clientSide: false,
+                serverSide: true,
+                dependencies: <MtnMinecraftInfoModDependency>[
+                  MtnMinecraftInfoModDependency(
+                    id: 'forge',
+                    type: MtnMinecraftInfoModDependencyType.requiredDependency,
+                    versionConstraints: <String>['[47,)'],
+                    clientSide: false,
+                    serverSide: true,
+                  ),
+                ],
+                providedIds: <String>['example_legacy'],
+              ),
+            ],
+          ),
+        ],
+      );
+
+      await list.add(File(p.join(Directory.systemTemp.path, 'example.jar')));
+
+      final MtnMinecraftInfoMod mod = list.mods.single;
+      expect(mod.authors, <String>['Alice', 'Bob']);
+      expect(mod.contributors, <String>['Carol', 'Dave']);
+      expect(mod.licenses, <String>['MIT', 'Apache-2.0']);
+      expect(mod.urls.homepage, 'https://modrinth.com/mod/example');
+      expect(mod.urls.source, 'https://github.com/example/example');
+      expect(mod.urls.issues, 'https://github.com/example/example/issues');
+      expect(mod.clientSide, isTrue);
+      expect(mod.serverSide, isTrue);
+      expect(mod.dependencies, hasLength(2));
+      expect(mod.providedIds, <String>['example_alias', 'example_legacy']);
+      expect(mod.modTypes, <String>['fabric', 'forge']);
+    });
+
     test('merges the same embedded mod and preserves every parent', () async {
       final MtnMinecraftModList list = MtnMinecraftModList(
         providers: <MtnMinecraftModInfoProvider>[
