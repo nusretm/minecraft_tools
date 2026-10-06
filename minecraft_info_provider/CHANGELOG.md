@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.0-dev.24
+
+Installed mod-file discovery foundation.
+
+- Added immutable `MtnMinecraftInfoMod` with the discovered JAR file as its single source of truth.
+- Added `MtnMinecraftInfoProvider.readMods()`.
+- Discovery scans only direct files under `<gameDirectory>/mods/`.
+- Matching is case-insensitive for the `.jar` extension.
+- Missing `mods/` is treated as an empty immutable list.
+- Nested directories and non-JAR files are ignored.
+- Results are returned in deterministic file-name order.
+- Added `example/mods.dart` for real-profile smoke validation.
+- Kept JAR metadata, disabled-mod conventions, nested JARs, loader compatibility, namespace ownership and assets outside this checkpoint.
+
 ## 1.0.0-dev.23
 
 Mod-loader discovery foundation.
