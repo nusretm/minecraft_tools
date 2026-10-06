@@ -442,9 +442,19 @@ final class MtnMinecraftInfoProvider {
       );
     }
 
+    if (!_hasZipSignature(bytes)) {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidData,
+      );
+    }
+
     late final Archive archive;
     try {
-      archive = ZipDecoder().decodeBytes(bytes);
+      archive = ZipDecoder().decodeBytes(bytes, verify: true);
+    } on ArchiveException {
+      throw const MtnMinecraftInfoProviderException(
+        MtnMinecraftInfoProviderError.invalidData,
+      );
     } on FormatException {
       throw const MtnMinecraftInfoProviderException(
         MtnMinecraftInfoProviderError.invalidData,
@@ -1232,6 +1242,16 @@ final class MtnMinecraftInfoProvider {
       }
     }
   }
+}
+
+bool _hasZipSignature(Uint8List bytes) {
+  if (bytes.length < 4 || bytes[0] != 0x50 || bytes[1] != 0x4b) {
+    return false;
+  }
+
+  return (bytes[2] == 0x03 && bytes[3] == 0x04) ||
+      (bytes[2] == 0x05 && bytes[3] == 0x06) ||
+      (bytes[2] == 0x07 && bytes[3] == 0x08);
 }
 
 MtnMinecraftInfoModMetadata _fabricModMetadataFromJson(
