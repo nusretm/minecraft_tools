@@ -226,12 +226,9 @@ final class MtnMinecraftModInfoProviderForge
         ),
       );
       final ({bool clientSide, bool serverSide}) sideSupport =
-          _forgeModSideSupport(
-        clientSideOnly: clientSideOnly,
-        displayTest: _optionalNonEmptyString(
-          modMetadata['displayTest'],
-        ),
-      );
+          clientSideOnly
+              ? (clientSide: true, serverSide: false)
+              : (clientSide: true, serverSide: true);
       final String? logoFile = _emptyToNull(
         _optionalString(
           modMetadata['logoFile'],
@@ -401,29 +398,6 @@ MtnMinecraftInfoModDependencyOrdering _forgeDependencyOrdering(
     case 'CLIENT':
       return (clientSide: true, serverSide: false);
     case 'SERVER':
-      return (clientSide: false, serverSide: true);
-  }
-
-  throw const MtnMinecraftModInfoProviderException(
-    MtnMinecraftModInfoProviderError.invalidData,
-  );
-}
-
-({bool clientSide, bool serverSide}) _forgeModSideSupport({
-  required bool clientSideOnly,
-  required String? displayTest,
-}) {
-  if (clientSideOnly) {
-    return (clientSide: true, serverSide: false);
-  }
-
-  switch (displayTest ?? 'MATCH_VERSION') {
-    case 'MATCH_VERSION':
-    case 'NONE':
-      return (clientSide: true, serverSide: true);
-    case 'IGNORE_ALL_VERSION':
-      return (clientSide: true, serverSide: false);
-    case 'IGNORE_SERVER_VERSION':
       return (clientSide: false, serverSide: true);
   }
 
