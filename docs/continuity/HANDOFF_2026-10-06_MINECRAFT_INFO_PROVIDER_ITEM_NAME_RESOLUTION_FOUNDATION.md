@@ -272,10 +272,25 @@ Final closure validation should rerun analyzer/tests plus `git diff --check` and
 - PNG decoding or rendering
 - mod-specific stack-state-dependent names
 
-## Natural next layer
+## Deferred rendering/resource continuation
 
-The natural rendering-oriented continuation is a separate item client-definition/model/texture resolution checkpoint.
+The rendering-oriented continuation has now been designed separately and intentionally deferred:
 
-It should explicitly consider version differences between modern client item definitions and historical item model layout, and must preserve the existing rule that resource precedence is not silently invented.
+```text
+docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
+```
 
-No next implementation checkpoint is automatically selected. Explicit user approval is still required before implementation, and merge approval remains a separate step.
+That plan records the version-aware resource loader/helper/source architecture, modern and historical item-entry boundaries, model-parent and texture resolution, cross-source lookup, raw PNG/image-region output, single-frame animation policy and staged implementation plan.
+
+It is not the next active Minecraft Tools checkpoint.
+
+Cross-project prerequisite/order:
+
+```text
+MtnLauncher Modrinth API foundation
+→ MtnLauncher CurseForge API foundation
+→ launcher UI/presentation requirement
+→ return to minecraft_tools resource foundation
+```
+
+When the work returns, the deferred plan must first be re-audited against the then-current repository state. Explicit implementation approval is still required, and merge approval remains a separate step.
