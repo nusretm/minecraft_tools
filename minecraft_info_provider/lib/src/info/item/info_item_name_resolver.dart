@@ -26,13 +26,25 @@ final class MtnMinecraftInfoItemNameResolver {
     final List<MtnMinecraftInfoItemName> result =
         <MtnMinecraftInfoItemName>[];
     for (final String languageNamespace in modList.assetNamespaces) {
-      final List<MtnMinecraftInfoModLanguage> languages =
-          await modList.readLanguages(
-        languageNamespace,
-        locale: locale,
-      );
+      for (final source in modList.getAssetSources(languageNamespace)) {
+        final bytes = await source.read(
+          languageNamespace,
+          'lang/$locale.json',
+        );
+        if (bytes == null) continue;
 
-      for (final MtnMinecraftInfoModLanguage language in languages) {
+        final MtnMinecraftInfoModLanguage language;
+        try {
+          language = MtnMinecraftInfoModLanguage.parse(
+            source: source,
+            namespace: languageNamespace,
+            locale: locale,
+            bytes: bytes,
+          );
+        } on MtnMinecraftInfoModLanguageException {
+          continue;
+        }
+
         final MtnMinecraftInfoModTranslation? itemTranslation =
             language.translation(identity.itemTranslationKey);
         if (itemTranslation != null) {
