@@ -20,7 +20,7 @@ final class MtnMinecraftInfoMod {
     Iterable<String> authors = const <String>[],
     Iterable<String> contributors = const <String>[],
     Iterable<String> licenses = const <String>[],
-    this.urls = const MtnMinecraftInfoModUrls(),
+    MtnMinecraftInfoModUrls urls = const MtnMinecraftInfoModUrls(),
     bool clientSide = true,
     bool serverSide = true,
     Iterable<MtnMinecraftInfoModDependency> dependencies =
@@ -35,6 +35,7 @@ final class MtnMinecraftInfoMod {
   })  : _authors = List<String>.of(authors),
         _contributors = List<String>.of(contributors),
         _licenses = List<String>.of(licenses),
+        _urls = urls,
         _clientSide = clientSide,
         _serverSide = serverSide,
         _dependencies = List<MtnMinecraftInfoModDependency>.of(dependencies),
@@ -52,7 +53,7 @@ final class MtnMinecraftInfoMod {
   final List<String> _authors;
   final List<String> _contributors;
   final List<String> _licenses;
-  MtnMinecraftInfoModUrls urls;
+  MtnMinecraftInfoModUrls _urls;
   bool _clientSide;
   bool _serverSide;
   final List<MtnMinecraftInfoModDependency> _dependencies;
@@ -67,6 +68,8 @@ final class MtnMinecraftInfoMod {
   List<String> get contributors => List<String>.unmodifiable(_contributors);
 
   List<String> get licenses => List<String>.unmodifiable(_licenses);
+
+  MtnMinecraftInfoModUrls get urls => _urls;
 
   bool get clientSide => _clientSide;
 
@@ -143,7 +146,7 @@ final class MtnMinecraftInfoMod {
   }
 
   void mergeUrls(MtnMinecraftInfoModUrls other) {
-    urls = urls.mergeMissing(other);
+    _urls = _urls.mergeMissing(other);
   }
 
   void addSideSupport({
