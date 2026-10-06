@@ -128,8 +128,8 @@ final class MtnMinecraftModList {
     final Map<MtnMinecraftInfoMod, MtnMinecraftInfoMod> parsedToCanonical =
         <MtnMinecraftInfoMod, MtnMinecraftInfoMod>{};
 
-    for (final _MtnMinecraftModRootSnapshot root in _roots.values) {
-      for (final MtnMinecraftModInfoProvider provider in _providers) {
+    for (final MtnMinecraftModInfoProvider provider in _providers) {
+      for (final _MtnMinecraftModRootSnapshot root in _roots.values) {
         final List<MtnMinecraftInfoMod>? parsedMods =
             root.providerMods[provider.name];
         if (parsedMods == null) continue;
@@ -157,8 +157,8 @@ final class MtnMinecraftModList {
       }
     }
 
-    for (final _MtnMinecraftModRootSnapshot root in _roots.values) {
-      for (final MtnMinecraftModInfoProvider provider in _providers) {
+    for (final MtnMinecraftModInfoProvider provider in _providers) {
+      for (final _MtnMinecraftModRootSnapshot root in _roots.values) {
         final List<MtnMinecraftInfoMod>? parsedMods =
             root.providerMods[provider.name];
         if (parsedMods == null) continue;
