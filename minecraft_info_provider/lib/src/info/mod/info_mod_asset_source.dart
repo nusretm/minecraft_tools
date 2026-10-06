@@ -63,6 +63,8 @@ final class MtnMinecraftInfoModAssetSource {
       );
     }
 
+    if (!containsNamespace(namespace)) return null;
+
     final Uint8List? bytes = await _loader(
       'assets/$namespace/$path',
     );
