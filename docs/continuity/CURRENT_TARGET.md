@@ -10,22 +10,22 @@ Last updated: 2026-10-06
 - `hypixel_api/` is unrelated and must not be modified for these checkpoints.
 - `docs/WORKING_RULES.md` is authoritative.
 
-## Repository state for this checkpoint
+## Repository state
 
-Main baseline before the current feature merge:
+Merged server-management milestone:
 
 ```text
 main
-58287599b2377a751d433a37fb4feb12affffab0
-Reorganize minecraft info provider source layout
+ea853076eaab34ac2b55906f4740028cb4770ea0
+Add servers.dat management and server health checks
 ```
 
-Validated feature branch:
+Merge path:
 
 ```text
-feature/servers-dat-example
-eebdafa6a3d3090924607b06eac644763e106b02
-Fix constructor member ordering lint
+PR #16
+feature/servers-dat-example -> main
+squash merge
 ```
 
 Package version:
@@ -38,7 +38,7 @@ Working milestone state:
 
 ```text
 SERVER LIST CRUD + AUTO CHECK / HEALTH CHECK
-COMPLETE / VALIDATED / MERGE APPROVED
+COMPLETE / VALIDATED / MERGED
 ```
 
 ## Completed server-list management
@@ -337,6 +337,6 @@ In particular:
 
 ## Next action
 
-After this approved merge, there is no automatically selected next implementation checkpoint.
+There is no automatically selected next implementation checkpoint.
 
 Choose the next narrow area explicitly before implementation. Based on the current launcher-facing priorities, installed mod-loader/mod metadata discovery is a natural candidate, but it is not approved merely by appearing here.
