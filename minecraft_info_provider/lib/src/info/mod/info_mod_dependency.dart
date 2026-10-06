@@ -1,8 +1,8 @@
 enum MtnMinecraftInfoModDependencyType {
-  requiredDependency,
+  required,
   recommended,
   suggested,
-  conflicting,
+  conflict,
   incompatible,
 }
 
