@@ -31,7 +31,7 @@ squash merge
 Package version:
 
 ```text
-1.0.0-dev.24
+1.0.0-dev.25
 ```
 
 Working milestone state:
@@ -154,6 +154,89 @@ Observed:
 The real profile includes mixed naming conventions, reinforcing that file names
 are discovery labels only and must not be treated as authoritative mod metadata
 or loader compatibility.
+
+
+## Fabric mod metadata and dependency graph checkpoint
+
+```text
+Branch: feature/fabric-mod-metadata-foundation
+Status: IMPLEMENTED / VALIDATED / REAL PROFILE SMOKE PASSED
+```
+
+Public surface:
+
+- `MtnMinecraftModInfoProvider`
+- `MtnMinecraftModInfoProviderFabric`
+- `MtnMinecraftModList`
+- `MtnMinecraftInfoMod`
+- `MtnListEvent`
+- `MtnMinecraftInfoProvider.readMods(modList)`
+
+Locked behavior:
+
+- `MtnMinecraftModList.providers` is the single parser registry authority.
+- Every direct `mods/*.jar` file is offered to every registered provider.
+- Provider recognition is represented by `MtnMinecraftInfoMod.modTypes`, using each provider's stable `name`.
+- Logical mod identity is currently normalized by `id + version`.
+- The same logical mod can be directly installed and embedded at the same time.
+- Different versions remain distinct and can expose dependency/version conflicts.
+- Fabric `fabric.mod.json` is parsed by the Fabric provider, not the generic info provider.
+- Fabric `jars[].file` entries are verified inside the parent archive and recursively parsed in memory.
+- Embedded JARs are not extracted to disk.
+- Shared embedded dependencies are merged into one logical mod with multiple `parentMods`.
+- `getDependencyList(mod, recursive: true)` traverses embedded dependency relationships.
+- `remove(mod)` rejects embedded-only mods; installed roots can be removed while dependencies still referenced by another parent remain in the graph.
+- `onItem(list, mod, event)` emits `MtnListEvent.add/update/remove` only for normalized visible-state changes.
+- Core registry/list code does not hardcode Fabric/Forge/NeoForge/Quilt cases.
+
+Final validation on 2026-10-06:
+
+```text
+dart analyze
+No issues found!
+
+focused installed mod-file discovery
+7/7 passed
+
+focused mod-list registry / graph
+8/8 passed
+
+focused Fabric provider
+10/10 passed
+
+full package test suite
+290/290 passed
+
+git diff --check
+PASS
+
+working tree
+clean
+```
+
+Real-profile smoke target:
+
+```text
+C:\Provanas\profiles\02766803-f0e2-4101-a3b8-962e1f520bcb
+```
+
+Observed:
+
+```text
+54 physical JAR files
+188 normalized logical Fabric mods
+```
+
+Examples confirmed:
+
+- direct mods with no parent
+- embedded-only mods
+- mods that are both directly installed and embedded
+- one embedded dependency shared by several parent mods
+- multiple versions of the same mod ID remaining distinct
+- parent output disambiguated as `id@version`
+
+Next launcher-facing extension after this checkpoint is mod presentation data such as icon lookup, followed later by richer metadata/dependency interpretation and additional loader providers.
 
 
 ## Completed server-list management
@@ -365,7 +448,6 @@ Remaining major areas include:
 
 ### Installed content / launcher presentation
 
-- mod metadata discovery
 - mod namespace -> owning mod mapping
 - localization/resource lookup
 - item model/texture resolution needed for launcher inventory rendering
@@ -452,4 +534,4 @@ In particular:
 
 There is no automatically selected next implementation checkpoint.
 
-Choose the next narrow area explicitly before implementation. Based on the current launcher-facing priorities, mod metadata discovery is the natural next candidate. It is not approved merely by appearing here.
+The next approved narrow area is mod icon lookup from normalized mod information. Keep icon metadata/provider-specific archive rules outside the generic core where possible, and preserve in-memory archive access for embedded mods.
