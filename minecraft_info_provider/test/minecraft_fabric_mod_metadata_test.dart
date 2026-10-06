@@ -113,14 +113,14 @@ void main() {
         <MtnMinecraftInfoModDependency>[
           MtnMinecraftInfoModDependency(
             id: 'fabricloader',
-            type: MtnMinecraftInfoModDependencyType.requiredDependency,
+            type: MtnMinecraftInfoModDependencyType.required,
             versionConstraints: <String>['>=0.19.0'],
             clientSide: true,
             serverSide: false,
           ),
           MtnMinecraftInfoModDependency(
             id: 'minecraft',
-            type: MtnMinecraftInfoModDependencyType.requiredDependency,
+            type: MtnMinecraftInfoModDependencyType.required,
             versionConstraints: <String>['26.1', '26.1.1'],
             clientSide: true,
             serverSide: false,
@@ -141,7 +141,7 @@ void main() {
           ),
           MtnMinecraftInfoModDependency(
             id: 'conflicting_mod',
-            type: MtnMinecraftInfoModDependencyType.conflicting,
+            type: MtnMinecraftInfoModDependencyType.conflict,
             versionConstraints: <String>['*'],
             clientSide: true,
             serverSide: false,
