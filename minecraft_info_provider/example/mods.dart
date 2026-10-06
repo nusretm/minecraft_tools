@@ -14,30 +14,31 @@ Future<void> main(List<String> args) async {
   final MtnMinecraftInfoProvider provider = MtnMinecraftInfoProvider(
     gameDirectory: Directory(args.single),
   );
-  final List<MtnMinecraftInfoMod> mods = await provider.readMods();
+  final MtnMinecraftModList modList = MtnMinecraftModList(
+    providers: const <MtnMinecraftModInfoProvider>[
+      MtnMinecraftModInfoProviderFabric(),
+    ],
+  );
+  final List<MtnMinecraftInfoMod> mods = await provider.readMods(modList);
 
   print('Mods: ${mods.length}');
   for (final MtnMinecraftInfoMod mod in mods) {
-    try {
-      final MtnMinecraftInfoModMetadata? metadata =
-          await provider.readModMetadata(mod);
-      if (metadata == null) {
-        print('[metadata=unknown] ${mod.fileName}');
-        continue;
-      }
+    final String installed = mod.installedFiles.isEmpty
+        ? '-'
+        : mod.installedFiles.map((File file) => file.path).join(', ');
+    final String parents = mod.parentMods.isEmpty
+        ? '-'
+        : mod.parentMods
+            .map((MtnMinecraftInfoMod parent) => parent.id)
+            .join(', ');
 
-      print(
-        '[metadata=${metadata.type.name}] '
-        'id=${metadata.id} '
-        'name=${metadata.name} '
-        'version=${metadata.version} '
-        'authors=${metadata.authors.join(', ')} '
-        'file=${mod.fileName}',
-      );
-    } on MtnMinecraftInfoProviderException catch (error) {
-      print(
-        '[metadataError=${error.error.name}] ${mod.fileName}',
-      );
-    }
+    print(
+      'id=${mod.id} '
+      'name=${mod.name} '
+      'version=${mod.version} '
+      'types=${mod.modTypes.join(',')} '
+      'installed=$installed '
+      'parents=$parents',
+    );
   }
 }
