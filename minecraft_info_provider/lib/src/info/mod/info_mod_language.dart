@@ -97,6 +97,36 @@ final class MtnMinecraftInfoModLanguage {
   bool contains(String key) => translations.containsKey(key);
 
   String? operator [](String key) => translations[key];
+
+  MtnMinecraftInfoModTranslation? translation(String key) {
+    final String? value = translations[key];
+    if (value == null) return null;
+
+    return MtnMinecraftInfoModTranslation(
+      source: source,
+      namespace: namespace,
+      locale: locale,
+      key: key,
+      value: value,
+    );
+  }
 }
 
-final RegExp _localePattern = RegExp(r'^[a-z0-9_-]+$');
+/// One translation-key candidate preserved with its exact asset source.
+final class MtnMinecraftInfoModTranslation {
+  const MtnMinecraftInfoModTranslation({
+    required this.source,
+    required this.namespace,
+    required this.locale,
+    required this.key,
+    required this.value,
+  });
+
+  final MtnMinecraftInfoModAssetSource source;
+  final String namespace;
+  final String locale;
+  final String key;
+  final String value;
+}
+
+final RegExp _localePattern = RegExp(r'^[a-z0-9_-]+);
