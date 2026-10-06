@@ -145,6 +145,99 @@ void main() {
       expect(servers.last.address, 'existing.invalid');
     });
 
+    test('updateServer changes matching entry in place and preserves unknown tags', () async {
+      final MtnMinecraftNbtDocument source = MtnMinecraftNbtDocument(
+        name: '',
+        root: MtnMinecraftNbtValue.compound(
+          <String, MtnMinecraftNbtValue>{
+            'futureRoot': MtnMinecraftNbtValue.long(77),
+            'servers': MtnMinecraftNbtValue.list(
+              MtnMinecraftNbtList(
+                elementType: MtnMinecraftNbtType.compound,
+                values: <MtnMinecraftNbtValue>[
+                  MtnMinecraftNbtValue.compound(
+                    <String, MtnMinecraftNbtValue>{
+                      'name': MtnMinecraftNbtValue.string('Existing'),
+                      'ip': MtnMinecraftNbtValue.string('example.invalid'),
+                      'futureServerTag': MtnMinecraftNbtValue.intValue(99),
+                    },
+                  ),
+                  MtnMinecraftNbtValue.compound(
+                    <String, MtnMinecraftNbtValue>{
+                      'name': MtnMinecraftNbtValue.string('Other'),
+                      'ip': MtnMinecraftNbtValue.string('other.invalid'),
+                    },
+                  ),
+                ],
+              ),
+            ),
+          },
+        ),
+      );
+      await provider.serversFile.writeAsBytes(
+        const MtnMinecraftNbtCodec().encode(source),
+        flush: true,
+      );
+
+      final bool updated = await provider.updateServer(
+        MtnMinecraftInfoServer(
+          name: 'Updated',
+          address: 'example.invalid:25565',
+          hidden: true,
+          acceptServerResourcePacks: true,
+        ),
+      );
+
+      final MtnMinecraftNbtDocument result =
+          const MtnMinecraftNbtCodec().decode(
+        await provider.serversFile.readAsBytes(),
+      );
+      final List<MtnMinecraftNbtValue> values =
+          result.root.asCompound['servers']!.asList.values;
+
+      expect(updated, isTrue);
+      expect(result.root.asCompound['futureRoot']?.asLong, 77);
+      expect(values, hasLength(2));
+      expect(values.first.asCompound['name']?.asString, 'Updated');
+      expect(values.first.asCompound['ip']?.asString, 'example.invalid:25565');
+      expect(values.first.asCompound['hidden']?.asByte, 1);
+      expect(values.first.asCompound['acceptTextures']?.asByte, 1);
+      expect(values.first.asCompound['futureServerTag']?.asInt, 99);
+      expect(values.last.asCompound['name']?.asString, 'Other');
+    });
+
+    test('removeServer removes matching entry and preserves remaining order', () async {
+      await provider.addServer(
+        MtnMinecraftInfoServer(
+          name: 'First',
+          address: 'first.invalid',
+        ),
+      );
+      await provider.addServer(
+        MtnMinecraftInfoServer(
+          name: 'Remove',
+          address: 'remove.invalid',
+        ),
+      );
+      await provider.addServer(
+        MtnMinecraftInfoServer(
+          name: 'Last',
+          address: 'last.invalid',
+        ),
+      );
+
+      final bool removed = await provider.removeServer('remove.invalid:25565');
+      final List<MtnMinecraftInfoServer> servers =
+          await provider.readServers();
+
+      expect(removed, isTrue);
+      expect(
+        servers.map((MtnMinecraftInfoServer server) => server.name).toList(),
+        <String>['First', 'Last'],
+      );
+      expect(await provider.removeServer('missing.invalid'), isFalse);
+    });
+
     test('concurrent adds are serialized and none are lost', () async {
       await Future.wait(
         List<Future<void>>.generate(
