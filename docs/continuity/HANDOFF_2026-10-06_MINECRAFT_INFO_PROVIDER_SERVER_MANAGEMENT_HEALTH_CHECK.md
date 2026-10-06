@@ -18,19 +18,18 @@ Package:    minecraft_info_provider/
 
 `docs/WORKING_RULES.md` remains authoritative. `hypixel_api/` is unrelated.
 
-Main baseline before merge:
+Merged implementation:
 
 ```text
-58287599b2377a751d433a37fb4feb12affffab0
-Reorganize minecraft info provider source layout
+PR #16
+ea853076eaab34ac2b55906f4740028cb4770ea0
+Add servers.dat management and server health checks
 ```
 
-Validated feature branch before continuity update:
+The feature work was squash merged from:
 
 ```text
 feature/servers-dat-example
-eebdafa6a3d3090924607b06eac644763e106b02
-Fix constructor member ordering lint
 ```
 
 User explicitly approved continuity update and merge after validation.
