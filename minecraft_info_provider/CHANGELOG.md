@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.0.0-dev.29
+
+NeoForge mod metadata provider foundation.
+
+- Added `MtnMinecraftModInfoProviderNeoForge` for modern `META-INF/neoforge.mods.toml` metadata.
+- Normalized NeoForge mod ID, version, display name, description, authors, license, homepage, issue tracker and lazy `iconFile` access into the existing generic mod model.
+- Added generic `discouraged` dependency type for NeoForge dependency semantics.
+- Normalized NeoForge dependency types `required`, `optional`, `incompatible` and `discouraged`.
+- Preserved NeoForge Maven-style `versionRange`, dependency ordering and dependency-side semantics through the existing generic dependency model.
+- Kept NeoForge dependency `side` scoped to the dependency relationship; mod-level side remains conservative because `neoforge.mods.toml` does not provide authoritative physical dist metadata for this checkpoint.
+- Kept `iconFile` and `logoFile` semantics distinct; `logoFile` is not reinterpreted as the mod icon.
+- Added file-level `iconFile` fallback and mod-level `iconFile` precedence.
+- Added `${file.jarVersion}` and `${file.*}` substitutions using the same provider-independent conventions as Forge.
+- Added recursive NeoForge JarJar discovery through `META-INF/jarjar/metadata.json` without disk extraction.
+- JarJar entries without NeoForge mod metadata are treated as libraries rather than logical mods.
+- Updated `example/mod_metadata.dart` to register Fabric, Forge and NeoForge providers.
+- Real Armor HUD NeoForge validation confirmed homepage, issue tracker, null source URL and NeoForge/Minecraft dependency scopes.
+- Final validation: analyzer clean, NeoForge tests 18/18, Forge tests 15/15, Fabric tests 19/19, mod-list tests 10/10, full suite 334/334, diff-check clean and working tree clean.
+
 ## 1.0.0-dev.28
 
 Forge mod metadata provider foundation.
