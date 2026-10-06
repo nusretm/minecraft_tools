@@ -12,26 +12,25 @@ Last updated: 2026-10-06
 
 ## Repository state
 
-Merged server-management milestone:
+Merged baseline:
 
 ```text
 main
-ea853076eaab34ac2b55906f4740028cb4770ea0
-Add servers.dat management and server health checks
+6021c650ff72cdf10f8e60ef78ef60ee9ee12589
+Add mod language translation foundation
 ```
 
-Merge path:
+Current checkpoint branch:
 
 ```text
-PR #16
-feature/servers-dat-example -> main
-squash merge
+feature/item-name-resolution-foundation
+IMPLEMENTED / VALIDATED / REAL PROFILE POSITIVE SMOKE PASSED
 ```
 
 Package version:
 
 ```text
-1.0.0-dev.31
+1.0.0-dev.32
 ```
 
 Working milestone state:
@@ -722,8 +721,10 @@ Public surface:
 Locked behavior:
 
 - language files are read from exact `assets/<namespace>/lang/<locale>.json` paths
-- language JSON must be an object with string keys and string values
-- malformed JSON or non-string values normalize to `MtnMinecraftInfoModLanguageError.invalidData`
+- language JSON must decode to an object
+- Minecraft-compatible primitive values are accepted: strings remain strings, numbers and booleans normalize through their string representation
+- object, array and null translation values remain invalid and normalize to `MtnMinecraftInfoModLanguageError.invalidData`
+- unsupported numeric format placeholders such as `%d` / `%f` normalize to `%s`, preserving positional indexes
 - language maps are immutable snapshots
 - locale names are validated before archive reads
 - missing language files return no language candidate
@@ -784,6 +785,111 @@ minecraft_info_provider/example/mod_translations.dart
 ```
 
 Next intended layer is item identity to translation-key/name resolution, kept separate from client item model and texture rendering.
+
+Compatibility corrections landed during the dev.32 item-name checkpoint:
+
+- Fabric empty optional license strings normalize to no license.
+- Fabric empty author/contributor strings are ignored in the generic normalized model.
+- Fabric metadata remains strict for wrong field types and missing required person object names.
+- Language primitive parsing now matches Minecraft semantics for strings, numbers and booleans.
+- Low-level language reads remain strict for composite/null translation values.
+- High-level item-name resolution isolates an invalid candidate language source and continues checking independent sources.
+
+## Item name resolution foundation checkpoint
+
+```text
+Branch: feature/item-name-resolution-foundation
+Status: IMPLEMENTED / VALIDATED / REAL PROFILE POSITIVE SMOKE PASSED
+```
+
+Public surface:
+
+- `MtnMinecraftInfoItemIdentity`
+- `MtnMinecraftInfoItemNameKind`
+- `MtnMinecraftInfoItemName`
+- `MtnMinecraftInfoItemNameResolver`
+
+Locked behavior:
+
+- namespaced item identities use `namespace:path`
+- conventional item keys derive as `item.<namespace>.<path>`
+- conventional block-item keys derive as `block.<namespace>.<path>`
+- slash-separated item paths map to dot-separated translation-key paths
+- both item and block candidates are preserved; no winner is guessed
+- item IDs do not imply that the matching language table must live under the same asset namespace
+- every discovered asset namespace/source may contribute a candidate
+- locale lookup remains exact and defaults to `en_us`
+- no implicit locale fallback is applied
+- no resource-pack/source precedence is invented
+- no custom runtime description ID is guessed
+- no runtime item registry is emulated
+- invalid language sources are isolated only in the high-level item-name candidate resolver; strict low-level `readLanguages()` behavior remains unchanged
+- persisted `customName` / `itemName` item components remain separate from registry/localization-derived default names
+
+Real profile validation:
+
+```text
+C:\Provanas\profiles\02766803-f0e2-4101-a3b8-962e1f520bcb
+54 direct mod JARs
+Fabric 26.1.2 profile
+```
+
+Negative smoke:
+
+```text
+simplyswords:diamond_greataxe
+sophisticatedbackpacks:gold_backpack
+-> No conventional localized name candidate found.
+```
+
+Those IDs were not present in the active profile's discovered mod graph, so the clean miss is expected.
+
+Positive smoke:
+
+```text
+item id: verity:flashlight
+derived key: item.verity.flashlight
+resolved value: Flashlight
+language namespace: verity
+source: ...\mods\verity-4.0.0.jar
+```
+
+Final validation on 2026-10-06:
+
+```text
+dart analyze
+No issues found!
+
+focused Fabric metadata
+21/21 passed
+
+focused mod language/translation
+9/9 passed
+
+focused item name resolution
+9/9 passed
+
+full package test suite
+361/361 passed
+```
+
+Example:
+
+```text
+minecraft_info_provider/example/item_names.dart
+```
+
+Still out of scope:
+
+- authoritative runtime description-ID discovery
+- vanilla registry/default-name synthesis
+- resource-pack precedence
+- client item definitions under `assets/<namespace>/items/`
+- legacy `models/item/` resolution
+- model parent inheritance
+- texture reference resolution
+- PNG rendering/compositing
+
 
 ## Completed server-list management
 
@@ -994,9 +1100,9 @@ Remaining major areas include:
 
 ### Installed content / launcher presentation
 
-- mod namespace -> owning mod mapping
-- localization/resource lookup
-- item model/texture resolution needed for launcher inventory rendering
+- authoritative mod namespace -> owning mod mapping where such ownership can actually be proven
+- item client-definition/model/texture resolution needed for launcher inventory rendering
+- resource precedence/conflict handling for higher-level effective resource selection
 
 ### World/player expansion
 
@@ -1061,6 +1167,13 @@ docs/continuity/HANDOFF_2026-10-05_MINECRAFT_INFO_PROVIDER_ITEM_CUSTOM_DATA.md
 docs/continuity/HANDOFF_2026-10-06_MINECRAFT_INFO_PROVIDER_ITEM_READ_FOUNDATION_COMPLETE.md
 ```
 
+Mod resource/name work:
+
+```text
+docs/continuity/HANDOFF_2026-10-06_MINECRAFT_INFO_PROVIDER_MOD_LANGUAGE_TRANSLATION_FOUNDATION.md
+docs/continuity/HANDOFF_2026-10-06_MINECRAFT_INFO_PROVIDER_ITEM_NAME_RESOLUTION_FOUNDATION.md
+```
+
 ## Development rules
 
 Always follow `docs/WORKING_RULES.md`.
@@ -1080,4 +1193,4 @@ In particular:
 
 There is no automatically selected next implementation checkpoint.
 
-There is no automatically selected next implementation checkpoint after mod icon lookup. Likely launcher-facing follow-ups include richer Fabric metadata, namespace ownership/localization/resource lookup, or additional loader providers.
+The natural launcher-facing continuation is item client-definition/model/texture resolution, but it must be designed as a separate checkpoint before implementation.
