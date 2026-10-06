@@ -72,7 +72,7 @@ void main() {
                 dependencies: <MtnMinecraftInfoModDependency>[
                   MtnMinecraftInfoModDependency(
                     id: 'minecraft',
-                    type: MtnMinecraftInfoModDependencyType.requiredDependency,
+                    type: MtnMinecraftInfoModDependencyType.required,
                     versionConstraints: <String>['~26.3'],
                     clientSide: true,
                     serverSide: false,
@@ -100,7 +100,7 @@ void main() {
                 dependencies: <MtnMinecraftInfoModDependency>[
                   MtnMinecraftInfoModDependency(
                     id: 'forge',
-                    type: MtnMinecraftInfoModDependencyType.requiredDependency,
+                    type: MtnMinecraftInfoModDependencyType.required,
                     versionConstraints: <String>['[47,)'],
                     clientSide: false,
                     serverSide: true,
