@@ -602,4 +602,3 @@ _FabricIcon? _fabricIconFromJson(
 
   return paths.isEmpty ? null : _FabricIcon.sized(paths);
 }
-
