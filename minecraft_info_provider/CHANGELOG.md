@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.0.0-dev.31
+
+Mod language/translation lookup foundation.
+
+- Added `MtnMinecraftInfoModLanguage` for one exact-locale language table read from one archive asset source.
+- Added `MtnMinecraftInfoModTranslation` to preserve translation-key candidates together with their exact source, namespace and locale.
+- Added `MtnMinecraftInfoModLanguageException` and `invalidData` normalization for malformed language JSON or non-string values.
+- Added `MtnMinecraftModList.readLanguages(namespace, locale: ...)` for exact-locale `assets/<namespace>/lang/<locale>.json` loading.
+- Added `MtnMinecraftModList.getTranslations(namespace, key, locale: ...)` to return all matching source candidates without inventing resource precedence.
+- No implicit locale fallback is applied; requesting `tr_tr` reads only `tr_tr`. Higher-level code may explicitly add Minecraft-style `en_us` fallback later.
+- Language maps are immutable and locale names are validated before archive reads.
+- Embedded archive language resources remain lazy and reuse the existing root/embedded archive-chain asset source infrastructure.
+- Missing language files and missing translation keys return empty candidate lists rather than synthesized values.
+- Added `example/mod_translations.dart` for exact-locale table and key lookup.
+- Real Armor HUD NeoForge validation discovered `assets/armor_hud/lang/en_us.json` with 11 entries.
+- Real translation smoke resolved `armor_hud.config.title` to `Armor HUD Configuration` from the published NeoForge JAR.
+- Final validation: analyzer clean, language tests 8/8, full suite 349/349, diff-check clean and working tree clean.
+
 ## 1.0.0-dev.30
 
 Mod asset/resource discovery foundation.
