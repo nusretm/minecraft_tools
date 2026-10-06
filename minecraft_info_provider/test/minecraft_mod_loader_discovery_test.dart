@@ -2,18 +2,23 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:minecraft_info_provider/minecraft_info_provider.dart';
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 void main() {
   group('Minecraft mod-loader discovery', () {
     late Directory gameDirectory;
     late MtnMinecraftInfoProvider provider;
+    late Directory versionsDirectory;
+    late File versionFile;
 
     setUp(() async {
       gameDirectory = await Directory.systemTemp.createTemp(
         'mtn-minecraft-info-mod-loader-',
       );
       provider = MtnMinecraftInfoProvider(gameDirectory: gameDirectory);
+      versionsDirectory = Directory(p.join(gameDirectory.path, 'versions'));
+      versionFile = File(p.join(versionsDirectory.path, 'version.json'));
     });
 
     tearDown(() async {
@@ -23,8 +28,8 @@ void main() {
     });
 
     Future<void> writeVersionJson(Object? value) async {
-      await provider.versionsDirectory.create(recursive: true);
-      await provider.versionFile.writeAsString(jsonEncode(value));
+      await versionsDirectory.create(recursive: true);
+      await versionFile.writeAsString(jsonEncode(value));
     }
 
     test('missing version.json means no discovered loader', () async {
@@ -138,8 +143,8 @@ void main() {
     });
 
     test('malformed JSON is invalid data', () async {
-      await provider.versionsDirectory.create(recursive: true);
-      await provider.versionFile.writeAsString('{');
+      await versionsDirectory.create(recursive: true);
+      await versionFile.writeAsString('{');
 
       await expectLater(
         provider.readModLoader(),
