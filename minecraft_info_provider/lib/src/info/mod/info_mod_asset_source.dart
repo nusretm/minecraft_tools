@@ -23,7 +23,9 @@ final class MtnMinecraftInfoModAssetSource {
             : File(p.normalize(p.absolute(rootFile.path))),
         embeddedArchivePaths =
             List<String>.unmodifiable(embeddedArchivePaths),
-        namespaces = List<String>.unmodifiable(namespaces),
+        namespaces = List<String>.unmodifiable(
+          _normalizeNamespaces(namespaces),
+        ),
         _loader = loader;
 
   final File? rootFile;
@@ -91,5 +93,23 @@ final class MtnMinecraftInfoModAssetSource {
   }
 }
 
-final RegExp _namespacePattern = RegExp(r'^[a-z0-9_.-]+$');
-final RegExp _assetPathPattern = RegExp(r'^[a-z0-9/._-]+$');
+List<String> _normalizeNamespaces(Iterable<String> namespaces) {
+  final Set<String> result = <String>{};
+  for (final String namespace in namespaces) {
+    if (!_namespacePattern.hasMatch(namespace)) {
+      throw ArgumentError.value(
+        namespace,
+        'namespaces',
+        'contains an invalid Minecraft resource namespace',
+      );
+    }
+    result.add(namespace);
+  }
+  final List<String> sorted = result.toList()..sort();
+  return sorted;
+}
+
+final RegExp _namespacePattern = RegExp(r'^[a-z0-9_.-]+
+);
+final RegExp _assetPathPattern = RegExp(r'^[a-z0-9/._-]+
+);
