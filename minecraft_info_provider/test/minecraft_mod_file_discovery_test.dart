@@ -32,7 +32,6 @@ void main() {
         () => mods.add(
           MtnMinecraftInfoMod(
             file: File(p.join(gameDirectory.path, 'x.jar')),
-            fileName: 'x.jar',
           ),
         ),
         throwsUnsupportedError,
