@@ -29,7 +29,7 @@ Future<void> main(List<String> args) async {
     final String parents = mod.parentMods.isEmpty
         ? '-'
         : mod.parentMods
-            .map((MtnMinecraftInfoMod parent) => parent.id)
+            .map((MtnMinecraftInfoMod parent) => '${parent.id}@${parent.version}')
             .join(', ');
 
     print(
