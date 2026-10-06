@@ -1101,8 +1101,25 @@ Remaining major areas include:
 ### Installed content / launcher presentation
 
 - authoritative mod namespace -> owning mod mapping where such ownership can actually be proven
-- item client-definition/model/texture resolution needed for launcher inventory rendering
-- resource precedence/conflict handling for higher-level effective resource selection
+- item client-definition/model/texture resolution needed for launcher inventory rendering is now a separately designed, deferred work item
+- resource precedence/conflict handling for higher-level effective resource selection is part of that planned resource-loader architecture
+
+Deferred plan:
+
+```text
+docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
+```
+
+Execution prerequisite outside this repository:
+
+```text
+MtnLauncher Modrinth API foundation
+→ MtnLauncher CurseForge API foundation
+→ launcher UI/presentation need
+→ return to minecraft_tools resource foundation
+```
+
+The planned resource work is not the next active checkpoint and must not start without a new explicit implementation approval.
 
 ### World/player expansion
 
@@ -1174,6 +1191,14 @@ docs/continuity/HANDOFF_2026-10-06_MINECRAFT_INFO_PROVIDER_MOD_LANGUAGE_TRANSLAT
 docs/continuity/HANDOFF_2026-10-06_MINECRAFT_INFO_PROVIDER_ITEM_NAME_RESOLUTION_FOUNDATION.md
 ```
 
+Deferred resource/rendering design:
+
+```text
+docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
+```
+
+That document records the full planned resource-loader/helper/source architecture, Minecraft-version boundaries, image/texture result model, single-frame animation policy, 14-step / ~72-substep implementation plan, and the launcher Modrinth + CurseForge prerequisite.
+
 ## Development rules
 
 Always follow `docs/WORKING_RULES.md`.
@@ -1191,6 +1216,25 @@ In particular:
 
 ## Next action
 
-There is no automatically selected next implementation checkpoint.
+There is no automatically selected next implementation checkpoint in `minecraft_tools`.
 
-The natural launcher-facing continuation is item client-definition/model/texture resolution, but it must be designed as a separate checkpoint before implementation.
+The item client-definition/model/texture resource foundation has already been designed and recorded, but is intentionally deferred:
+
+```text
+docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
+```
+
+Current cross-project execution order:
+
+```text
+1. Continue MtnLauncher.
+2. Build the launcher Modrinth API foundation.
+3. Build the launcher CurseForge API foundation.
+4. Let the resulting launcher UI/presentation work surface the item-resource requirement.
+5. Return to minecraft_tools.
+6. Re-audit the deferred plan against the then-current repository state.
+7. Obtain explicit implementation approval.
+8. Execute the resource foundation in small checkpoints, with a targeted focused implementation window of roughly 1-2 days if the recorded assumptions still hold.
+```
+
+Do not start the deferred resource work merely because it is documented.
