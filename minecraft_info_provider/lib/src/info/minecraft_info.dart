@@ -7,6 +7,7 @@ export 'item/info_item_stack.dart';
 
 export 'mod/info_mod.dart';
 export 'mod/info_mod_loader.dart';
+export 'mod/info_mod_metadata.dart';
 
 export 'player/info_player.dart';
 export 'player/info_player_advancements.dart';
