@@ -400,7 +400,6 @@ final class MtnMinecraftInfoProvider {
       files.map(
         (File file) => MtnMinecraftInfoMod(
           file: file,
-          fileName: p.basename(file.path),
         ),
       ),
     );
