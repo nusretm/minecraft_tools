@@ -312,15 +312,19 @@ List<String> _fabricPeopleFromJson(Object? rawPeople) {
       name = rawPerson;
     } else if (rawPerson is Map<String, dynamic>) {
       final Object? rawName = rawPerson['name'];
-      if (rawName is String) name = rawName;
-    }
-
-    if (name == null || name.isEmpty) {
+      if (rawName is! String) {
+        throw const MtnMinecraftModInfoProviderException(
+          MtnMinecraftModInfoProviderError.invalidData,
+        );
+      }
+      name = rawName;
+    } else {
       throw const MtnMinecraftModInfoProviderException(
         MtnMinecraftModInfoProviderError.invalidData,
       );
     }
-    if (!people.contains(name)) people.add(name);
+
+    if (name.isNotEmpty && !people.contains(name)) people.add(name);
   }
   return people;
 }
