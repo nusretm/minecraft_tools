@@ -328,11 +328,17 @@ final class MtnMinecraftInfoProvider {
         _readServersUnlocked,
       );
 
-  /// Appends one server while preserving every existing NBT tag.
+  /// Adds one server while preserving every existing NBT tag.
+  ///
+  /// By default the server is appended. Set [first] to insert it at the start
+  /// of the saved-server list.
   ///
   /// This operation intentionally does not deduplicate addresses; matching and
-  /// known-network policy belong to the later context/rules checkpoint.
-  Future<void> addServer(MtnMinecraftInfoServer server) =>
+  /// known-network policy belong to the caller.
+  Future<void> addServer(
+    MtnMinecraftInfoServer server, {
+    bool first = false,
+  }) =>
       _inTargetLane<void>(serversFile.path, () async {
         final MtnMinecraftNbtDocument document = await _loadDocumentForWrite();
         final Map<String, MtnMinecraftNbtValue> root =
@@ -355,8 +361,13 @@ final class MtnMinecraftInfoProvider {
         }
 
         final List<MtnMinecraftNbtValue> values =
-            List<MtnMinecraftNbtValue>.of(list.values)
-              ..add(_serverToNbt(server));
+            List<MtnMinecraftNbtValue>.of(list.values);
+        final MtnMinecraftNbtValue value = _serverToNbt(server);
+        if (first) {
+          values.insert(0, value);
+        } else {
+          values.add(value);
+        }
         root[_serversTagName] = MtnMinecraftNbtValue.list(
           MtnMinecraftNbtList(
             elementType: MtnMinecraftNbtType.compound,
