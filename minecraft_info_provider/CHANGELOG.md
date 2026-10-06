@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.0.0-dev.30
+
+Mod asset/resource discovery foundation.
+
+- Added `MtnMinecraftInfoModAssetSource` as a provider-independent archive-level client asset source.
+- Added `MtnMinecraftInfoMod.assetSources` and `assetNamespaces`.
+- Added `MtnMinecraftModList.assetSources`, `assetNamespaces` and `getAssetSources(namespace)`.
+- Discovers valid namespaces from `assets/<namespace>/...` without assuming that a namespace equals a logical mod ID.
+- Keeps namespace ownership non-authoritative: one archive may expose multiple logical mods and multiple namespaces, including `minecraft`.
+- Added lazy raw asset reads through `source.read(namespace, path)` without eagerly retaining asset bytes.
+- Root JAR asset reads reopen the JAR lazily; embedded Fabric/JarJar asset sources preserve and follow their archive chain in memory.
+- Added archive-level source deduplication so the same physical archive exposed by multiple metadata providers is represented once in the normalized list.
+- Added namespace/path validation and normalized unique/sorted namespace lists for custom providers.
+- Fabric, Forge and NeoForge providers now expose archive client assets through the same generic model.
+- Added `example/mod_assets.dart` for namespace discovery and targeted lazy asset reads.
+- Real Armor HUD NeoForge validation discovered namespace `armor_hud` and lazily read `textures/gui/hotbar_texture.png` as 1197 bytes.
+- Final validation: analyzer clean, asset-resource tests 7/7, Fabric 19/19, Forge 15/15, NeoForge 18/18, mod-list 10/10, full suite 341/341, diff-check clean and working tree clean.
+
 ## 1.0.0-dev.29
 
 NeoForge mod metadata provider foundation.
