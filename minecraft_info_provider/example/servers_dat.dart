@@ -60,10 +60,11 @@ Future<void> main(List<String> args) async {
       address: _provanasAddress,
       acceptServerResourcePacks: true,
     ),
+    first: true,
   );
 
   print(
-    'Added Provanas: '
+    'Added Provanas at first position: '
     'address=$_provanasAddress '
     'resourcePacks=enabled',
   );
