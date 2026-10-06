@@ -29,16 +29,6 @@ final class MtnMinecraftInfoModLanguage {
           Map<String, String>.of(translations),
         );
 
-  static void validateLocale(String locale) {
-    if (!_localePattern.hasMatch(locale)) {
-      throw ArgumentError.value(
-        locale,
-        'locale',
-        'must be a lowercase Minecraft language locale',
-      );
-    }
-  }
-
   factory MtnMinecraftInfoModLanguage.parse({
     required MtnMinecraftInfoModAssetSource source,
     required String namespace,
@@ -87,6 +77,16 @@ final class MtnMinecraftInfoModLanguage {
       locale: locale,
       translations: translations,
     );
+  }
+
+  static void validateLocale(String locale) {
+    if (!_localePattern.hasMatch(locale)) {
+      throw ArgumentError.value(
+        locale,
+        'locale',
+        'must be a lowercase Minecraft language locale',
+      );
+    }
   }
 
   final MtnMinecraftInfoModAssetSource source;
