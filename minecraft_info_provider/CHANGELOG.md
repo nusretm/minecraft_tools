@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.0.0-dev.25
+
+Fabric mod metadata/provider and embedded dependency graph foundation.
+
+- Added the extensible `MtnMinecraftModInfoProvider` base contract with stable provider `name` identity.
+- Added `MtnMinecraftModInfoProviderFabric` for root-level `fabric.mod.json` parsing.
+- Added `MtnMinecraftModList` as the single provider registry and normalized mod graph authority.
+- Every discovered root JAR is offered to every registered provider; provider results are merged instead of using first-match-wins behavior.
+- Expanded `MtnMinecraftInfoMod` into the normalized output model with ID, name, version, description, authors, provider-derived `modTypes`, parent mods and directly installed source files.
+- Canonical merging uses `id + version`, allowing one logical mod to be both directly installed and embedded and allowing different versions to remain distinct.
+- Added recursive in-memory Fabric `jars[].file` parsing without extracting embedded JARs to disk.
+- Added multi-parent embedded dependency tracking and recursive `getDependencyList()`.
+- Added guarded `remove(mod)`: embedded-only mods cannot be removed directly; removing an installed mod rebuilds the graph and preserves dependencies still referenced elsewhere.
+- Added `MtnListEvent` and `MtnMinecraftModList.onItem(list, mod, event)` with add/update/remove events based on normalized visible state changes.
+- Root JAR parsing uses streaming archive input; embedded JARs are parsed from archive-entry bytes in memory.
+- Real Fabric profile validation discovered 188 normalized logical mods from 54 physical JARs, including shared embedded dependencies and simultaneous installed+embedded mods.
+- Added focused registry/graph, Fabric metadata, embedded recursion and installed-file discovery coverage; full validation reached 290/290 tests.
+
 ## 1.0.0-dev.24
 
 Installed mod-file discovery foundation.
