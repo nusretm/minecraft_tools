@@ -20,7 +20,7 @@ final class MtnMinecraftInfoModLanguageException implements Exception {
 
 /// One exact-locale translation table read from one mod asset source.
 final class MtnMinecraftInfoModLanguage {
-  MtnMinecraftInfoModLanguage({
+  MtnMinecraftInfoModLanguage._({
     required this.source,
     required this.namespace,
     required this.locale,
@@ -81,7 +81,7 @@ final class MtnMinecraftInfoModLanguage {
       translations[entry.key] = value;
     }
 
-    return MtnMinecraftInfoModLanguage(
+    return MtnMinecraftInfoModLanguage._(
       source: source,
       namespace: namespace,
       locale: locale,
