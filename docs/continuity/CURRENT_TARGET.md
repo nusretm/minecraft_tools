@@ -5,17 +5,27 @@ Last updated: 2026-10-06
 ## Repository
 
 - Repository: `nusretm/minecraft_tools`
-- Local path: `D:\development\cross-platform\minecraft_tools`
+- Local path: `D:\\development\\cross-platform\\minecraft_tools`
 - Current package: `minecraft_info_provider/`
 - `hypixel_api/` is unrelated and must not be modified for these checkpoints.
 - `docs/WORKING_RULES.md` is authoritative.
 
-## Current main
+## Repository state for this checkpoint
+
+Main baseline before the current feature merge:
 
 ```text
 main
-97cc91ba6cc311d4872f9f9136d1dc6892ff1eb0
-Add item custom data foundation
+58287599b2377a751d433a37fb4feb12affffab0
+Reorganize minecraft info provider source layout
+```
+
+Validated feature branch:
+
+```text
+feature/servers-dat-example
+eebdafa6a3d3090924607b06eac644763e106b02
+Fix constructor member ordering lint
 ```
 
 Package version:
@@ -27,139 +37,277 @@ Package version:
 Working milestone state:
 
 ```text
-CORE ITEM-READ FOUNDATION COMPLETE
-NO ACTIVE FEATURE CHECKPOINT
+SERVER LIST CRUD + AUTO CHECK / HEALTH CHECK
+COMPLETE / VALIDATED / MERGE APPROVED
 ```
 
-The Custom Data Foundation was squash merged through PR #14 and both the
-local and remote feature branches were deleted.
+## Completed server-list management
 
-## Completed item-read foundation
+`MtnMinecraftInfoProvider` now owns the complete saved-server mutation surface needed by the launcher/UI:
 
-The planned core `MtnMinecraftInfoItemStack` read foundation is complete.
+- `readServers()`
+- `addServer(server, first: true|false)`
+- `updateServer(server)`
+- `removeServer(address)`
 
-Completed checkpoints:
+Locked behavior:
+
+- default add remains append
+- `first: true` inserts at index 0
+- update preserves the matching entry's list position
+- remove preserves remaining order
+- update/remove target canonical server identity through `MtnMinecraftInfoServerAddress.sameIdentity()`
+- bare default-port and explicit `:25565` addresses therefore match
+- existing unrelated/unknown NBT tags are preserved
+- writes remain serialized per target and atomically published
+- caller policy decides whether a server should be added/updated/removed; there is no hidden provider-side dedup policy
+
+Real Java Edition 1.8.9/launcher-profile smoke tests confirmed:
+
+- existing saved servers are read correctly
+- resource-pack prompt/disabled/enabled states round-trip as expected
+- hidden server state is read correctly
+- Provanas can be inserted first
+- duplicate add is prevented by the example's canonical identity check
+- update changes the chosen title/resource-pack policy in place
+- remove deletes the matching entry and a second remove reports not found
+
+## Server automatic status lifecycle
+
+`MtnMinecraftInfoServer` now owns its own optional status refresh lifecycle.
+
+Public/runtime behavior:
+
+```dart
+server.autoCheck       // default false
+server.autoCheckSec    // default 15, minimum 15
+server.dispose()
+```
+
+Locked semantics:
+
+- values below 15 seconds clamp to 15
+- enabling automatic checks never allows overlapping queries
+- the first status query can be started immediately by the health-check coordinator
+- after a query finishes, the next delay begins from completion time
+- therefore cadence is: query -> wait interval -> query
+- changing `autoCheckSec` while waiting reschedules the next check
+- `dispose()` cancels waiting timers, disables auto-check and releases `onChange`
+- an in-flight transport operation may finish, but after disposal it cannot publish a new status callback or schedule another automatic check
+- querying or re-enabling auto-check on a disposed server is rejected
+
+`MtnMinecraftInfoServer.clone()` preserves `autoCheckSec` but does not automatically start polling.
+
+## Server health-check orchestration
+
+Public coordinator:
 
 ```text
-Item Core Properties
-Text / Item Display
-Potion Properties
-Attribute Modifiers
-Custom Model Data
-Nested Item Stacks
-Custom Data
+MtnMinecraftInfoServerHealthCheck
 ```
 
-The item model now covers the following persisted information across the
-supported legacy and modern storage generations:
+It owns collection/lifecycle orchestration while each server owns its timer and query logic.
 
-- item ID and count
-- damage
-- repair cost
-- unbreakable state
-- active enchantments
-- stored enchantments
-- custom name
-- item name
-- lore
-- potion contents
-- potion duration scale
-- attribute modifiers
-- custom model data
-- sparse container contents
-- Bundle contents
-- Crossbow charged projectiles
-- use remainder
-- modern `minecraft:custom_data`
-- exact legacy raw `tag` preservation
-- explicit modern component removals
+Public surface includes:
 
-Nested persisted item stacks recursively reuse `MtnMinecraftInfoItemStack`.
+- `servers` as an immutable view
+- `intervalSec` with the same 15-second minimum
+- `active`
+- `add(server)`
+- `remove(server)`
+- `start()`
+- `stop()`
+- `dispose()`
 
-## Locked item-read semantics
+Callbacks:
 
-These decisions are authoritative unless explicitly redesigned later.
+```dart
+onAdd(MtnMinecraftInfoServerHealthCheck checker, MtnMinecraftInfoServer server)
+onChange(MtnMinecraftInfoServerHealthCheck checker, MtnMinecraftInfoServer server)
+onRemove(MtnMinecraftInfoServerHealthCheck checker, MtnMinecraftInfoServer server)
+```
 
-### Persisted values, not effective registry values
+Lifecycle rules:
 
-`MtnMinecraftInfoItemStackComponents` represents explicitly persisted
-stack data/overrides. It does not synthesize item-registry defaults.
+- add rejects duplicate object membership
+- add wires the server's existing `onChange` into the checker callback chain instead of discarding it
+- add starts one immediate `queryStatus()`
+- if `start()` happens while that initial query is running, no second overlapping query is launched
+- once the initial query completes, active auto-check scheduling begins
+- changing checker `intervalSec` propagates to all managed servers
+- `stop()` disables managed auto-check timers without disposing server snapshots
+- `remove()` removes membership, disposes that server, then emits `onRemove`
+- checker `dispose()` disposes every remaining managed server and emits `onRemove` for each
 
-### Modern authority
+## Examples
+
+### servers.dat CRUD
 
 ```text
-components present
-  -> modern component storage is authoritative
-  -> legacy tag is not used as fallback
+minecraft_info_provider/example/servers_dat.dart
 ```
 
-### Removal preservation
-
-Modern `!minecraft:*` removals remain explicit through
-`removedComponentIds`. Effective registry values are not guessed.
-
-### Unknown external metadata
-
-- unknown vanilla/future/modded IDs remain tolerant where not schema-recognized
-- recognized malformed component data remains strict
-- malformed recognized item data maps to the existing player `invalidData` path
-
-### Legacy tag versus modern custom data
+Actions:
 
 ```text
-pre-1.20.5 tag
-  -> legacyTag
-  -> customData == null
-
-1.20.5+ minecraft:custom_data
-  -> customData
-  -> legacyTag == null
+--add
+--update
+--remove
 ```
 
-No Minecraft DataFixer migration behavior is guessed.
+The example targets `oyna.provanas.com`, inserts it first when missing, updates the title/resource-pack policy, and removes it by canonical identity.
 
-### Absent versus explicit empty
+### Live server checker
 
-Persisted empty collections/compounds remain distinguishable from absent
-properties where the storage format makes that distinction.
+```text
+minecraft_info_provider/example/server_checker.dart
+```
 
-### No automatic formatting
+The example:
 
-`dart format` is not used for Pure Dart code unless explicitly requested.
+1. accepts a concrete `servers.dat` file path
+2. reads every saved server
+3. adds them to `MtnMinecraftInfoServerHealthCheck`
+4. begins immediate status queries
+5. prints add/change/remove callbacks until Ctrl+C
+6. omits icon/favicon data from output
+7. renders MOTD through the existing `MtnMinecraftText.plainText` representation
 
-## Final item-read validation
+## Validation
 
-Authoritative validation at the final Custom Data checkpoint:
+Authoritative local validation on 2026-10-06:
 
 ```text
 dart analyze
 No issues found!
 
-dart test test/minecraft_item_custom_data_test.dart
-11/11 passed
-
-dart test test/minecraft_item_core_properties_test.dart
-14/14 passed
-
-dart test test/minecraft_item_nested_stacks_test.dart
-13/13 passed
-
 dart test
-250/250 passed
+00:03 +256: All tests passed!
 
-git diff --check origin/main...HEAD
+git diff --check
 PASS
 
 git status
 clean
 ```
 
-Real Java Edition 1.20.1 modded smoke validation confirmed legacy item-tag
-preservation across vanilla-known, not-yet-modeled and mod-specific metadata.
-Modern `minecraft:custom_data` did not occur in that real 1.20.1 dataset and
-therefore remains deterministic-test validated only.
+Live smoke validation used:
 
-## Authoritative item handoffs
+```text
+C:\Provanas\profiles\919ffebe-f609-4019-afed-fe31537e3e5f\servers.dat
+```
+
+Observed real servers included:
+
+- `oyna.provanas.com`
+- `mc.hypixel.net`
+- `play.zenitmc.com`
+
+The live checker confirmed immediate first callbacks, repeated non-overlapping checks, online status, version/player/latency/MOTD updates, and clean remove callbacks during Ctrl+C shutdown.
+
+## Completed item-read foundation
+
+The core `MtnMinecraftInfoItemStack` read foundation remains complete.
+
+Covered persisted information includes:
+
+- item ID and count
+- damage / repair cost / unbreakable
+- active and stored enchantments
+- custom name / item name / lore
+- potion contents / duration scale
+- attribute modifiers
+- custom model data
+- nested container contents / Bundle contents / charged projectiles / use remainder
+- modern `minecraft:custom_data`
+- exact legacy raw `tag`
+- explicit removed component IDs
+
+The authoritative completion note remains:
+
+```text
+docs/continuity/HANDOFF_2026-10-06_MINECRAFT_INFO_PROVIDER_ITEM_READ_FOUNDATION_COMPLETE.md
+```
+
+## Locked item-read semantics
+
+These remain unchanged:
+
+- models represent persisted values, not synthesized registry defaults
+- modern `components` are authoritative when present
+- removed modern components remain explicit
+- unknown future/modded IDs are tolerated where their schema is not recognized
+- recognized malformed data remains strict
+- legacy raw `tag` and modern `minecraft:custom_data` are distinct
+- no Minecraft DataFixer behavior is guessed
+- Pure Dart code is not auto-formatted unless explicitly requested
+
+## Current backlog
+
+Completed server-list CRUD and health-check work is no longer an open backlog item.
+
+Remaining major areas include:
+
+### Installed content / launcher presentation
+
+- Minecraft version mod-loader discovery
+- installed mod list
+- mod metadata discovery
+- mod namespace -> owning mod mapping
+- localization/resource lookup
+- item model/texture resolution needed for launcher inventory rendering
+
+### World/player expansion
+
+- richer world metadata / cross-version normalization
+- dimension/map presentation
+- pre-26.1 embedded `Data.Player` singleplayer identity handling
+- additional persisted player/world data only when needed by launcher/UI
+
+### Item write/effective architecture
+
+- item writing foundation
+- effective item/registry defaults
+- registry-derived capacities/defaults
+- safe mutation/persistence policy
+
+### Player progress semantics
+
+- statistics units/aggregation/writing
+- advancement definitions/display metadata/requirements/rewards
+- semantic completion progress
+- advancement writing
+
+### Runtime/gameplay semantics
+
+- attribute registry/runtime calculations
+- potion/effect registry/runtime calculations
+- resource-pack/item-model resolution
+- nested runtime/block-entity inventory discovery
+- richer Minecraft text runtime resolvers
+
+### Advanced custom-data tooling
+
+- legacy-to-modern migration/DataFixer integration
+- NBT path query/mutation
+- custom-data matching/mutation
+- SNBT tooling
+- mod-specific custom-data interpretation
+
+### Separate integration work
+
+Exact live server/sub-game/activity discovery remains future client-mod communication work. It must not be guessed from server address/logs alone.
+
+## Authoritative handoffs
+
+Server work:
+
+```text
+docs/continuity/HANDOFF_2026-10-02_MINECRAFT_INFO_PROVIDER_SERVER_FOUNDATION.md
+docs/continuity/HANDOFF_2026-10-06_MINECRAFT_INFO_PROVIDER_SERVER_MANAGEMENT_HEALTH_CHECK.md
+```
+
+Item read work:
 
 ```text
 docs/continuity/HANDOFF_2026-10-05_MINECRAFT_INFO_PROVIDER_ITEM_CORE_PROPERTIES.md
@@ -171,125 +319,6 @@ docs/continuity/HANDOFF_2026-10-05_MINECRAFT_INFO_PROVIDER_ITEM_NESTED_STACKS.md
 docs/continuity/HANDOFF_2026-10-05_MINECRAFT_INFO_PROVIDER_ITEM_CUSTOM_DATA.md
 docs/continuity/HANDOFF_2026-10-06_MINECRAFT_INFO_PROVIDER_ITEM_READ_FOUNDATION_COMPLETE.md
 ```
-
-## Open backlog
-
-No next feature has been selected yet. The following work remains open.
-
-### Priority group 1 — write/effective item architecture
-
-- Item Writing Foundation
-  - serialize `MtnMinecraftInfoItemStack`
-  - legacy `tag` versus modern `components` generation policy
-  - all currently normalized item properties
-  - nested recursive item writing
-  - component removals
-  - unknown/modded metadata preservation policy
-  - safe/atomic persistence boundary
-- Effective Item / Registry Foundation
-  - item registry lookup
-  - registry-derived default components
-  - persisted overrides + defaults
-  - effective handling of removed components
-  - registry-derived capacities/default values
-
-### Priority group 2 — world/player foundations still open
-
-- richer world metadata / cross-version normalization
-  - difficulty
-  - default/world game mode
-  - world spawn
-  - world border
-  - world-generation settings
-  - possible `level.dat_old` recovery policy
-- pre-26.1 embedded `Data.Player` singleplayer identity handling
-- installed-content discovery
-
-### Priority group 3 — player progress semantics
-
-- statistics semantic unit conversion
-- statistics aggregation / leaderboards
-- statistics writing
-- advancement definition discovery/parsing
-- advancement titles/descriptions/icons/display metadata
-- advancement requirements and criteria definitions
-- advancement rewards
-- semantic completion percentage / remaining criteria
-- advancement writing
-
-### Priority group 4 — item/gameplay runtime semantics
-
-- attribute registry lookup
-- effective item-registry attribute defaults
-- attribute calculations
-- potion registry lookup
-- effective potion base effects
-- brewing recipes
-- computed potion colors/names/durations
-- potion writing
-- effect registry lookup
-- effect localization/duration formatting/runtime calculations
-- effect writing
-- general `minecraft:tooltip_display` support
-
-### Priority group 5 — item rendering and nested runtime
-
-- resource-pack discovery / precedence
-- item-model definitions
-- `minecraft:item_model`
-- custom-model-data driven model resolution
-- effective rendered-model selection
-- `minecraft:container_loot`
-- registry-derived container sizes/capacities
-- Bundle weight/capacity/runtime UI behavior
-- Crossbow charged/firing runtime mechanics
-- use-remainder runtime behavior
-- block-entity inventory discovery
-
-### Priority group 6 — Minecraft text runtime
-
-- runtime localization/language resolver
-- keybind resolver
-- selector evaluation
-- scoreboard lookup
-- NBT component path evaluation
-- font
-- insertion
-- clickEvent
-- hoverEvent
-- richer interactive text semantics
-
-### Priority group 7 — server-list write policy
-
-- address deduplication policy
-- normalized-address write/update behavior
-- existing-record update versus append behavior
-- possible remove/update APIs
-
-### Priority group 8 — advanced custom-data tooling
-
-- legacy tag -> modern custom-data migration
-- Minecraft DataFixer emulation/integration
-- NBT path query API
-- custom-data partial/predicate matching
-- custom-data mutation
-- SNBT parser/writer utilities
-- mod-specific custom-data interpretation
-
-These are lower priority than preserving the current reader architecture.
-
-### Separate integration work
-
-- client-mod activity discovery / exact runtime server-subsystem discovery
-
-This requires the future Minecraft client-mod communication path and should
-not be guessed from logs/server address alone.
-
-## Explicit non-provider responsibility
-
-World-icon PNG decoding, validation, resizing and image conversion remain
-application/UI responsibility. The provider intentionally exposes raw icon
-bytes and atomic replacement only.
 
 ## Development rules
 
@@ -308,7 +337,6 @@ In particular:
 
 ## Next action
 
-Select the next checkpoint from the open backlog before implementation.
+After this approved merge, there is no automatically selected next implementation checkpoint.
 
-No implementation should begin solely because an item appears earlier in the
-priority groups; the user must explicitly approve the chosen scope.
+Choose the next narrow area explicitly before implementation. Based on the current launcher-facing priorities, installed mod-loader/mod metadata discovery is a natural candidate, but it is not approved merely by appearing here.
