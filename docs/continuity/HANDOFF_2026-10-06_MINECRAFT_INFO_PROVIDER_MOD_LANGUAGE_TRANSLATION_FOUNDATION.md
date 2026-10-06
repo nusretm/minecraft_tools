@@ -184,6 +184,21 @@ git status
 clean
 ```
 
+## Dev.32 compatibility correction
+
+The dev.31 checkpoint above records the behavior validated at that historical boundary. During the subsequent item-name resolution checkpoint, real-profile testing showed that the string-only language-value rule was stricter than Minecraft itself.
+
+Current behavior from dev.32 onward:
+
+- string translation values remain strings
+- numeric and boolean JSON primitive values normalize to strings, matching Minecraft's language loader behavior
+- unsupported numeric placeholders such as `%d` / `%f` normalize to `%s` while positional indexes are preserved
+- object, array and null values remain invalid
+- low-level `MtnMinecraftModList.readLanguages()` remains strict for invalid language tables
+- high-level item-name candidate resolution may isolate one invalid source and continue with independent sources
+
+This correction does not add locale fallback or resource precedence.
+
 ## Deliberately out of scope
 
 - implicit locale fallback
