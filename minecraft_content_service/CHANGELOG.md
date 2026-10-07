@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0-dev.18
+
+- Add `MtnMinecraftContentInstallationManifest` as the portable persistence contract for managed installation state.
+- Persist schema version, installation-root-relative path, normalized content snapshot, normalized version snapshot, and selected canonical file index for each managed artifact.
+- Reconstruct the selected file by index from the decoded version so dev.16 canonical file identity is restored instead of matching by filename.
+- Validate embedded version/content ownership explicitly because the generic version decoder does not consume the persisted content key itself.
+- Parse schema, artifact shapes, paths and file indexes strictly rather than silently accepting malformed persisted data through fallback conversion helpers.
+- Reuse dev.16 installation artifact/state invariants for path safety and duplicate version/content/path ownership checks.
+- Support direct map, JSON and UTF-8 round trips without introducing `dart:io`.
+- Keep the installation manifest independent from `MtnMinecraftContentList`; it is managed physical-artifact ownership persistence, not catalog/dependency-graph persistence.
+- Keep filesystem read/write location, atomic file publication, discovery, download execution, verification, rollback and launcher integration out of this checkpoint.
+
 ## 1.0.0-dev.17
 
 - Add immutable materialization targets and install/retain/replace/remove action models.
