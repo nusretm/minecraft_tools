@@ -2795,14 +2795,23 @@ In particular:
 
 ## Next action
 
-The active content-service checkpoint is:
+dev.17 merge:
+
+```text
+PR: #45
+merge commit:
+c1d03bf9caad65cae6771c63491eb421fdd1c6bd
+Add content materialization plan foundation
+```
+
+The completed content-service checkpoint is:
 
 ```text
 dev.17 — Content Materialization Plan Foundation
 branch: feature/minecraft-content-materialization-plan
 baseline main: 42445d7847af62963afec43b9f18da16337e0b8c
 production/test HEAD: e4c241d83d252ba9ea0ab24184198d63b7faf5a5
-status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
 package: minecraft_content_service 1.0.0-dev.17
 ```
 
@@ -2857,7 +2866,7 @@ Still out of scope:
 - unmanaged/manual file cleanup
 - deferred resource rendering
 
-Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `e4c241d83d252ba9ea0ab24184198d63b7faf5a5`. Merge has been separately approved by the user.
+Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `e4c241d83d252ba9ea0ab24184198d63b7faf5a5`. PR #45 merged at `c1d03bf9caad65cae6771c63491eb421fdd1c6bd`.
 
 Validation:
 
