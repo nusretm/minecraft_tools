@@ -2,6 +2,8 @@ import '../model/minecraft_content_models.dart';
 import '../provider/minecraft_content_provider.dart';
 import '../provider/minecraft_content_provider_list.dart';
 import '../provider/minecraft_content_provider_models.dart';
+import 'minecraft_content_dependency_desired_state.dart';
+import 'minecraft_content_dependency_desired_state_composer.dart';
 import 'minecraft_content_dependency_graph.dart';
 import 'minecraft_content_dependency_install_plan.dart';
 import 'minecraft_content_dependency_install_planner.dart';
@@ -214,6 +216,12 @@ class MtnMinecraftContentService {
       versions: versions,
       edges: edges,
     );
+  }
+
+  MtnMinecraftContentDependencyDesiredState composeDependencyInstallPlans(
+    Iterable<MtnMinecraftContentDependencyInstallPlan> plans,
+  ) {
+    return const MtnMinecraftContentDependencyDesiredStateComposer().compose(plans);
   }
 
   MtnMinecraftContentDependencyInstallPlan planDependencyInstall(

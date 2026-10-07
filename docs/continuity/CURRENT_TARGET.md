@@ -144,11 +144,121 @@ production/test HEAD: 4e41c35de65d9770388d5f2c955551ac6a505690
 merge commit: a6f5e60a9bc48974be611ced297b508bd4a0ccf2
 ```
 
+Current active checkpoint:
+
+```text
+feature/minecraft-content-dependency-desired-state
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+MERGE NOT REQUESTED
+baseline main: 28bc28c42feaec81013aebcb738d60fafbaaacfd
+validated feature HEAD: d97e9bf00a640c812a3a21d0aa3ac450873c057f
+production/test HEAD: 035df4bf9db4e4b95709e08e515499c3e3565062
+```
+
 Package version:
 
 ```text
 minecraft_content_service
-1.0.0-dev.11
+1.0.0-dev.12
+```
+
+## Minecraft content dependency desired state foundation checkpoint
+
+```text
+Branch: feature/minecraft-content-dependency-desired-state
+Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+Package: minecraft_content_service/
+Baseline main: 28bc28c42feaec81013aebcb738d60fafbaaacfd
+Validated feature HEAD: d97e9bf00a640c812a3a21d0aa3ac450873c057f
+Production/test HEAD: 035df4bf9db4e4b95709e08e515499c3e3565062
+```
+
+Public/service surface:
+
+- `MtnMinecraftContentDependencyDesiredVersion`
+- `MtnMinecraftContentDependencyDesiredState`
+- `MtnMinecraftContentService.composeDependencyInstallPlans(plans)`
+
+Locked composition semantics:
+
+- every install plan represents one direct/root desired version
+- duplicate plan root `version.key` values are rejected
+- plans preserve caller input order
+- desired versions are canonicalized by first-seen `version.key`
+- later same-key occurrences extend ownership without replacing the canonical version object
+- every desired version records immutable direct-root ownership
+- `direct` is derived from desired ownership and never mutates `MtnMinecraftContentVersion.direct`
+- a dependency becomes direct when the same canonical version is also supplied as another root plan
+- empty plan input produces an empty installable desired state
+- all desired-state/result collections are immutable
+
+Desired-state conflict boundary:
+
+- root-local unresolved blockers and conflicts remain in their source install plans
+- `state.conflicts` contains composition-level cross-root conflicts
+- `state.installable` requires every source plan to be installable and `state.conflicts` to be empty
+- cross-root multiple-version conflicts reuse `MtnMinecraftContentDependencyInstallConflictMultipleVersions`
+- cross-root incompatibility conflicts reuse `MtnMinecraftContentDependencyInstallConflictIncompatible`
+- exact incompatibility remains exact-version scoped
+- content-level incompatibility remains logical-content scoped
+- no automatic conflict winner is introduced
+- root-local incompatibility is not duplicated merely by desired-state composition
+
+Shared authority:
+
+- `MtnMinecraftContentDependencyInstallConflictEvaluator` now owns common multiple-version and incompatibility matching
+- the existing single-root install planner and the new desired-state composer both reuse that evaluator
+- provider-specific behavior remains outside generic core
+
+Still deliberately out of scope:
+
+- current installed instance state
+- filesystem/current-file discovery
+- install/remove/replace/disable actions
+- orphan cleanup
+- installed-state reconciliation
+- `versionConstraint` parsing/evaluation
+- automatic conflict winner selection
+- artifact/file selection
+- download/materialization
+- cross-provider association
+- deferred item client-definition/model/texture rendering
+
+Validation on 2026-10-07:
+
+```text
+dart analyze
+Analyzing minecraft_content_service...
+No issues found!
+
+dart test test/content_dependency_desired_state_test.dart
+00:00 +10: All tests passed!
+
+dart test test/content_dependency_install_policy_test.dart
+00:00 +11: All tests passed!
+
+dart test test/content_provider_service_test.dart
+00:00 +22: All tests passed!
+
+dart test
+00:00 +69: All tests passed!
+
+git diff --check main...HEAD
+PASS
+
+git status
+clean
+
+validated feature HEAD
+d97e9bf00a640c812a3a21d0aa3ac450873c057f
+```
+
+No `dart format` was run.
+
+Dedicated handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-07_MINECRAFT_CONTENT_DEPENDENCY_DESIRED_STATE.md
 ```
 
 ## Minecraft content dependency install / conflict policy foundation checkpoint
@@ -2350,11 +2460,18 @@ In particular:
 
 ## Next action
 
-The dependency install / conflict policy foundation is implementation-complete, validated, continuity-closed, merged through PR #39, and recorded in continuity.
+The active content-service checkpoint is:
 
-No content-service implementation checkpoint is currently active or automatically approved.
+```text
+feature/minecraft-content-dependency-desired-state
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+MERGE NOT REQUESTED
+validated feature HEAD: d97e9bf00a640c812a3a21d0aa3ac450873c057f
+```
 
-Installed-state reconciliation and artifact/file selection remain the likely later content-service checkpoints and should be scoped separately before implementation.
+This checkpoint is ready for merge review but merge still requires separate explicit user approval.
+
+Installed-state reconciliation becomes the likely next content-service checkpoint only after this desired-state foundation is merged.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 

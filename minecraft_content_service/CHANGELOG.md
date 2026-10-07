@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.0-dev.12
+
+- Add immutable `MtnMinecraftContentDependencyDesiredVersion` and `MtnMinecraftContentDependencyDesiredState`.
+- Add `MtnMinecraftContentService.composeDependencyInstallPlans()` for deterministic instance-wide composition of multiple direct/root install plans.
+- Canonicalize desired versions by first-seen `version.key` while preserving install-plan input order.
+- Track immutable root ownership for every desired version and derive direct status from root identity without mutating `MtnMinecraftContentVersion.direct`.
+- Promote a dependency to direct state when the same canonical version is also supplied as an install-plan root.
+- Reject duplicate install plans for the same root version key.
+- Preserve invalid/root-local plan blockers in their source plans while keeping desired-state conflicts focused on cross-root interactions.
+- Add cross-root multiple-version conflict detection without automatic winner selection.
+- Add cross-root exact-version and content-level incompatibility evaluation by reusing the shared install conflict evaluator.
+- Refactor install-plan conflict evaluation into one internal evaluator shared by single-root planning and multi-root desired-state composition.
+- Support an empty desired state for future full managed-content removal/reconciliation scenarios.
+- Keep installed/current instance state, uninstall/disable actions, reconciliation, version-constraint evaluation, artifact/file selection, downloads, and materialization out of this checkpoint.
+
 ## 1.0.0-dev.11
 
 - Add immutable `MtnMinecraftContentDependencyInstallRequest` and `MtnMinecraftContentDependencyInstallPlan`.
