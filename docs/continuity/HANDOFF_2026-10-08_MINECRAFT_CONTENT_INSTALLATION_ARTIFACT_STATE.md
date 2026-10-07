@@ -15,7 +15,9 @@ Validated feature HEAD: 0701ee126b37f3f9c2a30f0fbc52f122650f6b4d
 Implementation: COMPLETE
 Validation: COMPLETE
 Continuity: CLOSED
-Merge: APPROVED
+Merge: COMPLETE
+PR: #44
+Merge commit: 4a5457180f87abd805588fa0f8afa5fe1fe595df
 Package version: 1.0.0-dev.16
 ```
 
