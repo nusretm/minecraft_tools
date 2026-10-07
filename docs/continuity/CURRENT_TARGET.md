@@ -2795,124 +2795,80 @@ In particular:
 
 ## Next action
 
-dev.17 merge:
+The active content-service checkpoint is:
 
 ```text
-PR: #45
-merge commit:
-c1d03bf9caad65cae6771c63491eb421fdd1c6bd
-Add content materialization plan foundation
-```
-
-The completed content-service checkpoint is:
-
-```text
-dev.17 — Content Materialization Plan Foundation
-branch: feature/minecraft-content-materialization-plan
-baseline main: 42445d7847af62963afec43b9f18da16337e0b8c
-production/test HEAD: e4c241d83d252ba9ea0ab24184198d63b7faf5a5
-status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
-package: minecraft_content_service 1.0.0-dev.17
+dev.18 — Managed Installation Manifest Persistence Foundation
+branch: feature/minecraft-content-installation-manifest
+baseline main: fc29bda41c9fe659bb789ad7c9e33402afd4aeff
+production/test HEAD: 7aa0555336ab85c011fe7c34c9f0a6f5bb5a1d52
+status: IMPLEMENTED / VALIDATION PENDING
+package: minecraft_content_service 1.0.0-dev.18
 ```
 
 Implemented boundary:
 
 ```text
-ReconciliationPlan
-        +
-DownloadPlan
-        +
-InstallationState
-        +
-caller-provided final relative paths
+MtnMinecraftContentInstallationState
         ↓
-MtnMinecraftContentMaterializationPlan
-        ├─ installs
-        ├─ retains
-        ├─ replacements
-        ├─ removals
-        └─ resultingInstallationState
+schema-versioned portable manifest
+        ├─ relativePath
+        ├─ content snapshot
+        ├─ version snapshot
+        └─ selected fileIndex
+        ↓
+JSON / UTF-8
+        ↓
+restart-safe MtnMinecraftContentInstallationState
 ```
 
 Locked design:
 
-- materialization planning is synchronous, provider-independent, network-free and filesystem-free
-- planning requires a fully downloadable dev.15 download plan
-- planning requires the exact dev.16 installation state whose installed-state view produced reconciliation
-- every canonical download item receives exactly one caller-owned installation-root-relative target
-- target construction reuses dev.16 installation-artifact canonical file/path validation
-- generic core does not choose `mods/`, `resourcepacks/`, or any other destination directory
-- install/retain/replace/remove action lists mirror reconciliation categories and are not filesystem execution order
-- retained actions keep the existing authoritative installed artifact
-- replacements keep both the authoritative current artifact and the new target artifact
-- removals keep the authoritative current artifact
-- resulting installation state is derived in complete desired-state order
-- paths released by replace/remove may be reused by new targets
-- exact collisions among resulting managed artifacts are rejected by dev.16 state invariants
-- path identity remains OS-neutral and case-sensitive; target-OS collision policy is deferred
+- manifest persistence is Pure Dart and contains no `dart:io`
+- the manifest is managed physical-artifact ownership persistence, not `MtnMinecraftContentList` catalog/dependency-graph persistence
+- each managed artifact persists its neutral installation-root-relative path
+- each artifact persists its normalized content and version snapshots
+- the selected canonical file is persisted by index within the version file list rather than by filename
+- decode reconstructs the selected file from `version.files[fileIndex]`, restoring dev.16 canonical object identity
+- embedded version `content` identity must exactly match the embedded content snapshot key
+- schema version, artifact list/object shapes, relativePath and fileIndex are parsed strictly
+- unsupported schema versions and malformed persistence fail fast
+- dev.16 installation artifact/state constructors remain the path-safety and duplicate version/content/path ownership authorities
+- artifact ordering is preserved
+- map, JSON and UTF-8 round trips are supported
+- version dependency records remain serialized snapshot metadata; the installation manifest does not resolve or become authority for the dependency graph
 
 Still out of scope:
 
-- `dart:io` filesystem work
-- download execution
+- filesystem read/write location
+- manifest file naming
+- `dart:io`
+- atomic manifest file publication
+- filesystem discovery
+- byte transfer
 - launcher DownloadJob/DownloadManager adapter
-- staging directories
+- staging
 - hash/size verification
-- target-OS case/canonical collision preflight
+- target-OS path collision policy
+- materialization execution
 - file copy/rename/delete
-- atomic publication
 - rollback/transactions
-- installation-manifest persistence
 - unmanaged/manual file cleanup
 - deferred resource rendering
 
-Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `e4c241d83d252ba9ea0ab24184198d63b7faf5a5`. PR #45 merged at `c1d03bf9caad65cae6771c63491eb421fdd1c6bd`.
-
-Validation:
-
-```text
-dart analyze
-No issues found!
-
-content_materialization_plan_test.dart
-9/9 passed
-
-full dart test
-118/118 passed
-
-git diff --check main...HEAD
-PASS
-
-working tree
-clean
-
-validated feature HEAD:
-e4c241d83d252ba9ea0ab24184198d63b7faf5a5
-```
-
-Earlier focused validation:
-- installation state 8/8
-- download plan 9/9
-- file selection 12/12
-- dependency reconciliation 11/11
+Next required action is authoritative local validation on the feature branch. Do not merge until validation is complete and the user separately approves merge.
 
 Active continuity document:
 
 ```text
-docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_MATERIALIZATION_PLAN.md
-```
-
-Completion handoff:
-
-```text
-docs/continuity/HANDOFF_2026-10-08_MINECRAFT_CONTENT_MATERIALIZATION_PLAN.md
+docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_MANIFEST.md
 ```
 
 Previous completed checkpoint:
 
 ```text
-dev.16 — Managed Installation Artifact State Foundation
-PR: #44
-merge commit: 4a5457180f87abd805588fa0f8afa5fe1fe595df
-post-merge main: 42445d7847af62963afec43b9f18da16337e0b8c
+dev.17 — Content Materialization Plan Foundation
+PR: #45
+merge commit: c1d03bf9caad65cae6771c63491eb421fdd1c6bd
+post-merge main: fc29bda41c9fe659bb789ad7c9e33402afd4aeff
 ```
