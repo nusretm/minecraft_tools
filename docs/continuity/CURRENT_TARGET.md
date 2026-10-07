@@ -6,8 +6,8 @@ Last updated: 2026-10-07
 
 - Repository: `nusretm/minecraft_tools`
 - Local path: `D:\\development\\cross-platform\\minecraft_tools`
-- Current package: `minecraft_info_provider/`
-- `hypixel_api/` is unrelated and must not be modified for these checkpoints.
+- Current package: `minecraft_content_service/`
+- `minecraft_info_provider/` and `hypixel_api/` are sibling packages and were not modified by the current content-service checkpoint.
 - `docs/WORKING_RULES.md` is authoritative.
 
 ## Repository state
@@ -16,22 +16,128 @@ Merged baseline:
 
 ```text
 main
-6021c650ff72cdf10f8e60ef78ef60ee9ee12589
-Add mod language translation foundation
+7d3fceca467d941f90b5c4d44bd8bdbf33f23096
+Merge remote-tracking branch 'origin/docs/item-client-resource-resolution-plan'
 ```
 
 Current checkpoint branch:
 
 ```text
-feature/item-name-resolution-foundation
-IMPLEMENTED / VALIDATED / REAL PROFILE POSITIVE SMOKE PASSED
+feature/minecraft-content-model-foundation
+IMPLEMENTED / VALIDATED
+MERGE NOT REQUESTED
+```
+
+Current branch production HEAD before continuity closeout:
+
+```text
+ed430670ba5b1ba4c27cb204b8aba5680a0df288
+Use super parameters in content specializations
 ```
 
 Package version:
 
 ```text
-1.0.0-dev.32
+minecraft_content_service
+1.0.0-dev.1
 ```
+
+## Minecraft content model foundation checkpoint
+
+```text
+Branch: feature/minecraft-content-model-foundation
+Status: IMPLEMENTED / VALIDATED
+Package: minecraft_content_service/
+```
+
+Purpose:
+
+- provide a reusable Pure Dart content-domain foundation independent from Modrinth, CurseForge and `minecraft_info_provider`
+- model mods, modpacks, resource packs, shader packs and data packs through one shared content family
+- preserve provider-specific metadata without forcing provider-specific fields into the generic domain
+- support persistence without recursively serializing the runtime object graph
+
+Locked public/model architecture:
+
+- `MtnMinecraftContentModel` is the common serialization/parsing base
+- one serialization authority: `toMap()`
+- common `toJson()`, UTF-8 `encode()`, decode/parsing helpers and runtime-type `toString()`
+- no database-style `recId` / `remoteRecId`
+- `MtnMinecraftContent` remains abstract and exposes concrete Mod / ModPack / ResourcePack / ShaderPack / DataPack subclasses
+- inheritance and `MtnMinecraftContentType` coexist; concrete subclasses fix their own type
+- one logical content may preserve metadata from multiple providers through `MtnMinecraftContentProviderMetadata`
+- provider identity is a stable string rather than a closed provider enum
+- provider IDs are stored as strings so Modrinth and CurseForge identities fit the same model
+- `MtnMinecraftContentVersion` owns release/version compatibility metadata
+- `modLoaders` is required and non-empty
+- mod versions may expose multiple loaders such as Fabric + Quilt or Forge + NeoForge
+- non-mod content versions must use only `[vanilla]`
+- `vanilla` cannot be combined with another loader
+- `content.version` uses an explicit selection when present, otherwise `versions.last`
+- version strings remain strings; no generic SemVer assumption is imposed
+- `MtnMinecraftContentFile` models physical artifacts separately from logical versions
+- file hash algorithms remain open strings
+- CurseForge fingerprint/module metadata has explicit fields and is not misrepresented as a normal hash
+- dependency declarations and resolved dependency targets live in `MtnMinecraftContentDependency`
+- `included` / `embedded` ownership is represented separately by `MtnMinecraftContentRelation`
+- relations are version-to-version, so the same source version can belong to multiple owner versions
+- `MtnMinecraftContentList` is the graph/list authority
+- the flat `versions` view is derived from content-owned version collections rather than maintained as a second mutable authority
+- duplicate local keys and duplicate provider canonical identities are rejected
+- persistence writes stable content/version keys instead of recursively embedding circular object references
+- load reconstructs dependency and relation object references without network access
+- schema version starts at 1
+
+Provider compatibility represented in the generic model includes:
+
+- Modrinth/CurseForge project metadata through normalized content fields plus provider metadata
+- release / beta / alpha version types
+- Minecraft game-version lists
+- loader compatibility
+- version environment metadata where available
+- Modrinth-style multi-file versions
+- CurseForge-style file/version identity, fingerprints and modules
+- required / optional / incompatible / embedded / included / tool dependency semantics
+- authors, categories, links, gallery/images, donations and license metadata
+
+Deliberately not implemented in this checkpoint:
+
+- provider HTTP clients
+- Modrinth search/project/version adapters
+- CurseForge search/project/file adapters
+- provider registry/service orchestration
+- download/materialization
+- dependency constraint solving
+- update/remove orphan reconciliation
+- cross-provider heuristic deduplication
+- `minecraft_info_provider` integration
+- deferred item resource/rendering implementation
+
+Final local validation on 2026-10-07:
+
+```text
+dart analyze
+No issues found!
+
+dart test
+00:00 +7: All tests passed!
+
+git diff --check main...HEAD
+PASS
+
+git status
+clean
+
+validated production HEAD
+ed430670ba5b1ba4c27cb204b8aba5680a0df288
+```
+
+Dedicated handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-07_MINECRAFT_CONTENT_MODEL_FOUNDATION.md
+```
+
 
 Working milestone state:
 
@@ -1216,25 +1322,33 @@ In particular:
 
 ## Next action
 
-There is no automatically selected next implementation checkpoint in `minecraft_tools`.
+The content model foundation is complete and validated. No next implementation checkpoint is automatically approved.
 
-The item client-definition/model/texture resource foundation has already been designed and recorded, but is intentionally deferred:
+Natural continuation for `minecraft_content_service/`:
+
+```text
+MtnMinecraftContentService
+→ explicit provider registry
+→ MtnMinecraftContentProvider base contract
+→ Modrinth provider adapter
+→ CurseForge provider adapter
+→ provider-independent search/project/version mapping
+```
+
+That continuation must preserve the current rules:
+
+- providers do not self-register
+- provider identity remains extensible
+- provider-specific metadata is preserved without polluting generic core models
+- do not deduplicate Modrinth and CurseForge projects by name/slug heuristics
+- canonical provider IDs remain authoritative inside each provider
+- HTTP/provider work stays independent from `minecraft_info_provider/`
+- dependency solving and materialization remain separate later checkpoints unless explicitly approved
+
+The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
 ```text
 docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
 ```
 
-Current cross-project execution order:
-
-```text
-1. Continue MtnLauncher.
-2. Build the launcher Modrinth API foundation.
-3. Build the launcher CurseForge API foundation.
-4. Let the resulting launcher UI/presentation work surface the item-resource requirement.
-5. Return to minecraft_tools.
-6. Re-audit the deferred plan against the then-current repository state.
-7. Obtain explicit implementation approval.
-8. Execute the resource foundation in small checkpoints, with a targeted focused implementation window of roughly 1-2 days if the recorded assumptions still hold.
-```
-
-Do not start the deferred resource work merely because it is documented.
+Do not start either a new content-service checkpoint or the deferred resource work without explicit user approval.
