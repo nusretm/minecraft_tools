@@ -19,8 +19,7 @@ class MtnMinecraftContentService {
     return providers.requireFromName(providerName).getContent(id);
   }
 
-  Future<MtnMinecraftContentVersionListResult> getVersions(String providerName, String contentId, MtnMinecraftContentVersionListRequest request) {
-    if (contentId.isEmpty) throw ArgumentError.value(contentId, 'contentId', 'Content id cannot be empty.');
-    return providers.requireFromName(providerName).getVersions(contentId, request);
+  Future<MtnMinecraftContentVersionListResult> getVersions(String providerName, MtnMinecraftContent content, MtnMinecraftContentVersionListRequest request) {
+    return providers.requireFromName(providerName).getVersions(content, request);
   }
 }
