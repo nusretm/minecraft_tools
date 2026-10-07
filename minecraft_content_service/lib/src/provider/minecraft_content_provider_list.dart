@@ -13,6 +13,8 @@ class MtnMinecraftContentProviderList {
 
   List<MtnMinecraftContentProvider> get items => List<MtnMinecraftContentProvider>.unmodifiable(_providers);
 
+  List<MtnMinecraftContentProvider> get readyItems => List<MtnMinecraftContentProvider>.unmodifiable(_providers.where((provider) => provider.ready));
+
   int get length => _providers.length;
 
   bool get isEmpty => _providers.isEmpty;
@@ -41,5 +43,9 @@ class MtnMinecraftContentProviderList {
     final provider = getFromName(name);
     if (provider == null) throw StateError('Minecraft content provider is not registered: $name');
     return provider;
+  }
+
+  MtnMinecraftContentProvider requireReadyFromName(String name) {
+    return requireFromName(name).requireReady();
   }
 }
