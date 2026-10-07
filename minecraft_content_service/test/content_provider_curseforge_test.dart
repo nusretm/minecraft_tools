@@ -191,6 +191,14 @@ void main() {
       );
       expect(fileRequest.url.queryParameters.containsKey('modLoaderType'), isFalse);
       expect(result.versions.single.modLoaders, <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.vanilla]);
+
+      await expectLater(
+        provider.getVersions(
+          content,
+          MtnMinecraftContentVersionListRequest(modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric]),
+        ),
+        throwsArgumentError,
+      );
     });
 
     test('rejects unsupported request shapes instead of lying about pagination', () async {
@@ -233,6 +241,39 @@ void main() {
           ),
         ),
         throwsArgumentError,
+      );
+      await expectLater(
+        provider.search(
+          MtnMinecraftContentSearchRequest(
+            types: <MtnMinecraftContentType>[MtnMinecraftContentType.resourcePack],
+            modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+          ),
+        ),
+        throwsArgumentError,
+      );
+    });
+
+
+    test('rejects incomplete version traversal beyond the CurseForge ten-thousand result boundary', () async {
+      final client = MockClient((request) async {
+        return _jsonResponse(<String, dynamic>{
+          'data': <Map<String, dynamic>>[_fileJson(id: 9001, releaseType: 1, displayName: 'Skyblocker 1.0', date: '2026-07-01T00:00:00Z')],
+          'pagination': <String, dynamic>{'index': 0, 'pageSize': 50, 'resultCount': 1, 'totalCount': 10001},
+        });
+      });
+
+      final provider = MtnMinecraftContentProviderCurseForge(apiKey: 'secret-key', client: client);
+      final content = MtnMinecraftContentMod(
+        key: 'curseforge:12345',
+        name: 'Skyblocker',
+        providers: <MtnMinecraftContentProviderMetadata>[
+          MtnMinecraftContentProviderMetadata(provider: MtnMinecraftContentProviderCurseForge.providerName, id: '12345'),
+        ],
+      );
+
+      await expectLater(
+        provider.getVersions(content, MtnMinecraftContentVersionListRequest()),
+        throwsStateError,
       );
     });
 
