@@ -58,6 +58,7 @@ void main() {
       expect(searchRequest.url.queryParameters['index'], '10');
       expect(searchRequest.url.queryParameters['pageSize'], '25');
 
+      expect(result.provider, MtnMinecraftContentProviderCurseForge.providerName);
       expect(result.total, 30);
       expect(result.hasMore, isTrue);
       expect(result.contents.single, isA<MtnMinecraftContentMod>());
