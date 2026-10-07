@@ -63,8 +63,12 @@ Current foundation includes:
 - provider-owned source resolution for files whose normalized download URL is absent
 - CurseForge download-URL lookup without leaking CurseForge IDs, endpoints, or authentication into generic planning
 - aggregate source-resolution issues with complete-plan blocking semantics through `downloadable`
+- immutable managed installation artifacts that bind an installed version to its exact selected file and caller-owned relative path
+- immutable managed installation state with duplicate version/content/path ownership protection
+- an installation-state view over the existing dependency installed-state model for reconciliation reuse
+- neutral relative-path safety validation without hardcoding `mods/`, resource-pack directories, absolute paths, or target-OS case rules
 
-Version-constraint interpretation, byte transfer, launcher download-manager adaptation, filesystem execution, integrity verification, and update/materialization remain separate later checkpoints.
+Version-constraint interpretation, installation-manifest persistence, byte transfer, launcher download-manager adaptation, filesystem execution, integrity verification, and update/materialization remain separate later checkpoints.
 
 
 ## CLI example
