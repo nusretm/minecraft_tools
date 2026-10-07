@@ -168,11 +168,147 @@ production/test HEAD: 035df4bf9db4e4b95709e08e515499c3e3565062
 merge commit: 322bdf08325ae8a4c714bd9d84b2c127c27ab24b
 ```
 
+Current active checkpoint:
+
+```text
+feature/minecraft-content-installed-state-reconciliation
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+MERGE NOT REQUESTED
+baseline main: d6d79f3dcdaf2fa92104871fbde554c65682cc98
+validated feature HEAD: de8b978d4c3a56ebb0a9ef01e3e59d12cae4aaeb
+production/test HEAD: 6df0ce3a1f509a18e7b65d43f97547f0859c63bc
+```
+
 Package version:
 
 ```text
 minecraft_content_service
-1.0.0-dev.12
+1.0.0-dev.13
+```
+
+## Minecraft content installed-state reconciliation foundation checkpoint
+
+```text
+Branch: feature/minecraft-content-installed-state-reconciliation
+Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+Package: minecraft_content_service/
+Baseline main: d6d79f3dcdaf2fa92104871fbde554c65682cc98
+Validated feature HEAD: de8b978d4c3a56ebb0a9ef01e3e59d12cae4aaeb
+Production/test HEAD: 6df0ce3a1f509a18e7b65d43f97547f0859c63bc
+```
+
+Public/service surface:
+
+- `MtnMinecraftContentDependencyInstalledState`
+- `MtnMinecraftContentDependencyReconciliationReplacement`
+- `MtnMinecraftContentDependencyReconciliationPlan`
+- `MtnMinecraftContentService.reconcileDependencyState(current, desired)`
+
+Locked installed-state semantics:
+
+- current state contains only versions known to be managed by `minecraft_content_service`
+- installed `version.key` values must be unique
+- installed logical `content.key` values must be unique
+- current `MtnMinecraftContentVersion.direct` is not keep/remove authority
+- unknown/manual filesystem content is outside this model
+- `MtnMinecraftContentList` is not automatically interpreted as installed state
+- no content-list schema change or installed-state adapter is introduced
+
+Locked reconciliation semantics:
+
+```text
+desired content absent from current
+  -> install
+
+same logical content + same version.key
+  -> retain
+
+same logical content + different version.key
+  -> replace
+
+current logical content absent from desired
+  -> remove
+```
+
+- matching uses logical `content.key`
+- exact retained identity uses `version.key`
+- replacement is neutral and covers upgrade/downgrade equally
+- desired ownership/direct metadata changes alone do not force replacement
+- desired state is complete instance-wide authority
+- non-installable desired state throws `StateError`
+- same global `version.key` pointing to different content across states throws `StateError`
+- manually malformed installable desired state with duplicate logical content is rejected
+- installs/retains/replacements preserve desired-state order
+- removals preserve current-state order
+- result lists are decisions, not execution order
+- reconciliation does not mutate current or desired models
+
+Reconciliation-plan invariants:
+
+- desired action categories do not overlap
+- current action categories do not overlap
+- desired actions cover the full desired state
+- current actions cover the full managed installed state
+- replacement requires same logical content and a different version key
+- action collections are immutable
+- `changesRequired` ignores pure retains and is true only for install/replace/remove work
+
+Still deliberately out of scope:
+
+- filesystem discovery
+- unknown/manual file cleanup
+- unmanaged content deletion
+- `MtnMinecraftContentList` installed-state adapter
+- schema migration
+- artifact/file selection
+- file/path planning
+- download/materialization
+- real execution ordering
+- transactions / backup / rollback
+- enable/disable state
+- `versionConstraint` interpretation
+- automatic conflict winner selection
+- cross-provider association
+- deferred item client-definition/model/texture rendering
+
+Validation on 2026-10-07:
+
+```text
+dart analyze
+Analyzing minecraft_content_service...
+No issues found!
+
+dart test test/content_dependency_reconciliation_test.dart
+00:00 +11: All tests passed!
+
+dart test test/content_dependency_desired_state_test.dart
+00:00 +10: All tests passed!
+
+dart test test/content_dependency_install_policy_test.dart
+00:00 +11: All tests passed!
+
+dart test test/content_provider_service_test.dart
+00:00 +22: All tests passed!
+
+dart test
+00:00 +80: All tests passed!
+
+git diff --check main...HEAD
+PASS
+
+git status
+clean
+
+validated feature HEAD
+de8b978d4c3a56ebb0a9ef01e3e59d12cae4aaeb
+```
+
+No `dart format` was run.
+
+Dedicated handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-07_MINECRAFT_CONTENT_INSTALLED_STATE_RECONCILIATION.md
 ```
 
 ## Minecraft content dependency desired state foundation checkpoint
@@ -2476,11 +2612,18 @@ In particular:
 
 ## Next action
 
-The dependency desired-state foundation is implementation-complete, validated, continuity-closed, merged through PR #40, and recorded in continuity.
+The active content-service checkpoint is:
 
-No content-service implementation checkpoint is currently active or automatically approved.
+```text
+feature/minecraft-content-installed-state-reconciliation
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+MERGE NOT REQUESTED
+validated feature HEAD: de8b978d4c3a56ebb0a9ef01e3e59d12cae4aaeb
+```
 
-Installed-state reconciliation is now the natural next content-service checkpoint and should be scoped separately before implementation.
+This checkpoint is ready for merge review but merge still requires separate explicit user approval.
+
+Artifact/file selection becomes the likely next content-service checkpoint only after this reconciliation foundation is merged.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
@@ -2488,4 +2631,4 @@ The item client-definition/model/texture resource foundation remains separately 
 docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
 ```
 
-Do not start installed-state reconciliation, artifact/download work, or deferred resource rendering without explicit user approval.
+Do not start artifact/download work, execution/materialization, or deferred resource rendering without explicit user approval.

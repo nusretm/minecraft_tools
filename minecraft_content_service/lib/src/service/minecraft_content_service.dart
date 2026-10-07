@@ -7,6 +7,8 @@ import 'minecraft_content_dependency_desired_state_composer.dart';
 import 'minecraft_content_dependency_graph.dart';
 import 'minecraft_content_dependency_install_plan.dart';
 import 'minecraft_content_dependency_install_planner.dart';
+import 'minecraft_content_dependency_reconciler.dart';
+import 'minecraft_content_dependency_reconciliation.dart';
 
 class MtnMinecraftContentService {
   MtnMinecraftContentService({
@@ -222,6 +224,13 @@ class MtnMinecraftContentService {
     Iterable<MtnMinecraftContentDependencyInstallPlan> plans,
   ) {
     return const MtnMinecraftContentDependencyDesiredStateComposer().compose(plans);
+  }
+
+  MtnMinecraftContentDependencyReconciliationPlan reconcileDependencyState(
+    MtnMinecraftContentDependencyInstalledState current,
+    MtnMinecraftContentDependencyDesiredState desired,
+  ) {
+    return const MtnMinecraftContentDependencyReconciler().reconcile(current, desired);
   }
 
   MtnMinecraftContentDependencyInstallPlan planDependencyInstall(

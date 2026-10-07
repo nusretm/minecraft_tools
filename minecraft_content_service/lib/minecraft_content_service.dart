@@ -9,4 +9,5 @@ export 'src/provider/modrinth/minecraft_content_provider_modrinth.dart';
 export 'src/service/minecraft_content_dependency_desired_state.dart';
 export 'src/service/minecraft_content_dependency_graph.dart';
 export 'src/service/minecraft_content_dependency_install_plan.dart';
+export 'src/service/minecraft_content_dependency_reconciliation.dart';
 export 'src/service/minecraft_content_service.dart';

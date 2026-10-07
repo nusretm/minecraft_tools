@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.0.0-dev.13
+
+- Add immutable `MtnMinecraftContentDependencyInstalledState` for service-managed current versions.
+- Reject duplicate installed `version.key` identities and multiple installed versions of the same logical `content.key`.
+- Add `MtnMinecraftContentDependencyReconciliationReplacement` and immutable `MtnMinecraftContentDependencyReconciliationPlan`.
+- Add `MtnMinecraftContentService.reconcileDependencyState()` as a synchronous, provider-independent, network-free, filesystem-free reconciliation layer.
+- Classify desired/current differences as install, retain, replace, and remove without performing filesystem actions.
+- Match current and desired state by logical `content.key`; retain only exact matching `version.key`, otherwise replace.
+- Treat both upgrades and downgrades as neutral replacements without generic version-string ordering.
+- Preserve desired ownership/direct metadata on install/retain/replace results while ignoring mutable current `version.direct` as reconciliation authority.
+- Reject reconciliation when the desired state is not installable.
+- Reject cross-state graph corruption where the same global `version.key` identifies different logical content.
+- Preserve deterministic desired order for install/retain/replace classifications and current order for removals.
+- Support empty current state and empty desired state, including full managed-content removal.
+- Keep `MtnMinecraftContentList` schema adaptation, filesystem discovery, unknown/manual file cleanup, artifact/file selection, downloads, execution ordering, rollback, and materialization out of this checkpoint.
+
 ## 1.0.0-dev.12
 
 - Add immutable `MtnMinecraftContentDependencyDesiredVersion` and `MtnMinecraftContentDependencyDesiredState`.
