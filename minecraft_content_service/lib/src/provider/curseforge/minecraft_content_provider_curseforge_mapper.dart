@@ -34,8 +34,17 @@ class MtnMinecraftContentProviderCurseForgeMapper {
     if (request.offset + request.limit > 10000) throw ArgumentError.value(request.offset, 'request.offset', 'CurseForge requires offset + limit to be at most 10000.');
     if (request.gameVersions.length > 4) throw ArgumentError.value(request.gameVersions, 'request.gameVersions', 'CurseForge search accepts at most four game versions.');
     if (request.modLoaders.length > 1) throw ArgumentError.value(request.modLoaders, 'request.modLoaders', 'CurseForge search currently supports one mod loader filter at a time.');
-    if (request.modLoaders.isNotEmpty && request.gameVersions.isEmpty) throw ArgumentError.value(request.modLoaders, 'request.modLoaders', 'CurseForge loader search requires at least one game version.');
-    if (request.modLoaders.isNotEmpty) _loaderWireValue(request.modLoaders.single);
+    if (request.modLoaders.isEmpty) return;
+
+    final contentType = request.types.single;
+    final loader = request.modLoaders.single;
+    if (contentType != MtnMinecraftContentType.mod) {
+      if (loader != MtnMinecraftModLoaderType.vanilla) throw ArgumentError.value(loader, 'request.modLoaders', 'Non-mod content can only use the generic vanilla loader.');
+      return;
+    }
+
+    if (request.gameVersions.isEmpty) throw ArgumentError.value(request.modLoaders, 'request.modLoaders', 'CurseForge loader search requires at least one game version.');
+    _loaderWireValue(loader);
   }
 
   static Map<String, String> searchQuery(MtnMinecraftContentSearchRequest request, int gameId, int classId) {
@@ -57,7 +66,7 @@ class MtnMinecraftContentProviderCurseForgeMapper {
       query['gameVersions'] = jsonEncode(request.gameVersions);
     }
 
-    if (request.modLoaders.length == 1) {
+    if (request.modLoaders.length == 1 && request.types.single == MtnMinecraftContentType.mod) {
       query['modLoaderType'] = _loaderWireValue(request.modLoaders.single).toString();
     }
 
@@ -224,7 +233,11 @@ class MtnMinecraftContentProviderCurseForgeMapper {
     if (request.modLoaders.isEmpty) return;
 
     final loader = request.modLoaders.single;
-    if (content is! MtnMinecraftContentMod && loader == MtnMinecraftModLoaderType.vanilla) return;
+    if (content is! MtnMinecraftContentMod) {
+      if (loader != MtnMinecraftModLoaderType.vanilla) throw ArgumentError.value(loader, 'request.modLoaders', 'Non-mod content can only use the generic vanilla loader.');
+      return;
+    }
+
     _loaderWireValue(loader);
   }
 
