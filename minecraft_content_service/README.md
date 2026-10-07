@@ -48,8 +48,13 @@ Current foundation includes:
 - canonical desired versions by `version.key` with immutable direct-root ownership
 - dependency-to-direct promotion without mutating `MtnMinecraftContentVersion.direct`
 - cross-root multiple-version and incompatibility conflict detection while preserving root-local blockers in their source plans
+- immutable managed installed-state modeling through `MtnMinecraftContentDependencyInstalledState`
+- pure installed-state reconciliation through `reconcileDependencyState()`
+- deterministic install / retain / replace / remove classification by logical content identity
+- replacement semantics that cover both upgrades and downgrades without generic version ordering
+- desired-state authority over ownership/direct metadata without mutating persisted version flags
 
-Version-constraint interpretation, installed-state reconciliation, automatic conflict winner selection, artifact selection/download, and update/materialization remain separate later checkpoints.
+Version-constraint interpretation, artifact selection/download, filesystem execution, and update/materialization remain separate later checkpoints.
 
 
 ## CLI example
