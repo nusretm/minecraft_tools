@@ -34,7 +34,7 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
 
   @override
   Future<MtnMinecraftContentSearchResult> search(MtnMinecraftContentSearchRequest request) async {
-    if (request.types.length != 1) throw ArgumentError.value(request.types, 'request.types', 'CurseForge search requires exactly one content type.');
+    MtnMinecraftContentProviderCurseForgeMapper.validateSearchRequest(request);
 
     await _ensureContentClasses();
     final contentType = request.types.single;
