@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0-dev.16
+
+- Add immutable `MtnMinecraftContentInstallationArtifact` and `MtnMinecraftContentInstallationState` as the managed physical-artifact ownership foundation.
+- Bind each managed artifact to the exact canonical normalized file instance owned by its installed version.
+- Store only a caller-owned installation-root-relative neutral path; do not persist or infer absolute filesystem paths.
+- Reject empty, absolute, Windows-drive-prefixed, backslash-separated, traversal, empty-segment, and null-character paths.
+- Reject duplicate installed version keys, duplicate logical-content ownership, and duplicate exact relative artifact paths.
+- Keep relative-path collision semantics OS-neutral; target-platform case-insensitive collision policy remains a later materialization concern.
+- Expose the existing `MtnMinecraftContentDependencyInstalledState` as an immutable version view without rewriting reconciliation.
+- Keep filesystem discovery, path existence checks, manifest serialization, downloads, staging, verification, publication, removal execution, rollback, and materialization out of this checkpoint.
+
 ## 1.0.0-dev.15
 
 - Add immutable batch-oriented `MtnMinecraftContentDownloadPlan` and `MtnMinecraftContentDownloadItem`.
