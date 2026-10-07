@@ -2795,14 +2795,23 @@ In particular:
 
 ## Next action
 
-The active content-service checkpoint is:
+dev.15 merge:
+
+```text
+PR: #43
+merge commit:
+d1c19878442e07982db3ecaedcb827cc3139e001
+Add content batch download plan foundation
+```
+
+The completed content-service checkpoint is:
 
 ```text
 dev.15 — Batch Download Plan / Source Resolution Foundation
 branch: feature/minecraft-content-download-plan
 baseline main: 8e227cf7e33ac968e9189ad4babbc1483cfc53f3
 implementation HEAD: 245315c3dd980adc5f4e6750204e0b018222d01f
-status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
 package: minecraft_content_service 1.0.0-dev.15
 ```
 
@@ -2837,7 +2846,7 @@ Still out of scope:
 - rollback / transactions
 - deferred resource rendering
 
-Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `4c1113af904999c15e7f23328030a80b575c9958`. Production/test HEAD remains `245315c3dd980adc5f4e6750204e0b018222d01f`; subsequent commits before merge are continuity-only. Merge has been separately approved by the user.
+Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `4c1113af904999c15e7f23328030a80b575c9958`. Production/test HEAD remains `245315c3dd980adc5f4e6750204e0b018222d01f`; subsequent pre-merge commits were continuity-only. PR #43 merged at `d1c19878442e07982db3ecaedcb827cc3139e001`.
 
 Validation:
 
