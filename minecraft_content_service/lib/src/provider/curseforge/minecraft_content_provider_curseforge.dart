@@ -77,6 +77,31 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
   }
 
   @override
+  Future<MtnMinecraftContentVersion> getVersion(String id) async {
+    requireReady();
+
+    final fileId = int.tryParse(id.trim());
+    if (fileId == null || fileId <= 0) throw ArgumentError.value(id, 'id', 'CurseForge version/file id must be a positive integer.');
+
+    final envelope = await _postEnvelope(
+      baseUri.resolve('v1/mods/files'),
+      <String, dynamic>{'fileIds': <int>[fileId]},
+    );
+    final files = MtnMinecraftContentProviderCurseForgeMapper.dataList(envelope);
+    if (files.length != 1) throw FormatException('CurseForge exact version lookup expected one file for id $fileId but received ${files.length}.');
+
+    final file = files.single;
+    final returnedFileId = MtnMinecraftContentModel.intFromMap(file['id'], fallback: -1);
+    if (returnedFileId != fileId) throw FormatException('CurseForge exact version lookup returned file $returnedFileId instead of $fileId.');
+
+    final modId = MtnMinecraftContentModel.intFromMap(file['modId'], fallback: -1);
+    if (modId <= 0) throw FormatException('CurseForge file $fileId does not contain a valid owning mod id.');
+
+    final content = await getContent(modId.toString());
+    return MtnMinecraftContentProviderCurseForgeMapper.version(name, content, file);
+  }
+
+  @override
   Future<MtnMinecraftContentVersionListResult> getVersions(MtnMinecraftContent content, MtnMinecraftContentVersionListRequest request) async {
     requireReady();
 
@@ -126,7 +151,35 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
     _contentTypesByClassId = maps.$2;
   }
 
-  Future<Map<String, dynamic>> _getEnvelope(Uri uri) async {
+  Future<Map<String, dynamic>> _getEnvelope(Uri uri) {
+    return _requestEnvelope(
+      uri,
+      (apiKey) => _client.get(
+        uri,
+        headers: <String, String>{
+          'Accept': 'application/json',
+          'x-api-key': apiKey,
+        },
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> _postEnvelope(Uri uri, Map<String, dynamic> body) {
+    return _requestEnvelope(
+      uri,
+      (apiKey) => _client.post(
+        uri,
+        headers: <String, String>{
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+        },
+        body: jsonEncode(body),
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> _requestEnvelope(Uri uri, Future<http.Response> Function(String apiKey) request) async {
     final response = await runRequest(() async {
       var retriedAfterRateLimit = false;
 
@@ -134,13 +187,7 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
         final apiKey = _apiKey;
         if (apiKey == null) throw MtnMinecraftContentProviderNotReadyException(providerName: name);
 
-        final response = await _client.get(
-          uri,
-          headers: <String, String>{
-            'Accept': 'application/json',
-            'x-api-key': apiKey,
-          },
-        );
+        final response = await request(apiKey);
 
         if (response.statusCode != 429 || retriedAfterRateLimit) return response;
 
