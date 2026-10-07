@@ -91,6 +91,112 @@ void main() {
       expect(versionsResult.versions.single, same(version));
       expect(provider.lastVersionsContent, same(content));
       expect(provider.lastVersionsRequest, same(versionsRequest));
+
+      expect(await service.getVersion('provider-a', 'remote-version-id'), same(version));
+      expect(provider.lastVersionId, 'remote-version-id');
+    });
+
+    test('resolveDependency resolves exact version identity before content-only identity and does not guess providers', () async {
+      final content = MtnMinecraftContentMod(
+        key: 'provider-a:content-id',
+        name: 'Dependency Content',
+        providers: <MtnMinecraftContentProviderMetadata>[
+          MtnMinecraftContentProviderMetadata(provider: 'provider-a', id: 'content-id'),
+        ],
+      );
+      final version = MtnMinecraftContentVersion(
+        key: 'provider-a:version-id',
+        content: content,
+        name: 'Dependency Version',
+        version: '1.0.0',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+      );
+      final provider = _FakeContentProvider(name: 'provider-a', content: content, versions: <MtnMinecraftContentVersion>[version]);
+      final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]);
+
+      final exact = await service.resolveDependency(
+        MtnMinecraftContentDependency(
+          type: MtnMinecraftContentDependencyType.required,
+          provider: 'provider-a',
+          providerContentId: 'content-id',
+          providerVersionId: 'version-id',
+        ),
+      );
+
+      expect(exact.content, same(content));
+      expect(exact.version, same(version));
+      expect(exact.contentResolved, isTrue);
+      expect(exact.versionResolved, isTrue);
+      expect(provider.lastVersionId, 'version-id');
+      expect(provider.getVersionCount, 1);
+
+      final contentOnly = await service.resolveDependency(
+        MtnMinecraftContentDependency(
+          type: MtnMinecraftContentDependencyType.required,
+          provider: 'provider-a',
+          providerContentId: 'content-id',
+        ),
+      );
+
+      expect(contentOnly.content, same(content));
+      expect(contentOnly.version, isNull);
+      expect(provider.lastContentId, 'content-id');
+
+      final noProvider = await service.resolveDependency(
+        MtnMinecraftContentDependency(
+          type: MtnMinecraftContentDependencyType.required,
+          fileName: 'dependency.jar',
+        ),
+      );
+
+      expect(noProvider.contentResolved, isFalse);
+      expect(noProvider.versionResolved, isFalse);
+      expect(provider.getVersionCount, 1);
+    });
+
+    test('resolveDependency reuses already resolved versions without provider dispatch and rejects content identity mismatch', () async {
+      final content = MtnMinecraftContentMod(
+        key: 'provider-a:content-id',
+        name: 'Dependency Content',
+        providers: <MtnMinecraftContentProviderMetadata>[
+          MtnMinecraftContentProviderMetadata(provider: 'provider-a', id: 'content-id'),
+        ],
+      );
+      final version = MtnMinecraftContentVersion(
+        key: 'provider-a:version-id',
+        content: content,
+        name: 'Dependency Version',
+        version: '1.0.0',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+      );
+      final provider = _FakeContentProvider(name: 'provider-a', content: content, versions: <MtnMinecraftContentVersion>[version]);
+      final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]);
+
+      final alreadyResolved = await service.resolveDependency(
+        MtnMinecraftContentDependency(
+          type: MtnMinecraftContentDependencyType.required,
+          content: content,
+          version: version,
+        ),
+      );
+
+      expect(alreadyResolved.content, same(content));
+      expect(alreadyResolved.version, same(version));
+      expect(provider.getVersionCount, 0);
+
+      await expectLater(
+        service.resolveDependency(
+          MtnMinecraftContentDependency(
+            type: MtnMinecraftContentDependencyType.required,
+            provider: 'provider-a',
+            providerContentId: 'different-content-id',
+            providerVersionId: 'version-id',
+          ),
+        ),
+        throwsA(isA<FormatException>()),
+      );
     });
 
     test('searchAll queries only ready providers and preserves registration order without deduplication', () async {
@@ -158,6 +264,10 @@ void main() {
         () => service.getVersions('missing-provider', MtnMinecraftContentMod(key: 'content-a', name: 'Content A'), MtnMinecraftContentVersionListRequest()),
         throwsStateError,
       );
+      expect(
+        () => service.getVersion('missing-provider', 'version-id'),
+        throwsStateError,
+      );
     });
 
     test('rejects empty remote content ids', () {
@@ -166,6 +276,7 @@ void main() {
       final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]);
 
       expect(() => service.getContent('provider-a', ''), throwsArgumentError);
+      expect(() => service.getVersion('provider-a', ''), throwsArgumentError);
     });
   });
 
@@ -260,8 +371,10 @@ class _FakeContentProvider extends MtnMinecraftContentProvider {
   bool ready;
 
   int searchCount = 0;
+  int getVersionCount = 0;
   MtnMinecraftContentSearchRequest? lastSearchRequest;
   String? lastContentId;
+  String? lastVersionId;
   MtnMinecraftContent? lastVersionsContent;
   MtnMinecraftContentVersionListRequest? lastVersionsRequest;
 
@@ -291,6 +404,14 @@ class _FakeContentProvider extends MtnMinecraftContentProvider {
   Future<MtnMinecraftContent> getContent(String id) async {
     lastContentId = id;
     return content;
+  }
+
+  @override
+  Future<MtnMinecraftContentVersion> getVersion(String id) async {
+    getVersionCount++;
+    lastVersionId = id;
+    if (versions.isEmpty) throw StateError('Fake provider has no versions.');
+    return versions.single;
   }
 
   @override
