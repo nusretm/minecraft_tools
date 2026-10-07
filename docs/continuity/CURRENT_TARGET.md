@@ -16,32 +16,137 @@ Merged baseline:
 
 ```text
 main
-d3e902633f34e1d56ccf70925b3828d2c6879851
-Merge pull request #30 from nusretm/feature/minecraft-content-provider-modrinth-foundation
+e1dc811ed85681f766d2711ac546b8ffa4a1b7e3
+Merge pull request #31 from nusretm/feature/minecraft-content-cli-example
 ```
 
 Current checkpoint branch:
 
 ```text
-feature/minecraft-content-cli-example
-IMPLEMENTED / VALIDATED / LIVE MODRINTH SMOKE PASSED
+feature/minecraft-content-provider-curseforge-foundation
+IMPLEMENTED / VALIDATED
 MERGE NOT REQUESTED
 ```
 
 Current branch production HEAD before continuity closeout:
 
 ```text
-ab1428bd134e4444a4f4c297c1001a5de93ccf78
-Add Minecraft content CLI example
+7a504338029f58c0808190d1e43d3b9c79146526
+Remove redundant CurseForge loader assertion
 ```
 
 Package version:
 
 ```text
 minecraft_content_service
-1.0.0-dev.3
+1.0.0-dev.4
 ```
 
+## Minecraft content CurseForge provider foundation checkpoint
+
+```text
+Branch: feature/minecraft-content-provider-curseforge-foundation
+Status: IMPLEMENTED / VALIDATED
+Package: minecraft_content_service/
+```
+
+Public surface:
+
+- `MtnMinecraftContentProviderCurseForge`
+- `MtnMinecraftContentProviderCurseForgeException`
+
+Implemented read-only operations:
+
+- authenticated CurseForge search
+- full mod/project read
+- project description read
+- paginated file/version listing
+
+Locked architecture/behavior:
+
+- CurseForge code lives under `src/provider/curseforge/` and extends the generic provider contract
+- generic provider/service core contains no CurseForge branch or wire constants
+- API key is required, kept private by the provider, and sent only as `x-api-key`
+- optional injected `http.Client` supports deterministic tests and caller-owned transport
+- provider-created HTTP client can be released through `close()`
+- Minecraft game ID is provider-specific and remains inside the CurseForge provider
+- CurseForge Minecraft content class IDs are discovered from the categories/classes endpoint and cached instead of hardcoded into generic core
+- search requires exactly one generic content type
+- search currently accepts at most one loader filter
+- search game-version filtering supports the provider request shape used by the implementation
+- generic pagination limit remains 1..50
+- CurseForge's 10,000-result access boundary is enforced rather than silently returning incomplete generic pagination
+- `getContent()` accepts canonical positive numeric CurseForge project IDs
+- content keys use `curseforge:<projectId>`
+- file/version keys use `curseforge:<fileId>`
+- CurseForge numeric identities are normalized to strings in generic provider metadata
+- raw project/category/author/image/file/dependency metadata is preserved where modeled
+- project description is fetched separately and mapped into generic description
+- file ID is preserved as provider file/version identity
+- `downloadUrl == null` is preserved rather than synthesized
+- SHA1 and MD5 hashes are normalized; future positive unknown hash enum values remain provider-qualified rather than guessed
+- CurseForge fingerprint remains a fingerprint, not a cryptographic hash
+- module name/fingerprint metadata maps to `MtnMinecraftContentFileModule`
+- dependency relation enums map into required/optional/incompatible/embedded/included/tool
+- dependency project IDs are validated as positive and preserved as provider content IDs
+- version/file `modId` must match the caller-supplied logical content's canonical CurseForge project ID
+- returned versions keep the exact caller-supplied `MtnMinecraftContent` instance
+- release-type filtering is applied generically after provider file retrieval
+- mapped versions are ordered deterministically by publication date ascending so latest remains last
+- non-mod content versions preserve the generic `[vanilla]` loader invariant
+- a generic `vanilla` filter for non-mod content does not emit a fake CurseForge loader filter
+- non-mod Fabric/Forge/etc. loader filters are rejected
+- provider HTTP errors surface as `MtnMinecraftContentProviderCurseForgeException` without including the API key
+
+Mapped generic project metadata includes:
+
+- name/slug/summary/description
+- authors
+- categories and primary category
+- website/source/issues/wiki links
+- logo and screenshots
+- created/modified/released timestamps
+
+Mapped generic file/version metadata includes:
+
+- file ID/name/display name
+- release/beta/alpha type
+- Minecraft versions
+- loader compatibility
+- publication date
+- download URL availability
+- file length / on-disk size
+- SHA1/MD5 hashes
+- fingerprint
+- modules
+- dependency relations
+
+Validation on 2026-10-07:
+
+```text
+dart analyze
+No issues found!
+
+dart test
+00:00 +25: All tests passed!
+
+git diff --check main...HEAD
+PASS
+
+git status
+clean
+
+validated production HEAD
+7a504338029f58c0808190d1e43d3b9c79146526
+```
+
+Focused CurseForge coverage uses `MockClient`; no real API key is stored in the repository and no live CurseForge smoke has been recorded yet.
+
+Dedicated handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-07_MINECRAFT_CONTENT_PROVIDER_CURSEFORGE_FOUNDATION.md
+```
 ## Minecraft content CLI example checkpoint
 
 ```text
@@ -1518,28 +1623,20 @@ In particular:
 
 ## Next action
 
-The content model, generic provider/service foundation and first concrete Modrinth provider foundation are complete and validated. No next implementation checkpoint is automatically approved.
+The content model, generic provider/service foundation, Modrinth provider, CurseForge provider and Modrinth live CLI search path are complete and validated. No next implementation checkpoint is automatically approved.
 
-Natural continuation for `minecraft_content_service/`:
+Natural short continuation for `minecraft_content_service/`:
 
 ```text
-MtnMinecraftContentProviderCurseForge
-→ CurseForge authentication / HTTP read foundation
-→ search mapping
-→ mod/project mapping
-→ file/version/dependency mapping
+extend example/mc_content.dart with CurseForge provider selection
+→ supply CurseForge API key outside source code
+→ run the same content/query/Minecraft-version/loader search path
+→ record a live CurseForge smoke
 ```
 
-The CurseForge checkpoint must preserve these rules:
+After both provider live paths are proven, later design work may consider multi-provider aggregation/fallback and explicit cross-provider association. Those are separate checkpoints and must not be inferred from matching names/slugs.
 
-- CurseForge API key/header, endpoints, numeric wire enums and response mapping stay inside the concrete CurseForge provider subtree
-- generic core must not gain CurseForge conditionals
-- provider registration remains explicit through `MtnMinecraftContentProviderList`
-- CurseForge numeric IDs are normalized to strings in generic provider metadata
-- CurseForge file ID/fingerprint/module metadata remains provider-specific where appropriate
-- no Modrinth/CurseForge association is inferred from name or slug
-- version/file mapping must preserve the existing logical `MtnMinecraftContent` instance
-- dependency solving and artifact materialization remain separate later checkpoints
+Dependency solving, download/materialization and provider aggregation remain out of scope until separately approved.
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
 ```text
