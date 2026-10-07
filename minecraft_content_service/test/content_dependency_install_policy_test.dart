@@ -156,6 +156,31 @@ void main() {
       expect(plan.installable, isTrue);
     });
 
+    test('shared install-reachable versions are included once while every install edge remains visible', () {
+      final root = _version('root:v1', _content('root'));
+      final b = _version('b:v1', _content('b'));
+      final c = _version('c:v1', _content('c'));
+      final d = _version('d:v1', _content('d'));
+
+      final rootToB = _edge(root, MtnMinecraftContentDependencyType.required, target: b);
+      final bToD = _edge(b, MtnMinecraftContentDependencyType.required, target: d);
+      final rootToC = _edge(root, MtnMinecraftContentDependencyType.required, target: c);
+      final cToD = _edge(c, MtnMinecraftContentDependencyType.required, target: d);
+      final graph = MtnMinecraftContentDependencyGraph(
+        root: root,
+        versions: <MtnMinecraftContentVersion>[root, b, d, c],
+        edges: <MtnMinecraftContentDependencyGraphEdge>[rootToB, bToD, rootToC, cToD],
+      );
+
+      final plan = MtnMinecraftContentService().planDependencyInstall(graph, MtnMinecraftContentDependencyInstallRequest());
+
+      expect(plan.installVersions, <MtnMinecraftContentVersion>[root, b, d, c]);
+      expect(plan.installVersions.where((version) => version.key == d.key), hasLength(1));
+      expect(plan.installEdges, <MtnMinecraftContentDependencyGraphEdge>[rootToB, bToD, rootToC, cToD]);
+      expect(plan.conflicts, isEmpty);
+      expect(plan.installable, isTrue);
+    });
+
     test('multiple install-reachable versions of the same logical content are blocking', () {
       final root = _version('root:v1', _content('root'));
       final sharedContent = _content('shared');
