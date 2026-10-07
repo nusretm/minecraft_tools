@@ -2795,110 +2795,70 @@ In particular:
 
 ## Next action
 
-dev.15 merge:
+The active content-service checkpoint is:
 
 ```text
-PR: #43
-merge commit:
-d1c19878442e07982db3ecaedcb827cc3139e001
-Add content batch download plan foundation
-```
-
-The completed content-service checkpoint is:
-
-```text
-dev.15 — Batch Download Plan / Source Resolution Foundation
-branch: feature/minecraft-content-download-plan
-baseline main: 8e227cf7e33ac968e9189ad4babbc1483cfc53f3
-implementation HEAD: 245315c3dd980adc5f4e6750204e0b018222d01f
-status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
-package: minecraft_content_service 1.0.0-dev.15
+dev.16 — Managed Installation Artifact State Foundation
+branch: feature/minecraft-content-installation-artifact-state
+baseline main: 17bddddc6449302eb6984ceb9ef665abee5b156e
+production/test HEAD: 135d5a41113c7859d819bf2f598a9cd5a72c115a
+status: IMPLEMENTED / VALIDATION PENDING
+package: minecraft_content_service 1.0.0-dev.16
 ```
 
 Implemented boundary:
 
 ```text
-selectable FileSelectionPlan
+managed installed version
+        +
+exact canonical normalized file
+        +
+caller-owned installation-root-relative path
         ↓
-resolve every selected source
-        ├─ reuse valid direct HTTP/HTTPS URL
-        └─ provider-owned source resolution when direct URL is absent
+MtnMinecraftContentInstallationArtifact
         ↓
-aggregate all source-resolution issues
+MtnMinecraftContentInstallationState
         ↓
-one immutable DownloadPlan
+existing MtnMinecraftContentDependencyInstalledState view
+        ↓
+existing reconciliation unchanged
 ```
 
-The generic planner contains no Modrinth/CurseForge switch. File provider identity is read from normalized file provider metadata only when direct URL resolution is unavailable. CurseForge owns its project/file ID interpretation, authenticated download-URL endpoint call, and wire behavior.
+Locked design:
 
-Any source-resolution issue makes the complete plan non-downloadable. Successful items may remain visible for diagnostics, but an incomplete batch must not be handed to an executor.
+- installation state owns managed physical-artifact identity; provider/catalog models do not
+- each artifact references the exact canonical file instance owned by its installed version
+- paths are neutral relative paths, never absolute local machine paths
+- generic core does not hardcode `mods/`, `resourcepacks/`, or other destination directories
+- unsafe paths, traversal segments, backslashes, Windows drive prefixes, duplicate exact paths, duplicate version keys, and duplicate logical-content ownership are rejected
+- path comparison is intentionally exact/case-sensitive at this layer; target-OS collision policy belongs to later materialization
+- existing reconciliation receives the installation state's version view rather than being rewritten
 
 Still out of scope:
 
-- byte transfer
-- launcher `DownloadList` / `DownloadManager` dependency
-- concurrency / retry / progress / cancellation
-- target paths and filesystem materialization
-- hash / size verification
-- publication
+- filesystem discovery or existence checks
+- installation manifest serialization/persistence
+- download execution
+- staging directories
+- hash/size verification
+- target-OS path collision handling
+- file publication
 - replacement/removal execution
-- managed installation manifest
-- rollback / transactions
+- rollback/transactions
+- manual/unmanaged file cleanup
+- launcher adapter implementation
 - deferred resource rendering
 
-Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `4c1113af904999c15e7f23328030a80b575c9958`. Production/test HEAD remains `245315c3dd980adc5f4e6750204e0b018222d01f`; subsequent pre-merge commits were continuity-only. PR #43 merged at `d1c19878442e07982db3ecaedcb827cc3139e001`.
+Next required action is authoritative local validation on the feature branch. Do not merge until validation is complete and the user separately approves merge.
 
-Validation:
-
-```text
-dart analyze
-No issues found!
-
-content_download_plan_test.dart
-9/9 passed
-
-content_file_selection_test.dart
-12/12 passed
-
-content_dependency_reconciliation_test.dart
-11/11 passed
-
-content_dependency_desired_state_test.dart
-10/10 passed
-
-content_dependency_install_policy_test.dart
-11/11 passed
-
-content_provider_service_test.dart
-22/22 passed
-
-full dart test
-101/101 passed
-
-git diff --check main...HEAD
-PASS
-
-working tree
-clean
-
-validated feature HEAD:
-4c1113af904999c15e7f23328030a80b575c9958
-```
-
-Authoritative planning document:
+Active continuity document:
 
 ```text
-docs/continuity/PLANNED_2026-10-07_MINECRAFT_CONTENT_BATCH_DOWNLOAD_FOUNDATION.md
+docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_ARTIFACT_STATE.md
 ```
 
-Completion handoff:
+The completed dev.15 handoff remains:
 
 ```text
 docs/continuity/HANDOFF_2026-10-08_MINECRAFT_CONTENT_BATCH_DOWNLOAD_FOUNDATION.md
-```
-
-The item client-definition/model/texture resource foundation remains separately designed and deferred:
-
-```text
-docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
 ```
