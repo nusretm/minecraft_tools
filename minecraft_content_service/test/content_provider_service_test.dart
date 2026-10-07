@@ -822,8 +822,8 @@ void main() {
         releaseType: MtnMinecraftContentVersionReleaseType.release,
         modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
         dependencies: <MtnMinecraftContentDependency>[
-          MtnMinecraftContentDependency(type: MtnMinecraftContentDependencyType.included, provider: 'provider-a', providerContentId: 'a', providerVersionId: 'a-v1'),
-          MtnMinecraftContentDependency(type: MtnMinecraftContentDependencyType.embedded, provider: 'provider-b', providerContentId: 'b', providerVersionId: 'b-v1'),
+          MtnMinecraftContentDependency(type: MtnMinecraftContentDependencyType.bundled, provider: 'provider-a', providerContentId: 'a', providerVersionId: 'a-v1'),
+          MtnMinecraftContentDependency(type: MtnMinecraftContentDependencyType.embeddedLibrary, provider: 'provider-b', providerContentId: 'b', providerVersionId: 'b-v1'),
         ],
       );
 
