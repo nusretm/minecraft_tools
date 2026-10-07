@@ -302,6 +302,7 @@ void main() {
           type: MtnMinecraftContentDependencyType.required,
           provider: 'provider-a',
           providerContentId: 'content-id',
+          versionConstraint: 'this-is-deliberately-not-interpreted',
         ),
         request,
       );
@@ -547,6 +548,23 @@ void main() {
       expect(() => MtnMinecraftContentSearchRequest(limit: 0), throwsArgumentError);
       expect(() => MtnMinecraftContentSearchRequest(limit: 51), throwsArgumentError);
       expect(() => MtnMinecraftContentVersionListRequest(limit: 51), throwsArgumentError);
+
+      final selectionGameVersions = <String>['1.21.1'];
+      final selectionLoaders = <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric];
+      final selectionReleaseTypes = <MtnMinecraftContentVersionReleaseType>[MtnMinecraftContentVersionReleaseType.release];
+      final selectionRequest = MtnMinecraftContentVersionSelectionRequest(
+        gameVersions: selectionGameVersions,
+        modLoaders: selectionLoaders,
+        releaseTypes: selectionReleaseTypes,
+      );
+      selectionGameVersions.add('1.21.2');
+      selectionLoaders.add(MtnMinecraftModLoaderType.forge);
+      selectionReleaseTypes.add(MtnMinecraftContentVersionReleaseType.beta);
+      expect(selectionRequest.gameVersions, <String>['1.21.1']);
+      expect(selectionRequest.modLoaders, <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric]);
+      expect(selectionRequest.releaseTypes, <MtnMinecraftContentVersionReleaseType>[MtnMinecraftContentVersionReleaseType.release]);
+      expect(() => selectionRequest.gameVersions.add('1.21.2'), throwsUnsupportedError);
+
       expect(
         () => MtnMinecraftContentSearchResult(
           provider: ' ',
