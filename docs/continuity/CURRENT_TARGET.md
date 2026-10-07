@@ -16,23 +16,23 @@ Merged baseline:
 
 ```text
 main
-2a6c671cf15740880b581b37f2585ea951ab71a0
-Merge pull request #29 from nusretm/feature/minecraft-content-provider-service-foundation
+d3e902633f34e1d56ccf70925b3828d2c6879851
+Merge pull request #30 from nusretm/feature/minecraft-content-provider-modrinth-foundation
 ```
 
 Current checkpoint branch:
 
 ```text
-feature/minecraft-content-provider-modrinth-foundation
-IMPLEMENTED / VALIDATED
+feature/minecraft-content-cli-example
+IMPLEMENTED / VALIDATED / LIVE MODRINTH SMOKE PASSED
 MERGE NOT REQUESTED
 ```
 
 Current branch production HEAD before continuity closeout:
 
 ```text
-f5003897401a6692b0fd67c1c6edace4d3fec254
-Sort Minecraft content service exports
+ab1428bd134e4444a4f4c297c1001a5de93ccf78
+Add Minecraft content CLI example
 ```
 
 Package version:
@@ -42,6 +42,75 @@ minecraft_content_service
 1.0.0-dev.3
 ```
 
+## Minecraft content CLI example checkpoint
+
+```text
+Branch: feature/minecraft-content-cli-example
+Status: IMPLEMENTED / VALIDATED / LIVE MODRINTH SMOKE PASSED
+Package: minecraft_content_service/
+```
+
+Example:
+
+```text
+minecraft_content_service/example/mc_content.dart
+```
+
+CLI contract:
+
+```text
+--provider
+--content
+--filter
+--mc-version
+--loader
+```
+
+Validated command:
+
+```powershell
+dart run example/mc_content.dart --provider modrinth --content mod --filter "Skyblocker" --mc-version 26.1.2 --loader fabric
+```
+
+Live result:
+
+```text
+3 results returned
+Skyblocker • Hypixel Skyblock
+Bazaar Utils ✦ Hypixel Skyblock
+CasualSkyblockZAddons [CSZA]
+```
+
+The live smoke confirms the full path:
+
+```text
+CLI args
+→ generic search request
+→ MtnMinecraftContentService
+→ Modrinth provider
+→ Modrinth search facets
+→ normalized MtnMinecraftContent results
+→ CLI presentation
+```
+
+Local validation supplied by the user:
+
+```text
+dart analyze
+No issues found!
+
+dart test
+00:00 +17: All tests passed!
+
+live Modrinth smoke
+PASS
+```
+
+Dedicated handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-07_MINECRAFT_CONTENT_CLI_EXAMPLE.md
+```
 ## Minecraft content Modrinth provider foundation checkpoint
 
 ```text
