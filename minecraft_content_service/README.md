@@ -44,6 +44,10 @@ Current foundation includes:
 - install-reachable traversal for required / embedded-library dependencies plus caller-selected optional versions
 - explicit bundled/tool cut-off, unresolved install blockers, multiple-version conflicts, and active-source incompatibility conflicts
 - immutable dependency install requests, plans, edge classifications, and conflict result models
+- multi-root desired-state composition through `composeDependencyInstallPlans()`
+- canonical desired versions by `version.key` with immutable direct-root ownership
+- dependency-to-direct promotion without mutating `MtnMinecraftContentVersion.direct`
+- cross-root multiple-version and incompatibility conflict detection while preserving root-local blockers in their source plans
 
 Version-constraint interpretation, installed-state reconciliation, automatic conflict winner selection, artifact selection/download, and update/materialization remain separate later checkpoints.
 
