@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.0-dev.14
+
+- Add immutable `MtnMinecraftContentFileSelection` and `MtnMinecraftContentFileSelectionPlan`.
+- Add the `MtnMinecraftContentFileSelectionIssue` family with no-files, ambiguous, and unavailable specializations.
+- Add `MtnMinecraftContentService.selectReconciliationFiles()` as a synchronous, provider-independent, network-free, filesystem-free selection layer over reconciliation output.
+- Evaluate only install and replacement desired targets; retained and removed versions do not require new-file selection.
+- Preserve complete desired-state ordering when install and replacement targets are interleaved.
+- Select the sole file when exactly one candidate exists, regardless of its primary flag.
+- For multiple files, require exactly one primary file and report ambiguity when zero or multiple primary files exist.
+- Treat only `available == false` as unavailable; null availability remains selectable.
+- Do not fall back from an unavailable selected primary file to a non-primary alternative.
+- Keep null download URLs, missing hashes, unknown sizes, provider metadata, and raw file type outside generic selection policy.
+- Keep provider-specific file normalization in provider mappers rather than adding provider switches to core.
+- Keep removal-file lookup, installed artifact persistence, download-source resolution, downloads, filesystem paths, verification, execution ordering, rollback, and materialization out of this checkpoint.
+
 ## 1.0.0-dev.13
 
 - Add immutable `MtnMinecraftContentDependencyInstalledState` for service-managed current versions.

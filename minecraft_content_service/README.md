@@ -53,8 +53,12 @@ Current foundation includes:
 - deterministic install / retain / replace / remove classification by logical content identity
 - replacement semantics that cover both upgrades and downgrades without generic version ordering
 - desired-state authority over ownership/direct metadata without mutating persisted version flags
+- pure install/replace file selection through `selectReconciliationFiles()`
+- deterministic single-file or unique-primary selection without provider-specific switches
+- explicit no-files, ambiguous-file, and unavailable-file selection issues
+- file selection independent from download URL, hash, size, filesystem path, and materialization concerns
 
-Version-constraint interpretation, artifact selection/download, filesystem execution, and update/materialization remain separate later checkpoints.
+Version-constraint interpretation, download-source resolution, filesystem execution, and update/materialization remain separate later checkpoints.
 
 
 ## CLI example
