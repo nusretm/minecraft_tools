@@ -14,8 +14,8 @@ Continuity: OPEN UNTIL VALIDATION
 Merge: NOT REQUESTED
 Baseline main:
 b6a729cd3cfb78141196b7774726ac4b06224da8
-Production/test HEAD before continuity updates:
-3427fd94c997cce5e985a4903aa1fe6486e1c3b6
+Production/test HEAD before final continuity sync:
+ba971c307e5ec9692b64e580d46b9d49661ef0c9
 ```
 
 Package version: `1.0.0-dev.9`.
