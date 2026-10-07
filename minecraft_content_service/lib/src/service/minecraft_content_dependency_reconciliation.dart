@@ -53,6 +53,12 @@ class MtnMinecraftContentDependencyReconciliationPlan {
       ...this.removals.map((item) => item.key),
     };
     if (currentKeys.length != this.retains.length + this.replacements.length + this.removals.length) throw ArgumentError('Reconciliation current actions cannot overlap.');
+
+    final expectedDesiredKeys = desired.versions.map((item) => item.version.key).toSet();
+    if (desiredKeys.length != expectedDesiredKeys.length || !desiredKeys.every(expectedDesiredKeys.contains)) throw ArgumentError('Reconciliation desired actions must cover the complete desired state.');
+
+    final expectedCurrentKeys = current.versions.map((item) => item.key).toSet();
+    if (currentKeys.length != expectedCurrentKeys.length || !currentKeys.every(expectedCurrentKeys.contains)) throw ArgumentError('Reconciliation current actions must cover the complete installed state.');
   }
 
   final MtnMinecraftContentDependencyInstalledState current;
