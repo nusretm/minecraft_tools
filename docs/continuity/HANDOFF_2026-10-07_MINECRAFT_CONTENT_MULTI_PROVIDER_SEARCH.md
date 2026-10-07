@@ -10,9 +10,12 @@ Package: minecraft_content_service/
 Branch: feature/minecraft-content-multi-provider-search
 Implementation: COMPLETE
 Validation: COMPLETE
-Merge: NOT REQUESTED
+Continuity: CLOSED
+Merge: COMPLETE
 Validated production HEAD:
 7b36e4b890f71dc1a274a8ebb254972f02ea7c12
+Merge commit:
+0655506983ee2300ede96df67d395bda2141a3b9
 ```
 
 Baseline:
@@ -226,11 +229,29 @@ and is then automatically excluded from `searchAll()`.
 
 For example, CurseForge can remain registered without an API key and join future multi-provider searches automatically once its readiness prerequisite is satisfied.
 
+## Post-merge closure
+
+The checkpoint was merged into `main` through pull request #34.
+
+```text
+main
+0655506983ee2300ede96df67d395bda2141a3b9
+Merge pull request #34 from nusretm/feature/minecraft-content-multi-provider-search
+Add multi-provider content search foundation
+```
+
+Authoritative post-merge local state supplied by the user:
+
+```text
+Branch: main
+HEAD: 0655506983ee2300ede96df67d395bda2141a3b9
+origin/main: same
+Working tree: clean
+```
+
 ## Next action
 
-This branch is implementation-complete, locally validated, and continuity-closed.
-
-Merge requires separate explicit user approval.
+This checkpoint is implementation-complete, locally validated, continuity-closed, merged, and synchronized on local `main`.
 
 No next implementation checkpoint is automatically approved.
 
