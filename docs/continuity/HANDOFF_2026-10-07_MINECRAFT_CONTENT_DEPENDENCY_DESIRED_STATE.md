@@ -11,13 +11,19 @@ Branch: feature/minecraft-content-dependency-desired-state
 Implementation: COMPLETE
 Validation: COMPLETE
 Continuity: CLOSED
-Merge: NOT REQUESTED
+Merge: COMPLETE
+Pull request:
+#40
 Baseline main:
 28bc28c42feaec81013aebcb738d60fafbaaacfd
 Validated feature HEAD:
 d97e9bf00a640c812a3a21d0aa3ac450873c057f
+Merged feature HEAD:
+a35a8a25bec1a9fe0ae7fdd4a1676f489f42f46e
 Production/test HEAD:
 035df4bf9db4e4b95709e08e515499c3e3565062
+Merge commit:
+322bdf08325ae8a4c714bd9d84b2c127c27ab24b
 ```
 
 Package version: `1.0.0-dev.12`.
@@ -468,10 +474,23 @@ d97e9bf00a640c812a3a21d0aa3ac450873c057f
 
 No `dart format` was run.
 
+## Post-merge closure
+
+The validated and continuity-closed feature branch was merged through pull request #40.
+
+```text
+PR: #40
+feature: feature/minecraft-content-dependency-desired-state
+validated feature HEAD: d97e9bf00a640c812a3a21d0aa3ac450873c057f
+merged feature HEAD: a35a8a25bec1a9fe0ae7fdd4a1676f489f42f46e
+production/test HEAD: 035df4bf9db4e4b95709e08e515499c3e3565062
+merge commit: 322bdf08325ae8a4c714bd9d84b2c127c27ab24b
+```
+
+The commits after the validated feature HEAD contain continuity-only closeout changes. No production implementation changed after authoritative validation.
+
 ## Next action
 
-This checkpoint is implementation-complete, validated, and continuity-closed.
+This checkpoint is implementation-complete, validated, continuity-closed, and merged.
 
-Merge is not yet requested and still requires separate explicit user approval.
-
-Installed-state reconciliation becomes the likely next checkpoint only after this desired-state checkpoint is merged. It is not automatically approved.
+Installed-state reconciliation becomes the likely next checkpoint, but it remains a separate scope and is not automatically approved.
