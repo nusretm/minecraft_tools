@@ -2802,7 +2802,7 @@ dev.16 — Managed Installation Artifact State Foundation
 branch: feature/minecraft-content-installation-artifact-state
 baseline main: 17bddddc6449302eb6984ceb9ef665abee5b156e
 production/test HEAD: 135d5a41113c7859d819bf2f598a9cd5a72c115a
-status: IMPLEMENTED / VALIDATION PENDING
+status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
 package: minecraft_content_service 1.0.0-dev.16
 ```
 
@@ -2849,12 +2849,49 @@ Still out of scope:
 - launcher adapter implementation
 - deferred resource rendering
 
-Next required action is authoritative local validation on the feature branch. Do not merge until validation is complete and the user separately approves merge.
+Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `0701ee126b37f3f9c2a30f0fbc52f122650f6b4d`. Production/test HEAD remains `135d5a41113c7859d819bf2f598a9cd5a72c115a`; subsequent pre-merge changes are continuity-only. Merge has been separately approved by the user.
+
+Validation:
+
+```text
+dart analyze
+No issues found!
+
+content_installation_state_test.dart
+8/8 passed
+
+content_dependency_reconciliation_test.dart
+11/11 passed
+
+content_file_selection_test.dart
+12/12 passed
+
+content_download_plan_test.dart
+9/9 passed
+
+full dart test
+109/109 passed
+
+git diff --check main...HEAD
+PASS
+
+working tree
+clean
+
+validated feature HEAD:
+0701ee126b37f3f9c2a30f0fbc52f122650f6b4d
+```
 
 Active continuity document:
 
 ```text
 docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_ARTIFACT_STATE.md
+```
+
+Completion handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_ARTIFACT_STATE.md
 ```
 
 The completed dev.15 handoff remains:
