@@ -12,6 +12,17 @@ Last updated: 2026-10-07
 
 ## Repository state
 
+Dependency desired state merge:
+
+```text
+PR: #40
+main merge commit:
+322bdf08325ae8a4c714bd9d84b2c127c27ab24b
+Add dependency desired state foundation
+```
+
+Post-merge continuity closeout commits are docs-only and follow that functional merge commit.
+
 Dependency install / conflict policy merge:
 
 ```text
@@ -131,7 +142,7 @@ implementation HEAD: fd3793b062deccb19490185cff3be3c958272ebe
 merge commit: a6094999cf05c345fe9ffdc0c421e45ccd0e61dc
 ```
 
-Latest completed checkpoint:
+Previous completed checkpoint:
 
 ```text
 feature/minecraft-content-dependency-install-policy
@@ -144,15 +155,17 @@ production/test HEAD: 4e41c35de65d9770388d5f2c955551ac6a505690
 merge commit: a6f5e60a9bc48974be611ced297b508bd4a0ccf2
 ```
 
-Current active checkpoint:
+Latest completed checkpoint:
 
 ```text
 feature/minecraft-content-dependency-desired-state
-IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
-MERGE NOT REQUESTED
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
+PR: #40
 baseline main: 28bc28c42feaec81013aebcb738d60fafbaaacfd
 validated feature HEAD: d97e9bf00a640c812a3a21d0aa3ac450873c057f
+merged feature HEAD: a35a8a25bec1a9fe0ae7fdd4a1676f489f42f46e
 production/test HEAD: 035df4bf9db4e4b95709e08e515499c3e3565062
+merge commit: 322bdf08325ae8a4c714bd9d84b2c127c27ab24b
 ```
 
 Package version:
@@ -166,11 +179,14 @@ minecraft_content_service
 
 ```text
 Branch: feature/minecraft-content-dependency-desired-state
-Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
 Package: minecraft_content_service/
+PR: #40
 Baseline main: 28bc28c42feaec81013aebcb738d60fafbaaacfd
 Validated feature HEAD: d97e9bf00a640c812a3a21d0aa3ac450873c057f
+Merged feature HEAD: a35a8a25bec1a9fe0ae7fdd4a1676f489f42f46e
 Production/test HEAD: 035df4bf9db4e4b95709e08e515499c3e3565062
+Merge commit: 322bdf08325ae8a4c714bd9d84b2c127c27ab24b
 ```
 
 Public/service surface:
@@ -2460,18 +2476,11 @@ In particular:
 
 ## Next action
 
-The active content-service checkpoint is:
+The dependency desired-state foundation is implementation-complete, validated, continuity-closed, merged through PR #40, and recorded in continuity.
 
-```text
-feature/minecraft-content-dependency-desired-state
-IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
-MERGE NOT REQUESTED
-validated feature HEAD: d97e9bf00a640c812a3a21d0aa3ac450873c057f
-```
+No content-service implementation checkpoint is currently active or automatically approved.
 
-This checkpoint is ready for merge review but merge still requires separate explicit user approval.
-
-Installed-state reconciliation becomes the likely next content-service checkpoint only after this desired-state foundation is merged.
+Installed-state reconciliation is now the natural next content-service checkpoint and should be scoped separately before implementation.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
