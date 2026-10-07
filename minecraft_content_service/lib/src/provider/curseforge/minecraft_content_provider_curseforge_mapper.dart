@@ -122,6 +122,15 @@ class MtnMinecraftContentProviderCurseForgeMapper {
     throw StateError('Content ${content.key} does not contain a canonical $providerName project id.');
   }
 
+  static int fileProviderId(String providerName, MtnMinecraftContentFile file) {
+    for (final metadata in file.providers) {
+      if (metadata.provider != providerName) continue;
+      final value = int.tryParse(metadata.id ?? '');
+      if (value != null && value > 0) return value;
+    }
+    throw StateError('File ${file.fileName} does not contain a canonical $providerName file id.');
+  }
+
   static MtnMinecraftContent content(
     String providerName,
     MtnMinecraftContentType type,

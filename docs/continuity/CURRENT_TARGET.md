@@ -1,6 +1,6 @@
 # Minecraft Tools — Current Target
 
-Last updated: 2026-10-07
+Last updated: 2026-10-08
 
 ## Repository
 
@@ -2795,15 +2795,85 @@ In particular:
 
 ## Next action
 
-The content file-selection foundation is implementation-complete, validated, continuity-closed, merged through PR #42, and recorded in continuity.
-
-No content-service implementation checkpoint is currently active or automatically approved.
-
-The agreed next architecture direction is batch-oriented download planning and source resolution:
+The active content-service checkpoint is:
 
 ```text
-proposed dev.15
-Batch Download Plan / Source Resolution Foundation
+dev.15 — Batch Download Plan / Source Resolution Foundation
+branch: feature/minecraft-content-download-plan
+baseline main: 8e227cf7e33ac968e9189ad4babbc1483cfc53f3
+implementation HEAD: 245315c3dd980adc5f4e6750204e0b018222d01f
+status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+package: minecraft_content_service 1.0.0-dev.15
+```
+
+Implemented boundary:
+
+```text
+selectable FileSelectionPlan
+        ↓
+resolve every selected source
+        ├─ reuse valid direct HTTP/HTTPS URL
+        └─ provider-owned source resolution when direct URL is absent
+        ↓
+aggregate all source-resolution issues
+        ↓
+one immutable DownloadPlan
+```
+
+The generic planner contains no Modrinth/CurseForge switch. File provider identity is read from normalized file provider metadata only when direct URL resolution is unavailable. CurseForge owns its project/file ID interpretation, authenticated download-URL endpoint call, and wire behavior.
+
+Any source-resolution issue makes the complete plan non-downloadable. Successful items may remain visible for diagnostics, but an incomplete batch must not be handed to an executor.
+
+Still out of scope:
+
+- byte transfer
+- launcher `DownloadList` / `DownloadManager` dependency
+- concurrency / retry / progress / cancellation
+- target paths and filesystem materialization
+- hash / size verification
+- publication
+- replacement/removal execution
+- managed installation manifest
+- rollback / transactions
+- deferred resource rendering
+
+Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `4c1113af904999c15e7f23328030a80b575c9958`. Production/test HEAD remains `245315c3dd980adc5f4e6750204e0b018222d01f`; subsequent commits before merge are continuity-only. Merge has been separately approved by the user.
+
+Validation:
+
+```text
+dart analyze
+No issues found!
+
+content_download_plan_test.dart
+9/9 passed
+
+content_file_selection_test.dart
+12/12 passed
+
+content_dependency_reconciliation_test.dart
+11/11 passed
+
+content_dependency_desired_state_test.dart
+10/10 passed
+
+content_dependency_install_policy_test.dart
+11/11 passed
+
+content_provider_service_test.dart
+22/22 passed
+
+full dart test
+101/101 passed
+
+git diff --check main...HEAD
+PASS
+
+working tree
+clean
+
+validated feature HEAD:
+4c1113af904999c15e7f23328030a80b575c9958
 ```
 
 Authoritative planning document:
@@ -2812,32 +2882,14 @@ Authoritative planning document:
 docs/continuity/PLANNED_2026-10-07_MINECRAFT_CONTENT_BATCH_DOWNLOAD_FOUNDATION.md
 ```
 
-Key locked direction:
+Completion handoff:
 
 ```text
-all selected install/replace files
-        ↓
-resolve all download sources
-        ↓
-one complete neutral content DownloadPlan
-        ↓
-launcher adapter
-        ↓
-one launcher DownloadList
-        ↓
-one downloadManager.add(downloadList)
+docs/continuity/HANDOFF_2026-10-08_MINECRAFT_CONTENT_BATCH_DOWNLOAD_FOUNDATION.md
 ```
-
-`minecraft_content_service` must not depend directly on launcher `DownloadManager` / `DownloadList` types.
-
-Actual byte transfer, retry/concurrency/progress/cancellation, filesystem materialization, installed artifact tracking and removal execution remain separate later concerns unless explicitly rescoped.
-
-Start the next chat by auditing provider/file identity and source-resolution API boundaries, then lock dev.15 scope before implementation.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
 ```text
 docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
 ```
-
-Do not start dev.15 implementation, download execution/materialization, or deferred resource rendering without explicit user approval.

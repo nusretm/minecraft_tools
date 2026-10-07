@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.0-dev.15
+
+- Add immutable batch-oriented `MtnMinecraftContentDownloadPlan` and `MtnMinecraftContentDownloadItem`.
+- Add source-resolution issue specializations for invalid URLs, missing/ambiguous provider identity, unregistered/not-ready providers, unavailable sources, and provider resolution failures.
+- Add `MtnMinecraftContentService.planSelectedFileDownloads()` over a successful file-selection plan.
+- Reuse normalized direct download URLs without provider lookup and resolve missing URLs through the registered provider abstraction.
+- Add provider-owned `resolveDownloadSource(version, file)` with a neutral nullable `Uri` result.
+- Add CurseForge download-source resolution through its project/file download-URL endpoint while keeping project/file IDs, API headers, and endpoint behavior provider-specific.
+- Preserve dev.14 selection ordering in the resulting batch and aggregate all source-resolution blockers before download execution.
+- Make any source-resolution issue block the complete plan through `downloadable == false`.
+- Keep file name, size, hashes, and provider metadata reachable through the original selection/file instead of duplicating them into download items.
+- Keep byte transfer, launcher `DownloadList` / `DownloadManager` types, concurrency, retry, progress, cancellation, target paths, verification, publication, replacement/removal execution, and materialization out of this checkpoint.
+
 ## 1.0.0-dev.14
 
 - Add immutable `MtnMinecraftContentFileSelection` and `MtnMinecraftContentFileSelectionPlan`.

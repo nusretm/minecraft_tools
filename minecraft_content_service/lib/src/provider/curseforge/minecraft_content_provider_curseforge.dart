@@ -40,6 +40,19 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
   bool get ready => _apiKey != null;
 
   @override
+  Future<Uri?> resolveDownloadSource(MtnMinecraftContentVersion version, MtnMinecraftContentFile file) async {
+    requireReady();
+    if (!version.files.any((item) => identical(item, file))) throw ArgumentError.value(file, 'file', 'Download-source file must belong to the supplied version.');
+
+    final modId = MtnMinecraftContentProviderCurseForgeMapper.providerId(name, version.content);
+    final fileId = MtnMinecraftContentProviderCurseForgeMapper.fileProviderId(name, file);
+    final envelope = await _getEnvelope(baseUri.resolve('v1/mods/$modId/files/$fileId/download-url'));
+    final value = MtnMinecraftContentProviderCurseForgeMapper.dataString(envelope);
+    if (value == null || value.isEmpty) return null;
+    return Uri.parse(value);
+  }
+
+  @override
   Future<MtnMinecraftContentSearchResult> search(MtnMinecraftContentSearchRequest request) async {
     requireReady();
     MtnMinecraftContentProviderCurseForgeMapper.validateSearchRequest(request);
