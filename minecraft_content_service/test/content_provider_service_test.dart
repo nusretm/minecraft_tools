@@ -665,7 +665,7 @@ void main() {
 
       expect(graph.versions.map((version) => version.key), <String>['root:v1', 'provider-a:b-v1', 'provider-a:d-v1', 'provider-a:e-v1', 'provider-a:c-v1']);
       expect(graph.versions.where((version) => version.key == 'provider-a:d-v1'), hasLength(1));
-      expect(graph.edges.map((edge) => edge.source.key + '->' + (edge.target?.key ?? 'null')), <String>[
+      expect(graph.edges.map((edge) => '${edge.source.key}->${edge.target?.key ?? 'null'}'), <String>[
         'root:v1->provider-a:b-v1',
         'provider-a:b-v1->provider-a:d-v1',
         'provider-a:d-v1->provider-a:e-v1',
@@ -1064,7 +1064,7 @@ class _GraphContentProvider extends MtnMinecraftContentProvider {
   Future<MtnMinecraftContent> getContent(String id) async {
     contentIds.add(id);
     final content = contentsById[id];
-    if (content == null) throw StateError('Graph fake provider ' + name + ' has no content id: ' + id);
+    if (content == null) throw StateError('Graph fake provider $name has no content id: $id');
     return content;
   }
 
@@ -1072,7 +1072,7 @@ class _GraphContentProvider extends MtnMinecraftContentProvider {
   Future<MtnMinecraftContentVersion> getVersion(String id) async {
     versionIds.add(id);
     final version = versionsById[id];
-    if (version == null) throw StateError('Graph fake provider ' + name + ' has no version id: ' + id);
+    if (version == null) throw StateError('Graph fake provider $name has no version id: $id');
     return version;
   }
 
@@ -1085,7 +1085,7 @@ class _GraphContentProvider extends MtnMinecraftContentProvider {
         break;
       }
     }
-    if (contentId == null) throw StateError('Content ' + content.key + ' has no canonical ' + name + ' id.');
+    if (contentId == null) throw StateError('Content ${content.key} has no canonical $name id.');
 
     versionListContentIds.add(contentId);
     final source = versionsByContentId[contentId] ?? const <MtnMinecraftContentVersion>[];
