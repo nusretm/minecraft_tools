@@ -23,7 +23,7 @@ void main() {
               'index': 10,
               'pageSize': 25,
               'resultCount': 1,
-              'totalCount': 3,
+              'totalCount': 30,
             },
           });
         }
@@ -58,7 +58,7 @@ void main() {
       expect(searchRequest.url.queryParameters['index'], '10');
       expect(searchRequest.url.queryParameters['pageSize'], '25');
 
-      expect(result.total, 3);
+      expect(result.total, 30);
       expect(result.hasMore, isTrue);
       expect(result.contents.single, isA<MtnMinecraftContentMod>());
 
@@ -166,8 +166,10 @@ void main() {
       expect(version.dependencies.first.providerContentId, '777');
     });
 
-    test('non-mod versions normalize loader to vanilla', () async {
+    test('non-mod versions normalize loader to vanilla without sending a fake loader filter', () async {
+      late http.Request fileRequest;
       final client = MockClient((request) async {
+        fileRequest = request;
         return _jsonResponse(<String, dynamic>{
           'data': <Map<String, dynamic>>[_fileJson(id: 8001, releaseType: 1, displayName: 'Pack 1', date: '2026-07-01T00:00:00Z')],
           'pagination': <String, dynamic>{'index': 0, 'pageSize': 50, 'resultCount': 1, 'totalCount': 1},
@@ -187,6 +189,7 @@ void main() {
         content,
         MtnMinecraftContentVersionListRequest(modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.vanilla]),
       );
+      expect(fileRequest.url.queryParameters.containsKey('modLoaderType'), isFalse);
       expect(result.versions.single.modLoaders, <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.vanilla]);
     });
 
