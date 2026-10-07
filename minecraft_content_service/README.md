@@ -26,8 +26,11 @@ Current foundation includes:
 - provider-owned serialized request gate and observable `MtnMinecraftContentProviderRateLimit` state
 - Modrinth rate-limit header tracking and one bounded HTTP 429 retry when a reset duration is supplied
 - CurseForge HTTP 429 / `Retry-After` handling without inventing an undocumented fixed request quota
+- `MtnMinecraftContentService.searchAll()` across all currently ready registered providers
+- provider-tagged per-provider search results with independent pagination
+- no cross-provider name/slug deduplication or automatic association
 
-Multi-provider aggregation, dependency solving and update/materialization reconciliation remain separate later checkpoints.
+Dependency solving and update/materialization reconciliation remain separate later checkpoints.
 
 
 ## CLI example
