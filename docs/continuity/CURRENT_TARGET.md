@@ -96,11 +96,95 @@ production/test HEAD: 4fd032395c081f143a2186519569ac06f8cb54cf
 merge commit: 3238bf8d345b58b20c12643e01828bc6db3847d6
 ```
 
+Current active checkpoint:
+
+```text
+feature/minecraft-content-dependency-semantic-normalization
+IMPLEMENTED / VALIDATION PENDING
+MERGE NOT REQUESTED
+baseline main: 604f0ad6964e6c1147f9969619e5c16b5391a5b6
+implementation HEAD before continuity updates: fd3793b062deccb19490185cff3be3c958272ebe
+```
+
 Package version:
 
 ```text
 minecraft_content_service
-1.0.0-dev.9
+1.0.0-dev.10
+```
+
+## Minecraft content dependency semantic normalization foundation checkpoint
+
+```text
+Branch: feature/minecraft-content-dependency-semantic-normalization
+Status: IMPLEMENTED / VALIDATION PENDING
+Package: minecraft_content_service/
+Baseline main: 604f0ad6964e6c1147f9969619e5c16b5391a5b6
+Implementation HEAD before continuity updates: fd3793b062deccb19490185cff3be3c958272ebe
+```
+
+Generic dependency semantics:
+
+- `required`
+- `optional`
+- `incompatible`
+- `embeddedLibrary`
+- `bundled`
+- `tool`
+
+Provider normalization:
+
+```text
+Modrinth required       -> required
+Modrinth optional       -> optional
+Modrinth incompatible   -> incompatible
+Modrinth embedded       -> bundled
+
+CurseForge EmbeddedLibrary    -> embeddedLibrary
+CurseForge OptionalDependency -> optional
+CurseForge RequiredDependency -> required
+CurseForge Tool               -> tool
+CurseForge Incompatible       -> incompatible
+CurseForge Include            -> bundled
+```
+
+Locked boundaries:
+
+- generic dependency names describe semantics rather than provider wire terminology
+- provider wire tokens remain inside provider mapper implementations
+- `MtnMinecraftContentRelationType.included/embedded` remains unchanged and separate from dependency semantics
+- no backward-compatible dependency aliases are added before first release
+- recursive graph traversal behavior remains unchanged
+- all dependency types remain graph metadata only until install policy is implemented
+- no install/conflict decision is made in this checkpoint
+
+Still deliberately out of scope:
+
+- dependency install policy
+- optional user-selection policy
+- incompatible conflict resolution
+- embedded-library install policy
+- bundled suppression policy
+- tool policy
+- `versionConstraint` interpretation
+- artifact/file selection
+- download/materialization
+- installed-state reconciliation
+- cross-provider association
+- deferred item client-definition/model/texture rendering
+
+Validation:
+
+```text
+PENDING USER-SUPPLIED LOCAL DART VALIDATION
+```
+
+No `dart format` was run.
+
+Dedicated handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-07_MINECRAFT_CONTENT_DEPENDENCY_SEMANTIC_NORMALIZATION.md
 ```
 
 ## Minecraft content recursive dependency graph foundation checkpoint
@@ -134,7 +218,7 @@ Locked semantics:
 - shared nodes are stored and expanded once while every incoming edge remains visible
 - the first runtime version object observed for a key becomes the canonical graph node
 - direct and deep cycles are retained as `cyclic == true` edges and stop recursive expansion at that edge
-- dependency types remain metadata only; required/optional/incompatible/embedded/included/tool do not change traversal
+- dependency types remain metadata only; required/optional/incompatible/embeddedLibrary/bundled/tool do not change traversal
 - provider identity is never guessed or crossed
 - graph collections are immutable
 - root/version/dependency inputs are not mutated
@@ -146,7 +230,7 @@ Still deliberately out of scope:
 - `versionConstraint` parsing/evaluation
 - install policy
 - incompatible conflict resolution
-- embedded/included/tool installation semantics
+- embeddedLibrary/bundled/tool installation semantics
 - dependency winner selection
 - artifact/file selection
 - download/materialization
@@ -234,7 +318,7 @@ Still deliberately out of scope:
 - recursive dependency traversal / graph construction
 - cycle and duplicate graph handling
 - `versionConstraint` interpretation
-- install policy for required/optional/incompatible/embedded/included/tool relations
+- install policy for required/optional/incompatible/embeddedLibrary/bundled/tool relations
 - artifact/file selection
 - download/materialization
 - cross-provider association
@@ -544,7 +628,7 @@ Locked architecture/behavior:
 - SHA1 and MD5 hashes are normalized; future positive unknown hash enum values remain provider-qualified rather than guessed
 - CurseForge fingerprint remains a fingerprint, not a cryptographic hash
 - module name/fingerprint metadata maps to `MtnMinecraftContentFileModule`
-- dependency relation enums map into required/optional/incompatible/embedded/included/tool
+- dependency relation enums map into required/optional/incompatible/embeddedLibrary/bundled/tool
 - dependency project IDs are validated as positive and preserved as provider content IDs
 - version/file `modId` must match the caller-supplied logical content's canonical CurseForge project ID
 - returned versions keep the exact caller-supplied `MtnMinecraftContent` instance
@@ -2080,18 +2164,36 @@ In particular:
 
 ## Next action
 
-The recursive dependency graph foundation is implementation-complete, validated, continuity-closed, merged through PR #37, and recorded in continuity.
+The active content-service checkpoint is:
 
-No content-service implementation checkpoint is currently active or automatically approved.
+```text
+feature/minecraft-content-dependency-semantic-normalization
+IMPLEMENTED / VALIDATION PENDING
+MERGE NOT REQUESTED
+```
 
-Potential next content-service work remains separate and requires a new explicit scope/implementation approval:
+Run authoritative local validation:
 
-- dependency install policy
-- incompatible/conflict handling
-- version-constraint interpretation
-- artifact/file selection
-- download/materialization
-- broader graph error aggregation/recovery policy
+```text
+cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
+
+dart analyze
+dart test test/content_provider_modrinth_test.dart
+dart test test/content_provider_curseforge_test.dart
+dart test test/content_provider_service_test.dart
+dart test
+
+cd ..
+git diff --check main...HEAD
+git status
+git rev-parse HEAD
+```
+
+Do not mark this checkpoint VALIDATED or continuity-closed until user-supplied local output is available.
+
+After successful validation, update continuity and wait for separate explicit merge approval.
+
+Dependency install/conflict policy remains the likely next content-service checkpoint but is not automatically approved.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
@@ -2099,4 +2201,4 @@ The item client-definition/model/texture resource foundation remains separately 
 docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
 ```
 
-Do not start those later checkpoints or the deferred resource work without explicit user approval.
+Do not start install policy, artifact/download work, or the deferred resource work without explicit user approval.
