@@ -151,7 +151,7 @@ feature/minecraft-content-dependency-desired-state
 IMPLEMENTED / VALIDATION PENDING
 MERGE NOT REQUESTED
 baseline main: 28bc28c42feaec81013aebcb738d60fafbaaacfd
-implementation HEAD before continuity updates: 8ff719c9744f89d2cb33407432200a0ebbad0ca0
+production/test HEAD after analyzer directive-order fix: 035df4bf9db4e4b95709e08e515499c3e3565062
 ```
 
 Package version:
@@ -168,7 +168,7 @@ Branch: feature/minecraft-content-dependency-desired-state
 Status: IMPLEMENTED / VALIDATION PENDING
 Package: minecraft_content_service/
 Baseline main: 28bc28c42feaec81013aebcb738d60fafbaaacfd
-Implementation HEAD before continuity updates: 8ff719c9744f89d2cb33407432200a0ebbad0ca0
+Production/test HEAD after analyzer directive-order fix: 035df4bf9db4e4b95709e08e515499c3e3565062
 ```
 
 Public/service surface:
