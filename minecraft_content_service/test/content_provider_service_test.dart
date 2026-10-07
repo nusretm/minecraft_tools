@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:minecraft_content_service/minecraft_content_service.dart';
 import 'package:test/test.dart';
 
@@ -25,6 +27,24 @@ void main() {
       expect(providers.unregister('provider-a'), isTrue);
       expect(providers.unregister('provider-a'), isFalse);
       expect(providers.items, <MtnMinecraftContentProvider>[providerB]);
+    });
+
+    test('registered providers remain visible even when they are not ready', () {
+      final content = MtnMinecraftContentMod(key: 'content-a', name: 'Content A');
+      final provider = _FakeContentProvider(name: 'provider-a', content: content, ready: false);
+      final providers = MtnMinecraftContentProviderList(<MtnMinecraftContentProvider>[provider]);
+
+      expect(providers.items.single, same(provider));
+      expect(providers.items.single.ready, isFalse);
+      expect(providers.readyItems, isEmpty);
+      expect(
+        () => providers.requireReadyFromName('provider-a'),
+        throwsA(isA<MtnMinecraftContentProviderNotReadyException>()),
+      );
+
+      provider.ready = true;
+      expect(providers.readyItems, <MtnMinecraftContentProvider>[provider]);
+      expect(providers.requireReadyFromName('provider-a'), same(provider));
     });
   });
 
@@ -72,6 +92,18 @@ void main() {
       expect(provider.lastVersionsRequest, same(versionsRequest));
     });
 
+    test('rejects registered providers that are not ready before dispatch', () {
+      final content = MtnMinecraftContentMod(key: 'content-a', name: 'Content A');
+      final provider = _FakeContentProvider(name: 'provider-a', content: content, ready: false);
+      final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]);
+
+      expect(
+        () => service.search('provider-a', MtnMinecraftContentSearchRequest()),
+        throwsA(isA<MtnMinecraftContentProviderNotReadyException>().having((error) => error.providerName, 'providerName', 'provider-a')),
+      );
+      expect(provider.searchCount, 0);
+    });
+
     test('rejects unregistered providers before dispatch', () {
       final service = MtnMinecraftContentService();
 
@@ -98,6 +130,54 @@ void main() {
     });
   });
 
+  group('provider request runtime', () {
+    test('serializes provider requests through the shared request gate', () async {
+      final content = MtnMinecraftContentMod(key: 'content-a', name: 'Content A');
+      final provider = _FakeContentProvider(name: 'provider-a', content: content);
+      final firstStarted = Completer<void>();
+      final releaseFirst = Completer<void>();
+      final events = <String>[];
+
+      final first = provider.runRequest(() async {
+        events.add('first-start');
+        firstStarted.complete();
+        await releaseFirst.future;
+        events.add('first-end');
+        return 1;
+      });
+
+      await firstStarted.future;
+
+      final second = provider.runRequest(() async {
+        events.add('second-start');
+        events.add('second-end');
+        return 2;
+      });
+
+      await Future<void>.delayed(Duration.zero);
+      expect(events, <String>['first-start']);
+
+      releaseFirst.complete();
+
+      expect(await first, 1);
+      expect(await second, 2);
+      expect(events, <String>['first-start', 'first-end', 'second-start', 'second-end']);
+    });
+
+    test('exposes provider-owned rate-limit state without changing readiness', () {
+      final content = MtnMinecraftContentMod(key: 'content-a', name: 'Content A');
+      final provider = _FakeContentProvider(name: 'provider-a', content: content);
+
+      provider.setRateLimit(limit: 300, remaining: 12, resetAfter: const Duration(seconds: 60));
+
+      expect(provider.ready, isTrue);
+      expect(provider.rateLimit.limit, 300);
+      expect(provider.rateLimit.remaining, 12);
+      expect(provider.rateLimit.resetAt, isNotNull);
+      expect(provider.rateLimit.limited, isFalse);
+    });
+  });
+
   group('provider request/result contracts', () {
     test('request filters are immutable and common pagination is bounded', () {
       final types = <MtnMinecraftContentType>[MtnMinecraftContentType.mod];
@@ -119,17 +199,29 @@ class _FakeContentProvider extends MtnMinecraftContentProvider {
   _FakeContentProvider({
     required super.name,
     required this.content,
+    this.ready = true,
     List<MtnMinecraftContentVersion>? versions,
   }) : versions = List<MtnMinecraftContentVersion>.unmodifiable(versions ?? <MtnMinecraftContentVersion>[]);
 
   final MtnMinecraftContent content;
   final List<MtnMinecraftContentVersion> versions;
 
+  @override
+  bool ready;
+
   int searchCount = 0;
   MtnMinecraftContentSearchRequest? lastSearchRequest;
   String? lastContentId;
   MtnMinecraftContent? lastVersionsContent;
   MtnMinecraftContentVersionListRequest? lastVersionsRequest;
+
+  void setRateLimit({
+    int? limit,
+    int? remaining,
+    Duration? resetAfter,
+  }) {
+    updateRateLimit(limit: limit, remaining: remaining, resetAfter: resetAfter);
+  }
 
   @override
   Future<MtnMinecraftContentSearchResult> search(MtnMinecraftContentSearchRequest request) async {

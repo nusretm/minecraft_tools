@@ -28,7 +28,12 @@ class MtnMinecraftContentProviderModrinth extends MtnMinecraftContentProvider {
   final bool _ownsClient;
 
   @override
+  bool get ready => true;
+
+  @override
   Future<MtnMinecraftContentSearchResult> search(MtnMinecraftContentSearchRequest request) async {
+    requireReady();
+
     final facets = MtnMinecraftContentProviderModrinthMapper.searchFacets(request);
     final query = <String, String>{
       if (request.query != null && request.query!.trim().isNotEmpty) 'query': request.query!.trim(),
@@ -43,6 +48,7 @@ class MtnMinecraftContentProviderModrinth extends MtnMinecraftContentProvider {
 
   @override
   Future<MtnMinecraftContent> getContent(String id) async {
+    requireReady();
     if (id.trim().isEmpty) throw ArgumentError.value(id, 'id', 'Modrinth project id or slug cannot be empty.');
 
     final map = await _getMap(baseUri.resolve('project/${Uri.encodeComponent(id.trim())}'));
@@ -51,6 +57,8 @@ class MtnMinecraftContentProviderModrinth extends MtnMinecraftContentProvider {
 
   @override
   Future<MtnMinecraftContentVersionListResult> getVersions(MtnMinecraftContent content, MtnMinecraftContentVersionListRequest request) async {
+    requireReady();
+
     final projectId = MtnMinecraftContentProviderModrinthMapper.providerId(name, content);
     final query = MtnMinecraftContentProviderModrinthMapper.versionQuery(request);
 
@@ -73,13 +81,30 @@ class MtnMinecraftContentProviderModrinth extends MtnMinecraftContentProvider {
   }
 
   Future<String> _get(Uri uri) async {
-    final response = await _client.get(
-      uri,
-      headers: <String, String>{
-        'Accept': 'application/json',
-        'User-Agent': userAgent,
-      },
-    );
+    final response = await runRequest(() async {
+      var retriedAfterRateLimit = false;
+
+      while (true) {
+        final response = await _client.get(
+          uri,
+          headers: <String, String>{
+            'Accept': 'application/json',
+            'User-Agent': userAgent,
+          },
+        );
+
+        _updateRateLimitFromResponse(response);
+
+        if (response.statusCode != 429 || retriedAfterRateLimit) return response;
+
+        final retryAfter = _retryAfter(response);
+        if (retryAfter == null) return response;
+
+        throttleRequests(retryAfter);
+        await waitForRequestAvailability();
+        retriedAfterRateLimit = true;
+      }
+    });
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw MtnMinecraftContentProviderModrinthException(
@@ -91,6 +116,37 @@ class MtnMinecraftContentProviderModrinth extends MtnMinecraftContentProvider {
     }
 
     return response.body;
+  }
+
+  void _updateRateLimitFromResponse(http.Response response) {
+    final limit = int.tryParse(_header(response, 'x-ratelimit-limit') ?? '');
+    final remaining = int.tryParse(_header(response, 'x-ratelimit-remaining') ?? '');
+    final resetSeconds = int.tryParse(_header(response, 'x-ratelimit-reset') ?? '');
+
+    if (limit == null && remaining == null && resetSeconds == null) return;
+
+    updateRateLimit(
+      limit: limit,
+      remaining: remaining,
+      resetAfter: resetSeconds == null || resetSeconds < 0 ? null : Duration(seconds: resetSeconds),
+    );
+  }
+
+  Duration? _retryAfter(http.Response response) {
+    final retryAfterSeconds = int.tryParse(_header(response, 'retry-after') ?? '');
+    if (retryAfterSeconds != null && retryAfterSeconds >= 0) return Duration(seconds: retryAfterSeconds);
+
+    final resetSeconds = int.tryParse(_header(response, 'x-ratelimit-reset') ?? '');
+    if (resetSeconds != null && resetSeconds >= 0) return Duration(seconds: resetSeconds);
+
+    return null;
+  }
+
+  String? _header(http.Response response, String name) {
+    for (final entry in response.headers.entries) {
+      if (entry.key.toLowerCase() == name) return entry.value;
+    }
+    return null;
   }
 }
 

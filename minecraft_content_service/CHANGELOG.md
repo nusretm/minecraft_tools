@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.0-dev.5
+
+- Add provider readiness as a first-class contract independent from registration.
+- Add `MtnMinecraftContentProviderNotReadyException`, `readyItems`, and ready-provider service routing.
+- Allow CurseForge to stay registered without an API key and become ready when a key is configured later.
+- Add provider-owned serialized request execution and observable rate-limit state.
+- Track Modrinth `X-Ratelimit-Limit`, `X-Ratelimit-Remaining`, and `X-Ratelimit-Reset` response headers instead of hardcoding the published quota.
+- Retry one HTTP 429 when the provider supplies a usable reset / retry duration.
+- Keep CurseForge free of guessed fixed rate-limit numbers and use `Retry-After` only when returned.
+
 ## 1.0.0-dev.4
 
 - Add authenticated `MtnMinecraftContentProviderCurseForge` foundation.

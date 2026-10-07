@@ -40,7 +40,12 @@ void main() {
             'total_hits': 40,
           }),
           200,
-          headers: <String, String>{'content-type': 'application/json'},
+          headers: <String, String>{
+            'content-type': 'application/json',
+            'x-ratelimit-limit': '300',
+            'x-ratelimit-remaining': '299',
+            'x-ratelimit-reset': '60',
+          },
         );
       });
 
@@ -83,6 +88,10 @@ void main() {
       expect(content.providers.single.metadata['all_project_types'], <String>['mod', 'datapack']);
       expect(content.authors.single.username, 'example-author');
       expect(content.license?.id, 'MIT');
+      expect(provider.ready, isTrue);
+      expect(provider.rateLimit.limit, 300);
+      expect(provider.rateLimit.remaining, 299);
+      expect(provider.rateLimit.resetAt, isNotNull);
     });
 
     test('getContent maps full project metadata and preserves raw response', () async {
@@ -173,6 +182,48 @@ void main() {
       expect(version.dependencies.single.providerContentId, 'DEPEND01');
       expect(version.dependencies.single.providerVersionId, 'DEPVER01');
       expect(version.providers.single.metadata['status'], 'listed');
+    });
+
+    test('retries one 429 response when Modrinth supplies a reset duration', () async {
+      var requestCount = 0;
+      final client = MockClient((request) async {
+        requestCount++;
+
+        if (requestCount == 1) {
+          return http.Response(
+            '{"error":"rate_limited"}',
+            429,
+            headers: <String, String>{
+              'x-ratelimit-limit': '300',
+              'x-ratelimit-remaining': '0',
+              'x-ratelimit-reset': '0',
+            },
+          );
+        }
+
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'hits': <Map<String, dynamic>>[],
+            'offset': 0,
+            'limit': 10,
+            'total_hits': 0,
+          }),
+          200,
+          headers: <String, String>{
+            'content-type': 'application/json',
+            'x-ratelimit-limit': '300',
+            'x-ratelimit-remaining': '299',
+            'x-ratelimit-reset': '60',
+          },
+        );
+      });
+
+      final provider = MtnMinecraftContentProviderModrinth(userAgent: 'nusretm/minecraft_tools/1.0', client: client);
+      final result = await provider.search(MtnMinecraftContentSearchRequest(limit: 10));
+
+      expect(requestCount, 2);
+      expect(result.contents, isEmpty);
+      expect(provider.rateLimit.remaining, 299);
     });
 
     test('throws provider-specific exception for HTTP errors', () async {

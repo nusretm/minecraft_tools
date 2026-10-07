@@ -22,6 +22,10 @@ Current foundation includes:
 - Modrinth project, version, file and dependency mapping with raw provider metadata preservation
 - `MtnMinecraftContentProviderCurseForge` authenticated CurseForge v1 search/project/file integration
 - CurseForge class discovery plus project, file/version, hash, fingerprint, module and dependency mapping
+- provider readiness independent from registration, with `readyItems` exposed by the provider registry
+- provider-owned serialized request gate and observable `MtnMinecraftContentProviderRateLimit` state
+- Modrinth rate-limit header tracking and one bounded HTTP 429 retry when a reset duration is supplied
+- CurseForge HTTP 429 / `Retry-After` handling without inventing an undocumented fixed request quota
 
 Multi-provider aggregation, dependency solving and update/materialization reconciliation remain separate later checkpoints.
 

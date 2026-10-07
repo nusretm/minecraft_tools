@@ -9,22 +9,21 @@ import 'minecraft_content_provider_curseforge_mapper.dart';
 
 class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider {
   MtnMinecraftContentProviderCurseForge({
-    required String apiKey,
+    String? apiKey,
     http.Client? client,
     Uri? baseUri,
-  }) : _apiKey = apiKey,
-       _client = client ?? http.Client(),
+  }) : _client = client ?? http.Client(),
        _ownsClient = client == null,
        baseUri = baseUri ?? Uri.parse('https://api.curseforge.com/'),
        super(name: providerName) {
-    if (apiKey.trim().isEmpty) throw ArgumentError('CurseForge API key cannot be empty.');
+    this.apiKey = apiKey;
     if (!this.baseUri.hasScheme || this.baseUri.host.isEmpty) throw ArgumentError.value(this.baseUri, 'baseUri', 'CurseForge baseUri must be absolute.');
   }
 
   static const String providerName = 'curseforge';
   static const int minecraftGameId = 432;
 
-  final String _apiKey;
+  String? _apiKey;
   final Uri baseUri;
   final http.Client _client;
   final bool _ownsClient;
@@ -32,8 +31,17 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
   Map<MtnMinecraftContentType, int>? _classIdsByContentType;
   Map<int, MtnMinecraftContentType>? _contentTypesByClassId;
 
+  set apiKey(String? value) {
+    final normalized = value?.trim();
+    _apiKey = normalized == null || normalized.isEmpty ? null : normalized;
+  }
+
+  @override
+  bool get ready => _apiKey != null;
+
   @override
   Future<MtnMinecraftContentSearchResult> search(MtnMinecraftContentSearchRequest request) async {
+    requireReady();
     MtnMinecraftContentProviderCurseForgeMapper.validateSearchRequest(request);
 
     await _ensureContentClasses();
@@ -49,6 +57,8 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
 
   @override
   Future<MtnMinecraftContent> getContent(String id) async {
+    requireReady();
+
     final modId = int.tryParse(id.trim());
     if (modId == null || modId <= 0) throw ArgumentError.value(id, 'id', 'CurseForge content id must be a positive integer.');
 
@@ -68,6 +78,8 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
 
   @override
   Future<MtnMinecraftContentVersionListResult> getVersions(MtnMinecraftContent content, MtnMinecraftContentVersionListRequest request) async {
+    requireReady();
+
     final modId = MtnMinecraftContentProviderCurseForgeMapper.providerId(name, content);
     MtnMinecraftContentProviderCurseForgeMapper.validateVersionRequest(content, request);
 
@@ -115,13 +127,32 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
   }
 
   Future<Map<String, dynamic>> _getEnvelope(Uri uri) async {
-    final response = await _client.get(
-      uri,
-      headers: <String, String>{
-        'Accept': 'application/json',
-        'x-api-key': _apiKey,
-      },
-    );
+    final response = await runRequest(() async {
+      var retriedAfterRateLimit = false;
+
+      while (true) {
+        final apiKey = _apiKey;
+        if (apiKey == null) throw MtnMinecraftContentProviderNotReadyException(providerName: name);
+
+        final response = await _client.get(
+          uri,
+          headers: <String, String>{
+            'Accept': 'application/json',
+            'x-api-key': apiKey,
+          },
+        );
+
+        if (response.statusCode != 429 || retriedAfterRateLimit) return response;
+
+        final retryAfter = _retryAfter(response);
+        if (retryAfter == null) return response;
+
+        throttleRequests(retryAfter);
+        await waitForRequestAvailability();
+        requireReady();
+        retriedAfterRateLimit = true;
+      }
+    });
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw MtnMinecraftContentProviderCurseForgeException(
@@ -136,6 +167,18 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
     if (decoded is! Map<Object?, Object?>) throw MtnMinecraftContentProviderCurseForgeException(uri: uri, message: 'Expected a JSON object from CurseForge.');
 
     return decoded.map((key, value) => MapEntry(key.toString(), value));
+  }
+
+  Duration? _retryAfter(http.Response response) {
+    for (final entry in response.headers.entries) {
+      if (entry.key.toLowerCase() != 'retry-after') continue;
+
+      final seconds = int.tryParse(entry.value.trim());
+      if (seconds != null && seconds >= 0) return Duration(seconds: seconds);
+      return null;
+    }
+
+    return null;
   }
 }
 
