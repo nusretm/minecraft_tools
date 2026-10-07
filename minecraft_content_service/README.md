@@ -1,6 +1,6 @@
 # minecraft_content_service
 
-Pure Dart Minecraft content domain foundation for reusable catalog, version, file, dependency and ownership metadata.
+Pure Dart Minecraft content domain and provider-service foundation for reusable catalog, version, file, dependency and ownership metadata.
 
 The package models logical Minecraft content independently from any single provider. The same model family can represent mods, modpacks, resource packs, shader packs and data packs while preserving Modrinth, CurseForge and future provider provenance.
 
@@ -14,5 +14,9 @@ Current foundation includes:
 - JSON / UTF-8 round-trip through `MtnMinecraftContentList`
 - duplicate logical provider identity protection
 - version selection where `content.version` uses the explicit selection or falls back to `content.versions.last`
+- `MtnMinecraftContentProvider` provider contract
+- `MtnMinecraftContentProviderList` explicit provider registry authority
+- `MtnMinecraftContentService` registered-provider routing
+- provider-independent search and version-list request/result contracts
 
-Provider HTTP/search implementations and dependency/update reconciliation are intentionally outside this first checkpoint.
+Concrete Modrinth/CurseForge HTTP adapters, multi-provider aggregation, dependency solving and update/materialization reconciliation remain separate later checkpoints.
