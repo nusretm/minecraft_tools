@@ -9,10 +9,11 @@ import 'minecraft_content_provider_curseforge_mapper.dart';
 
 class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider {
   MtnMinecraftContentProviderCurseForge({
-    required this.apiKey,
+    required String apiKey,
     http.Client? client,
     Uri? baseUri,
-  }) : _client = client ?? http.Client(),
+  }) : _apiKey = apiKey,
+       _client = client ?? http.Client(),
        _ownsClient = client == null,
        baseUri = baseUri ?? Uri.parse('https://api.curseforge.com/'),
        super(name: providerName) {
@@ -23,7 +24,7 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
   static const String providerName = 'curseforge';
   static const int minecraftGameId = 432;
 
-  final String apiKey;
+  final String _apiKey;
   final Uri baseUri;
   final http.Client _client;
   final bool _ownsClient;
@@ -117,7 +118,7 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
       uri,
       headers: <String, String>{
         'Accept': 'application/json',
-        'x-api-key': apiKey,
+        'x-api-key': _apiKey,
       },
     );
 
