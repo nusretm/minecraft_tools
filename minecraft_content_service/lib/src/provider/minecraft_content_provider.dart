@@ -1,4 +1,5 @@
 import '../model/minecraft_content_models.dart';
+import 'minecraft_content_provider_models.dart';
 
 abstract class MtnMinecraftContentProvider {
   MtnMinecraftContentProvider({
