@@ -76,10 +76,11 @@ Current active checkpoint:
 
 ```text
 feature/minecraft-content-recursive-dependency-graph
-IMPLEMENTED / VALIDATION PENDING
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
 MERGE NOT REQUESTED
 baseline main: b6a729cd3cfb78141196b7774726ac4b06224da8
-production/test HEAD before final continuity sync: 4fd032395c081f143a2186519569ac06f8cb54cf
+validated feature HEAD: 4bcc8ee5a72129bec5d371366ceb6c94fda04f74
+production/test HEAD: 4fd032395c081f143a2186519569ac06f8cb54cf
 ```
 
 Package version:
@@ -93,10 +94,11 @@ minecraft_content_service
 
 ```text
 Branch: feature/minecraft-content-recursive-dependency-graph
-Status: IMPLEMENTED / VALIDATION PENDING
+Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
 Package: minecraft_content_service/
 Baseline main: b6a729cd3cfb78141196b7774726ac4b06224da8
-Production/test HEAD before final continuity sync: 4fd032395c081f143a2186519569ac06f8cb54cf
+Validated feature HEAD: 4bcc8ee5a72129bec5d371366ceb6c94fda04f74
+Production/test HEAD: 4fd032395c081f143a2186519569ac06f8cb54cf
 ```
 
 Public/service surface:
@@ -138,10 +140,27 @@ Still deliberately out of scope:
 - CurseForge live smoke
 - deferred item client-definition/model/texture rendering
 
-Validation:
+Validation on 2026-10-07:
 
 ```text
-PENDING USER-SUPPLIED LOCAL DART VALIDATION
+dart analyze
+Analyzing minecraft_content_service...
+No issues found!
+
+dart test test/content_provider_service_test.dart
+00:00 +22: All tests passed!
+
+dart test
+00:00 +46: All tests passed!
+
+git diff --check main...HEAD
+PASS
+
+git status
+clean
+
+validated feature HEAD
+4bcc8ee5a72129bec5d371366ceb6c94fda04f74
 ```
 
 No `dart format` was run.
@@ -2049,28 +2068,12 @@ The active content-service checkpoint is:
 
 ```text
 feature/minecraft-content-recursive-dependency-graph
-IMPLEMENTED / VALIDATION PENDING
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
 MERGE NOT REQUESTED
+validated feature HEAD: 4bcc8ee5a72129bec5d371366ceb6c94fda04f74
 ```
 
-Run authoritative local validation:
-
-```text
-cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
-
-dart analyze
-dart test test/content_provider_service_test.dart
-dart test
-
-cd ..
-git diff --check main...HEAD
-git status
-git rev-parse HEAD
-```
-
-Do not mark this checkpoint VALIDATED or continuity-closed until user-supplied local output is available.
-
-After successful validation, update continuity and wait for separate explicit merge approval.
+This checkpoint is ready for merge review but merge still requires separate explicit user approval.
 
 Install/conflict policy, artifact selection/download/materialization, and broader graph error policy remain separate future checkpoints.
 
