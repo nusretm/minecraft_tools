@@ -9,12 +9,14 @@ Repository: nusretm/minecraft_tools
 Package: minecraft_content_service/
 Branch: feature/minecraft-content-dependency-install-policy
 Implementation: COMPLETE
-Validation: PENDING USER-SUPPLIED LOCAL DART VALIDATION
-Continuity: OPEN UNTIL VALIDATION
+Validation: COMPLETE
+Continuity: CLOSED
 Merge: NOT REQUESTED
 Baseline main:
 8c67afc0e4726276fb4ac11b4622591f27208a2a
-Production/test HEAD before final continuity sync:
+Validated feature HEAD:
+dca0bae51a6ababcb312705c0795149addb6dfb2
+Production/test HEAD:
 4e41c35de65d9770388d5f2c955551ac6a505690
 ```
 
@@ -396,34 +398,40 @@ Provider fakes are not used by the new policy tests.
 
 ## Validation
 
-Authoritative local validation is pending.
-
-Required validation:
+Authoritative user-supplied local validation on 2026-10-07:
 
 ```text
-cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
-
 dart analyze
-dart test test/content_dependency_install_policy_test.dart
-dart test test/content_provider_service_test.dart
-dart test
+Analyzing minecraft_content_service...
+No issues found!
 
-cd ..
+dart test test/content_dependency_install_policy_test.dart
+00:00 +11: All tests passed!
+
+dart test test/content_provider_service_test.dart
+00:00 +22: All tests passed!
+
+dart test
+00:00 +59: All tests passed!
+
 git diff --check main...HEAD
+PASS
+
 git status
+On branch feature/minecraft-content-dependency-install-policy
+Your branch is up to date with 'origin/feature/minecraft-content-dependency-install-policy'.
+nothing to commit, working tree clean
+
 git rev-parse HEAD
+dca0bae51a6ababcb312705c0795149addb6dfb2
 ```
 
-Per repository rules, user-supplied local Dart output is authoritative.
-
-Do not mark this checkpoint VALIDATED or continuity-closed until those results are supplied.
+No `dart format` was run.
 
 ## Next action
 
-Run authoritative local validation on the feature branch.
+This checkpoint is implementation-complete, validated, and continuity-closed.
 
-If validation fails, fix only this approved dependency install/conflict policy checkpoint.
-
-If validation passes, record the supplied results here and in `docs/continuity/CURRENT_TARGET.md`, close continuity, and wait for separate explicit merge approval.
+Merge is not yet requested and still requires separate explicit user approval.
 
 Installed-state reconciliation and artifact/file selection remain later separate checkpoints and are not automatically approved.
