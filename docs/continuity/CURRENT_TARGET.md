@@ -2802,7 +2802,7 @@ dev.15 — Batch Download Plan / Source Resolution Foundation
 branch: feature/minecraft-content-download-plan
 baseline main: 8e227cf7e33ac968e9189ad4babbc1483cfc53f3
 implementation HEAD: 245315c3dd980adc5f4e6750204e0b018222d01f
-status: IMPLEMENTED / VALIDATION PENDING
+status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
 package: minecraft_content_service 1.0.0-dev.15
 ```
 
@@ -2837,12 +2837,55 @@ Still out of scope:
 - rollback / transactions
 - deferred resource rendering
 
-Next required action is authoritative local validation on the feature branch. Do not merge until validation is complete and the user separately approves merge.
+Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `4c1113af904999c15e7f23328030a80b575c9958`. Production/test HEAD remains `245315c3dd980adc5f4e6750204e0b018222d01f`; subsequent commits before merge are continuity-only. Merge has been separately approved by the user.
+
+Validation:
+
+```text
+dart analyze
+No issues found!
+
+content_download_plan_test.dart
+9/9 passed
+
+content_file_selection_test.dart
+12/12 passed
+
+content_dependency_reconciliation_test.dart
+11/11 passed
+
+content_dependency_desired_state_test.dart
+10/10 passed
+
+content_dependency_install_policy_test.dart
+11/11 passed
+
+content_provider_service_test.dart
+22/22 passed
+
+full dart test
+101/101 passed
+
+git diff --check main...HEAD
+PASS
+
+working tree
+clean
+
+validated feature HEAD:
+4c1113af904999c15e7f23328030a80b575c9958
+```
 
 Authoritative planning document:
 
 ```text
 docs/continuity/PLANNED_2026-10-07_MINECRAFT_CONTENT_BATCH_DOWNLOAD_FOUNDATION.md
+```
+
+Completion handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-08_MINECRAFT_CONTENT_BATCH_DOWNLOAD_FOUNDATION.md
 ```
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
