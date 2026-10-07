@@ -168,11 +168,119 @@ production/test HEAD: 035df4bf9db4e4b95709e08e515499c3e3565062
 merge commit: 322bdf08325ae8a4c714bd9d84b2c127c27ab24b
 ```
 
+Current active checkpoint:
+
+```text
+feature/minecraft-content-installed-state-reconciliation
+IMPLEMENTED / VALIDATION PENDING
+MERGE NOT REQUESTED
+baseline main: d6d79f3dcdaf2fa92104871fbde554c65682cc98
+production/test HEAD: e266c2a83fc88fd450892ddc1051ed559a219b00
+```
+
 Package version:
 
 ```text
 minecraft_content_service
-1.0.0-dev.12
+1.0.0-dev.13
+```
+
+## Minecraft content installed-state reconciliation foundation checkpoint
+
+```text
+Branch: feature/minecraft-content-installed-state-reconciliation
+Status: IMPLEMENTED / VALIDATION PENDING
+Package: minecraft_content_service/
+Baseline main: d6d79f3dcdaf2fa92104871fbde554c65682cc98
+Production/test HEAD: e266c2a83fc88fd450892ddc1051ed559a219b00
+```
+
+Public/service surface:
+
+- `MtnMinecraftContentDependencyInstalledState`
+- `MtnMinecraftContentDependencyReconciliationReplacement`
+- `MtnMinecraftContentDependencyReconciliationPlan`
+- `MtnMinecraftContentService.reconcileDependencyState(current, desired)`
+
+Locked installed-state semantics:
+
+- current state contains only versions known to be managed by `minecraft_content_service`
+- installed `version.key` values must be unique
+- installed logical `content.key` values must be unique
+- current `MtnMinecraftContentVersion.direct` is not keep/remove authority
+- unknown/manual filesystem content is outside this model
+- `MtnMinecraftContentList` is not automatically interpreted as installed state
+- no content-list schema change or installed-state adapter is introduced
+
+Locked reconciliation semantics:
+
+```text
+desired content absent from current
+  -> install
+
+same logical content + same version.key
+  -> retain
+
+same logical content + different version.key
+  -> replace
+
+current logical content absent from desired
+  -> remove
+```
+
+- matching uses logical `content.key`
+- exact retained identity uses `version.key`
+- replacement is neutral and covers upgrade/downgrade equally
+- desired ownership/direct metadata changes alone do not force replacement
+- desired state is complete instance-wide authority
+- non-installable desired state throws `StateError`
+- same global `version.key` pointing to different content across states throws `StateError`
+- manually malformed installable desired state with duplicate logical content is rejected
+- installs/retains/replacements preserve desired-state order
+- removals preserve current-state order
+- result lists are decisions, not execution order
+- reconciliation does not mutate current or desired models
+
+Reconciliation-plan invariants:
+
+- desired action categories do not overlap
+- current action categories do not overlap
+- desired actions cover the full desired state
+- current actions cover the full managed installed state
+- replacement requires same logical content and a different version key
+- action collections are immutable
+- `changesRequired` ignores pure retains and is true only for install/replace/remove work
+
+Still deliberately out of scope:
+
+- filesystem discovery
+- unknown/manual file cleanup
+- unmanaged content deletion
+- `MtnMinecraftContentList` installed-state adapter
+- schema migration
+- artifact/file selection
+- file/path planning
+- download/materialization
+- real execution ordering
+- transactions / backup / rollback
+- enable/disable state
+- `versionConstraint` interpretation
+- automatic conflict winner selection
+- cross-provider association
+- deferred item client-definition/model/texture rendering
+
+Validation:
+
+```text
+PENDING USER-SUPPLIED LOCAL DART VALIDATION
+```
+
+No `dart format` was run.
+
+Dedicated handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-07_MINECRAFT_CONTENT_INSTALLED_STATE_RECONCILIATION.md
 ```
 
 ## Minecraft content dependency desired state foundation checkpoint
@@ -2476,11 +2584,37 @@ In particular:
 
 ## Next action
 
-The dependency desired-state foundation is implementation-complete, validated, continuity-closed, merged through PR #40, and recorded in continuity.
+The active content-service checkpoint is:
 
-No content-service implementation checkpoint is currently active or automatically approved.
+```text
+feature/minecraft-content-installed-state-reconciliation
+IMPLEMENTED / VALIDATION PENDING
+MERGE NOT REQUESTED
+```
 
-Installed-state reconciliation is now the natural next content-service checkpoint and should be scoped separately before implementation.
+Run authoritative local validation:
+
+```text
+cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
+
+dart analyze
+dart test test/content_dependency_reconciliation_test.dart
+dart test test/content_dependency_desired_state_test.dart
+dart test test/content_dependency_install_policy_test.dart
+dart test test/content_provider_service_test.dart
+dart test
+
+cd ..
+git diff --check main...HEAD
+git status
+git rev-parse HEAD
+```
+
+Do not mark this checkpoint VALIDATED or continuity-closed until user-supplied local output is available.
+
+After successful validation, update continuity and wait for separate explicit merge approval.
+
+Artifact/file selection becomes the likely next content-service checkpoint only after reconciliation is validated and merged.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
@@ -2488,4 +2622,4 @@ The item client-definition/model/texture resource foundation remains separately 
 docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
 ```
 
-Do not start installed-state reconciliation, artifact/download work, or deferred resource rendering without explicit user approval.
+Do not start artifact/download work, execution/materialization, or deferred resource rendering without explicit user approval.
