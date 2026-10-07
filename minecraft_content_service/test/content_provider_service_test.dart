@@ -407,6 +407,449 @@ void main() {
       expect(providerB.getVersionsCount, 0);
     });
 
+    test('resolveDependencyGraph builds deterministic depth-first graph with resolved and unresolved edges', () async {
+      final rootContent = MtnMinecraftContentMod(key: 'root', name: 'Root');
+      final contentB = MtnMinecraftContentMod(
+        key: 'provider-a:b',
+        name: 'B',
+        providers: <MtnMinecraftContentProviderMetadata>[
+          MtnMinecraftContentProviderMetadata(provider: 'provider-a', id: 'b'),
+        ],
+      );
+      final contentC = MtnMinecraftContentMod(
+        key: 'provider-a:c',
+        name: 'C',
+        providers: <MtnMinecraftContentProviderMetadata>[
+          MtnMinecraftContentProviderMetadata(provider: 'provider-a', id: 'c'),
+        ],
+      );
+      final contentD = MtnMinecraftContentMod(
+        key: 'provider-a:d',
+        name: 'D',
+        providers: <MtnMinecraftContentProviderMetadata>[
+          MtnMinecraftContentProviderMetadata(provider: 'provider-a', id: 'd'),
+        ],
+      );
+
+      final dependencyD = MtnMinecraftContentDependency(
+        type: MtnMinecraftContentDependencyType.tool,
+        provider: 'provider-a',
+        providerContentId: 'd',
+        providerVersionId: 'd-v1',
+      );
+      final versionD = MtnMinecraftContentVersion(
+        key: 'provider-a:d-v1',
+        content: contentD,
+        name: 'D 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        gameVersions: <String>['1.21.1'],
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+      );
+      final versionB = MtnMinecraftContentVersion(
+        key: 'provider-a:b-v1',
+        content: contentB,
+        name: 'B 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        gameVersions: <String>['1.21.1'],
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+        dependencies: <MtnMinecraftContentDependency>[dependencyD],
+      );
+      final versionCOld = MtnMinecraftContentVersion(
+        key: 'provider-a:c-v1',
+        content: contentC,
+        name: 'C 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        gameVersions: <String>['1.21.1'],
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+        publishedAt: DateTime.utc(2026, 1, 1),
+      );
+      final versionCNew = MtnMinecraftContentVersion(
+        key: 'provider-a:c-v2',
+        content: contentC,
+        name: 'C 2',
+        version: '2',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        gameVersions: <String>['1.21.1'],
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+        publishedAt: DateTime.utc(2026, 2, 1),
+      );
+
+      final dependencyB = MtnMinecraftContentDependency(
+        type: MtnMinecraftContentDependencyType.required,
+        provider: 'provider-a',
+        providerContentId: 'b',
+        providerVersionId: 'b-v1',
+      );
+      final dependencyC = MtnMinecraftContentDependency(
+        type: MtnMinecraftContentDependencyType.optional,
+        provider: 'provider-a',
+        providerContentId: 'c',
+        versionConstraint: 'ignored-by-this-checkpoint',
+      );
+      final unresolvedDependency = MtnMinecraftContentDependency(
+        type: MtnMinecraftContentDependencyType.incompatible,
+        fileName: 'missing.jar',
+      );
+      final root = MtnMinecraftContentVersion(
+        key: 'root:v1',
+        content: rootContent,
+        name: 'Root 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        gameVersions: <String>['1.21.1'],
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+        dependencies: <MtnMinecraftContentDependency>[dependencyB, dependencyC, unresolvedDependency],
+      );
+
+      final provider = _GraphContentProvider(
+        name: 'provider-a',
+        contentsById: <String, MtnMinecraftContent>{
+          'b': contentB,
+          'c': contentC,
+          'd': contentD,
+        },
+        versionsById: <String, MtnMinecraftContentVersion>{
+          'b-v1': versionB,
+          'd-v1': versionD,
+        },
+        versionsByContentId: <String, List<MtnMinecraftContentVersion>>{
+          'c': <MtnMinecraftContentVersion>[versionCOld, versionCNew],
+        },
+      );
+      final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]);
+
+      final graph = await service.resolveDependencyGraph(
+        root,
+        MtnMinecraftContentVersionSelectionRequest(
+          gameVersions: <String>['1.21.1'],
+          modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+          releaseTypes: <MtnMinecraftContentVersionReleaseType>[MtnMinecraftContentVersionReleaseType.release],
+        ),
+      );
+
+      expect(graph.root, same(root));
+      expect(graph.versions.first, same(root));
+      expect(graph.versions.map((version) => version.key), <String>['root:v1', 'provider-a:b-v1', 'provider-a:d-v1', 'provider-a:c-v2']);
+      expect(graph.edges.map((edge) => edge.source.key), <String>['root:v1', 'provider-a:b-v1', 'root:v1', 'root:v1']);
+      expect(graph.edges.map((edge) => edge.target?.key), <String?>['provider-a:b-v1', 'provider-a:d-v1', 'provider-a:c-v2', null]);
+      expect(
+        graph.edges.map((edge) => edge.dependency.type),
+        <MtnMinecraftContentDependencyType>[
+          MtnMinecraftContentDependencyType.required,
+          MtnMinecraftContentDependencyType.tool,
+          MtnMinecraftContentDependencyType.optional,
+          MtnMinecraftContentDependencyType.incompatible,
+        ],
+      );
+      expect(graph.unresolvedEdges.single.dependency, same(unresolvedDependency));
+      expect(graph.cyclicEdges, isEmpty);
+      expect(provider.versionIds, <String>['b-v1', 'd-v1']);
+      expect(provider.contentIds, <String>['c']);
+      expect(provider.versionListContentIds, <String>['c']);
+      expect(root.dependencies, <MtnMinecraftContentDependency>[dependencyB, dependencyC, unresolvedDependency]);
+      expect(dependencyC.content, isNull);
+      expect(dependencyC.version, isNull);
+    });
+
+    test('resolveDependencyGraph collapses shared version nodes and expands them only once', () async {
+      final rootContent = MtnMinecraftContentMod(key: 'root', name: 'Root');
+      final contentB = MtnMinecraftContentMod(
+        key: 'provider-a:b',
+        name: 'B',
+        providers: <MtnMinecraftContentProviderMetadata>[MtnMinecraftContentProviderMetadata(provider: 'provider-a', id: 'b')],
+      );
+      final contentC = MtnMinecraftContentMod(
+        key: 'provider-a:c',
+        name: 'C',
+        providers: <MtnMinecraftContentProviderMetadata>[MtnMinecraftContentProviderMetadata(provider: 'provider-a', id: 'c')],
+      );
+      final contentD = MtnMinecraftContentMod(
+        key: 'provider-a:d',
+        name: 'D',
+        providers: <MtnMinecraftContentProviderMetadata>[MtnMinecraftContentProviderMetadata(provider: 'provider-a', id: 'd')],
+      );
+      final contentE = MtnMinecraftContentMod(
+        key: 'provider-a:e',
+        name: 'E',
+        providers: <MtnMinecraftContentProviderMetadata>[MtnMinecraftContentProviderMetadata(provider: 'provider-a', id: 'e')],
+      );
+
+      final dependencyE = MtnMinecraftContentDependency(
+        type: MtnMinecraftContentDependencyType.required,
+        provider: 'provider-a',
+        providerContentId: 'e',
+        providerVersionId: 'e-v1',
+      );
+      final dependencyDFromB = MtnMinecraftContentDependency(
+        type: MtnMinecraftContentDependencyType.required,
+        provider: 'provider-a',
+        providerContentId: 'd',
+        providerVersionId: 'd-v1',
+      );
+      final dependencyDFromC = MtnMinecraftContentDependency(
+        type: MtnMinecraftContentDependencyType.optional,
+        provider: 'provider-a',
+        providerContentId: 'd',
+        providerVersionId: 'd-v1',
+      );
+
+      final versionE = MtnMinecraftContentVersion(
+        key: 'provider-a:e-v1',
+        content: contentE,
+        name: 'E 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+      );
+      final versionD = MtnMinecraftContentVersion(
+        key: 'provider-a:d-v1',
+        content: contentD,
+        name: 'D 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+        dependencies: <MtnMinecraftContentDependency>[dependencyE],
+      );
+      final versionB = MtnMinecraftContentVersion(
+        key: 'provider-a:b-v1',
+        content: contentB,
+        name: 'B 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+        dependencies: <MtnMinecraftContentDependency>[dependencyDFromB],
+      );
+      final versionC = MtnMinecraftContentVersion(
+        key: 'provider-a:c-v1',
+        content: contentC,
+        name: 'C 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+        dependencies: <MtnMinecraftContentDependency>[dependencyDFromC],
+      );
+      final root = MtnMinecraftContentVersion(
+        key: 'root:v1',
+        content: rootContent,
+        name: 'Root 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+        dependencies: <MtnMinecraftContentDependency>[
+          MtnMinecraftContentDependency(type: MtnMinecraftContentDependencyType.required, provider: 'provider-a', providerContentId: 'b', providerVersionId: 'b-v1'),
+          MtnMinecraftContentDependency(type: MtnMinecraftContentDependencyType.required, provider: 'provider-a', providerContentId: 'c', providerVersionId: 'c-v1'),
+        ],
+      );
+
+      final provider = _GraphContentProvider(
+        name: 'provider-a',
+        contentsById: <String, MtnMinecraftContent>{
+          'b': contentB,
+          'c': contentC,
+          'd': contentD,
+          'e': contentE,
+        },
+        versionsById: <String, MtnMinecraftContentVersion>{
+          'b-v1': versionB,
+          'c-v1': versionC,
+          'd-v1': versionD,
+          'e-v1': versionE,
+        },
+      );
+      final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]);
+
+      final graph = await service.resolveDependencyGraph(root, MtnMinecraftContentVersionSelectionRequest());
+
+      expect(graph.versions.map((version) => version.key), <String>['root:v1', 'provider-a:b-v1', 'provider-a:d-v1', 'provider-a:e-v1', 'provider-a:c-v1']);
+      expect(graph.versions.where((version) => version.key == 'provider-a:d-v1'), hasLength(1));
+      expect(graph.edges.map((edge) => '${edge.source.key}->${edge.target?.key ?? 'null'}'), <String>[
+        'root:v1->provider-a:b-v1',
+        'provider-a:b-v1->provider-a:d-v1',
+        'provider-a:d-v1->provider-a:e-v1',
+        'root:v1->provider-a:c-v1',
+        'provider-a:c-v1->provider-a:d-v1',
+      ]);
+      expect(graph.edges.where((edge) => edge.source.key == 'provider-a:d-v1'), hasLength(1));
+      expect(provider.versionIds.where((id) => id == 'd-v1'), hasLength(2));
+    });
+
+    test('resolveDependencyGraph preserves cyclic edge and stops recursive expansion', () async {
+      final contentA = MtnMinecraftContentMod(
+        key: 'provider-a:a',
+        name: 'A',
+        providers: <MtnMinecraftContentProviderMetadata>[MtnMinecraftContentProviderMetadata(provider: 'provider-a', id: 'a')],
+      );
+      final contentB = MtnMinecraftContentMod(
+        key: 'provider-a:b',
+        name: 'B',
+        providers: <MtnMinecraftContentProviderMetadata>[MtnMinecraftContentProviderMetadata(provider: 'provider-a', id: 'b')],
+      );
+      final contentC = MtnMinecraftContentMod(
+        key: 'provider-a:c',
+        name: 'C',
+        providers: <MtnMinecraftContentProviderMetadata>[MtnMinecraftContentProviderMetadata(provider: 'provider-a', id: 'c')],
+      );
+
+      final versionC = MtnMinecraftContentVersion(
+        key: 'provider-a:c-v1',
+        content: contentC,
+        name: 'C 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+        dependencies: <MtnMinecraftContentDependency>[
+          MtnMinecraftContentDependency(type: MtnMinecraftContentDependencyType.required, provider: 'provider-a', providerContentId: 'a', providerVersionId: 'a-v1'),
+        ],
+      );
+      final versionB = MtnMinecraftContentVersion(
+        key: 'provider-a:b-v1',
+        content: contentB,
+        name: 'B 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+        dependencies: <MtnMinecraftContentDependency>[
+          MtnMinecraftContentDependency(type: MtnMinecraftContentDependencyType.required, provider: 'provider-a', providerContentId: 'c', providerVersionId: 'c-v1'),
+        ],
+      );
+      final root = MtnMinecraftContentVersion(
+        key: 'provider-a:a-v1',
+        content: contentA,
+        name: 'A 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+        dependencies: <MtnMinecraftContentDependency>[
+          MtnMinecraftContentDependency(type: MtnMinecraftContentDependencyType.required, provider: 'provider-a', providerContentId: 'b', providerVersionId: 'b-v1'),
+        ],
+      );
+
+      final provider = _GraphContentProvider(
+        name: 'provider-a',
+        contentsById: <String, MtnMinecraftContent>{
+          'a': contentA,
+          'b': contentB,
+          'c': contentC,
+        },
+        versionsById: <String, MtnMinecraftContentVersion>{
+          'a-v1': root,
+          'b-v1': versionB,
+          'c-v1': versionC,
+        },
+      );
+      final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]);
+
+      final graph = await service.resolveDependencyGraph(root, MtnMinecraftContentVersionSelectionRequest());
+
+      expect(graph.versions.map((version) => version.key), <String>['provider-a:a-v1', 'provider-a:b-v1', 'provider-a:c-v1']);
+      expect(graph.edges, hasLength(3));
+      expect(graph.cyclicEdges, hasLength(1));
+      expect(graph.cyclicEdges.single.source, same(versionC));
+      expect(graph.cyclicEdges.single.target, same(root));
+      expect(graph.cyclicEdges.single.cyclic, isTrue);
+      expect(graph.unresolvedEdges, isEmpty);
+    });
+
+    test('resolveDependencyGraph marks a direct self dependency as cyclic without duplicating the root', () async {
+      final content = MtnMinecraftContentMod(
+        key: 'provider-a:a',
+        name: 'A',
+        providers: <MtnMinecraftContentProviderMetadata>[MtnMinecraftContentProviderMetadata(provider: 'provider-a', id: 'a')],
+      );
+      final root = MtnMinecraftContentVersion(
+        key: 'provider-a:a-v1',
+        content: content,
+        name: 'A 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+        dependencies: <MtnMinecraftContentDependency>[
+          MtnMinecraftContentDependency(type: MtnMinecraftContentDependencyType.required, provider: 'provider-a', providerContentId: 'a', providerVersionId: 'a-v1'),
+        ],
+      );
+      final provider = _GraphContentProvider(
+        name: 'provider-a',
+        contentsById: <String, MtnMinecraftContent>{'a': content},
+        versionsById: <String, MtnMinecraftContentVersion>{'a-v1': root},
+      );
+      final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]);
+
+      final graph = await service.resolveDependencyGraph(root, MtnMinecraftContentVersionSelectionRequest());
+
+      expect(graph.versions, <MtnMinecraftContentVersion>[root]);
+      expect(graph.edges, hasLength(1));
+      expect(graph.cyclicEdges.single.target, same(root));
+      expect(graph.cyclicEdges.single.cyclic, isTrue);
+      expect(provider.versionIds, <String>['a-v1']);
+    });
+
+    test('resolveDependencyGraph keeps providers isolated and graph collections immutable', () async {
+      final rootContent = MtnMinecraftContentMod(key: 'root', name: 'Root');
+      final contentA = MtnMinecraftContentMod(
+        key: 'provider-a:a',
+        name: 'A',
+        providers: <MtnMinecraftContentProviderMetadata>[MtnMinecraftContentProviderMetadata(provider: 'provider-a', id: 'a')],
+      );
+      final contentB = MtnMinecraftContentMod(
+        key: 'provider-b:b',
+        name: 'B',
+        providers: <MtnMinecraftContentProviderMetadata>[MtnMinecraftContentProviderMetadata(provider: 'provider-b', id: 'b')],
+      );
+      final versionA = MtnMinecraftContentVersion(
+        key: 'provider-a:a-v1',
+        content: contentA,
+        name: 'A 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+      );
+      final versionB = MtnMinecraftContentVersion(
+        key: 'provider-b:b-v1',
+        content: contentB,
+        name: 'B 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+      );
+      final root = MtnMinecraftContentVersion(
+        key: 'root:v1',
+        content: rootContent,
+        name: 'Root 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+        dependencies: <MtnMinecraftContentDependency>[
+          MtnMinecraftContentDependency(type: MtnMinecraftContentDependencyType.included, provider: 'provider-a', providerContentId: 'a', providerVersionId: 'a-v1'),
+          MtnMinecraftContentDependency(type: MtnMinecraftContentDependencyType.embedded, provider: 'provider-b', providerContentId: 'b', providerVersionId: 'b-v1'),
+        ],
+      );
+
+      final providerA = _GraphContentProvider(
+        name: 'provider-a',
+        contentsById: <String, MtnMinecraftContent>{'a': contentA},
+        versionsById: <String, MtnMinecraftContentVersion>{'a-v1': versionA},
+      );
+      final providerB = _GraphContentProvider(
+        name: 'provider-b',
+        contentsById: <String, MtnMinecraftContent>{'b': contentB},
+        versionsById: <String, MtnMinecraftContentVersion>{'b-v1': versionB},
+      );
+      final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[providerA, providerB]);
+
+      final graph = await service.resolveDependencyGraph(root, MtnMinecraftContentVersionSelectionRequest());
+
+      expect(graph.versions.map((version) => version.key), <String>['root:v1', 'provider-a:a-v1', 'provider-b:b-v1']);
+      expect(providerA.versionIds, <String>['a-v1']);
+      expect(providerB.versionIds, <String>['b-v1']);
+      expect(() => graph.versions.add(versionA), throwsUnsupportedError);
+      expect(() => graph.edges.clear(), throwsUnsupportedError);
+      expect(() => graph.unresolvedEdges.clear(), throwsUnsupportedError);
+      expect(() => graph.cyclicEdges.clear(), throwsUnsupportedError);
+    });
+
     test('searchAll queries only ready providers and preserves registration order without deduplication', () async {
       final firstContent = MtnMinecraftContentMod(key: 'provider-a:same-project', name: 'Same Project');
       final skippedContent = MtnMinecraftContentMod(key: 'provider-b:same-project', name: 'Same Project');
@@ -579,6 +1022,91 @@ void main() {
       );
     });
   });
+}
+
+class _GraphContentProvider extends MtnMinecraftContentProvider {
+  _GraphContentProvider({
+    required super.name,
+    required Map<String, MtnMinecraftContent> contentsById,
+    required Map<String, MtnMinecraftContentVersion> versionsById,
+    Map<String, List<MtnMinecraftContentVersion>>? versionsByContentId,
+  }) : contentsById = Map<String, MtnMinecraftContent>.unmodifiable(contentsById),
+       versionsById = Map<String, MtnMinecraftContentVersion>.unmodifiable(versionsById),
+       versionsByContentId = Map<String, List<MtnMinecraftContentVersion>>.unmodifiable(
+         (versionsByContentId ?? <String, List<MtnMinecraftContentVersion>>{}).map(
+           (key, versions) => MapEntry(key, List<MtnMinecraftContentVersion>.unmodifiable(versions)),
+         ),
+       );
+
+  final Map<String, MtnMinecraftContent> contentsById;
+  final Map<String, MtnMinecraftContentVersion> versionsById;
+  final Map<String, List<MtnMinecraftContentVersion>> versionsByContentId;
+  final List<String> contentIds = <String>[];
+  final List<String> versionIds = <String>[];
+  final List<String> versionListContentIds = <String>[];
+
+  @override
+  bool get ready => true;
+
+  @override
+  Future<MtnMinecraftContentSearchResult> search(MtnMinecraftContentSearchRequest request) async {
+    return MtnMinecraftContentSearchResult(
+      provider: name,
+      contents: const <MtnMinecraftContent>[],
+      offset: request.offset,
+      limit: request.limit,
+      total: 0,
+      hasMore: false,
+    );
+  }
+
+  @override
+  Future<MtnMinecraftContent> getContent(String id) async {
+    contentIds.add(id);
+    final content = contentsById[id];
+    if (content == null) throw StateError('Graph fake provider $name has no content id: $id');
+    return content;
+  }
+
+  @override
+  Future<MtnMinecraftContentVersion> getVersion(String id) async {
+    versionIds.add(id);
+    final version = versionsById[id];
+    if (version == null) throw StateError('Graph fake provider $name has no version id: $id');
+    return version;
+  }
+
+  @override
+  Future<MtnMinecraftContentVersionListResult> getVersions(MtnMinecraftContent content, MtnMinecraftContentVersionListRequest request) async {
+    String? contentId;
+    for (final metadata in content.providers) {
+      if (metadata.provider == name && metadata.id != null && metadata.id!.isNotEmpty) {
+        contentId = metadata.id;
+        break;
+      }
+    }
+    if (contentId == null) throw StateError('Content ${content.key} has no canonical $name id.');
+
+    versionListContentIds.add(contentId);
+    final source = versionsByContentId[contentId] ?? const <MtnMinecraftContentVersion>[];
+    final filtered = source.where((version) {
+      final gameVersionMatches = request.gameVersions.isEmpty || version.gameVersions.any(request.gameVersions.contains);
+      final loaderMatches = request.modLoaders.isEmpty || version.modLoaders.any(request.modLoaders.contains);
+      final releaseMatches = request.releaseTypes.isEmpty || request.releaseTypes.contains(version.releaseType);
+      return gameVersionMatches && loaderMatches && releaseMatches;
+    }).toList(growable: false);
+
+    final start = request.offset > filtered.length ? filtered.length : request.offset;
+    final end = start + request.limit > filtered.length ? filtered.length : start + request.limit;
+
+    return MtnMinecraftContentVersionListResult(
+      versions: filtered.sublist(start, end),
+      offset: request.offset,
+      limit: request.limit,
+      total: filtered.length,
+      hasMore: end < filtered.length,
+    );
+  }
 }
 
 class _FakeContentProvider extends MtnMinecraftContentProvider {

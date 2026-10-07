@@ -2,6 +2,7 @@ import '../model/minecraft_content_models.dart';
 import '../provider/minecraft_content_provider.dart';
 import '../provider/minecraft_content_provider_list.dart';
 import '../provider/minecraft_content_provider_models.dart';
+import 'minecraft_content_dependency_graph.dart';
 
 class MtnMinecraftContentService {
   MtnMinecraftContentService({
@@ -141,6 +142,76 @@ class MtnMinecraftContentService {
 
     if (latest == null) return identity;
     return MtnMinecraftContentDependencyResolution(dependency: dependency, version: latest);
+  }
+
+  Future<MtnMinecraftContentDependencyGraph> resolveDependencyGraph(
+    MtnMinecraftContentVersion root,
+    MtnMinecraftContentVersionSelectionRequest request,
+  ) async {
+    final versionsByKey = <String, MtnMinecraftContentVersion>{
+      root.key: root,
+    };
+    final versions = <MtnMinecraftContentVersion>[root];
+    final edges = <MtnMinecraftContentDependencyGraphEdge>[];
+    final expandedVersionKeys = <String>{};
+
+    Future<void> expand(MtnMinecraftContentVersion source, Set<String> path) async {
+      if (!expandedVersionKeys.add(source.key)) return;
+
+      for (final dependency in source.dependencies) {
+        final resolution = await resolveDependencyVersion(dependency, request);
+        final resolvedVersion = resolution.version;
+
+        if (resolvedVersion == null) {
+          edges.add(
+            MtnMinecraftContentDependencyGraphEdge(
+              source: source,
+              dependency: dependency,
+              resolution: resolution,
+              target: null,
+              cyclic: false,
+            ),
+          );
+          continue;
+        }
+
+        var target = versionsByKey[resolvedVersion.key];
+        if (target == null) {
+          target = resolvedVersion;
+          versionsByKey[target.key] = target;
+          versions.add(target);
+        }
+
+        final cyclic = path.contains(target.key);
+        edges.add(
+          MtnMinecraftContentDependencyGraphEdge(
+            source: source,
+            dependency: dependency,
+            resolution: resolution,
+            target: target,
+            cyclic: cyclic,
+          ),
+        );
+
+        if (cyclic || expandedVersionKeys.contains(target.key)) continue;
+
+        await expand(
+          target,
+          <String>{
+            ...path,
+            target.key,
+          },
+        );
+      }
+    }
+
+    await expand(root, <String>{root.key});
+
+    return MtnMinecraftContentDependencyGraph(
+      root: root,
+      versions: versions,
+      edges: edges,
+    );
   }
 
   void _requireDependencyContentIdentity(MtnMinecraftContentDependency dependency, String providerName, MtnMinecraftContent content) {

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0-dev.9
+
+- Add `MtnMinecraftContentDependencyGraph` and `MtnMinecraftContentDependencyGraphEdge` as immutable runtime resolution results.
+- Add `MtnMinecraftContentService.resolveDependencyGraph()` for recursive dependency traversal from a caller-selected root version.
+- Reuse existing `resolveDependencyVersion()` semantics for every graph edge instead of duplicating identity/version-selection logic.
+- Traverse dependencies deterministically in depth-first declaration order.
+- Collapse shared dependency nodes by canonical `version.key` while preserving every declaring edge.
+- Preserve unresolved dependencies as graph edges with no target version.
+- Detect direct and deep cycles, retain the cyclic edge, and stop expansion without treating cycles as errors.
+- Preserve all dependency relation types as metadata only; do not introduce install/conflict policy.
+- Keep `versionConstraint` interpretation, artifact selection, downloads/materialization, and cross-provider association out of this checkpoint.
+
 ## 1.0.0-dev.8
 
 - Add immutable `MtnMinecraftContentVersionSelectionRequest` without exposing pagination as selection policy.
