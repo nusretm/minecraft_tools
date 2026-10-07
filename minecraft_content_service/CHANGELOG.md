@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.0-dev.2
+
+- Add `MtnMinecraftContentProvider` base contract.
+- Add explicit `MtnMinecraftContentProviderList` registry authority.
+- Add `MtnMinecraftContentService` routing for registered providers.
+- Add provider-independent search and version-list request/result contracts.
+- Keep concrete provider HTTP/API behavior outside the generic core.
+
 ## 1.0.0-dev.1
 
 - Add reusable Minecraft content model foundation.

@@ -16,14 +16,14 @@ Merged baseline:
 
 ```text
 main
-7d3fceca467d941f90b5c4d44bd8bdbf33f23096
-Merge remote-tracking branch 'origin/docs/item-client-resource-resolution-plan'
+0ad126e0a568bb3e6414399d87e2df58ddfc26d7
+Merge pull request #28 from nusretm/feature/minecraft-content-model-foundation
 ```
 
 Current checkpoint branch:
 
 ```text
-feature/minecraft-content-model-foundation
+feature/minecraft-content-provider-service-foundation
 IMPLEMENTED / VALIDATED
 MERGE NOT REQUESTED
 ```
@@ -31,17 +31,63 @@ MERGE NOT REQUESTED
 Current branch production HEAD before continuity closeout:
 
 ```text
-ed430670ba5b1ba4c27cb204b8aba5680a0df288
-Use super parameters in content specializations
+55534a1b4979dfcbf46c715716add01c9297bd01
+Test version loading with logical content
 ```
 
 Package version:
 
 ```text
 minecraft_content_service
-1.0.0-dev.1
+1.0.0-dev.2
 ```
 
+## Minecraft content provider/service foundation checkpoint
+
+```text
+Branch: feature/minecraft-content-provider-service-foundation
+Status: IMPLEMENTED / VALIDATED
+Package: minecraft_content_service/
+```
+
+Locked architecture:
+
+- `MtnMinecraftContentProviderList` is the single provider registry authority
+- providers do not self-register
+- duplicate provider names are rejected and registration order is preserved
+- `MtnMinecraftContentService` routes only through registered providers
+- provider identity remains an extensible stable string
+- search/version request filters are immutable
+- common offset/limit pagination is bounded to 1..50
+- `getVersions(providerName, content, request)` receives the existing logical content object
+- concrete providers must attach returned versions to that same logical content instance
+- generic core contains no Modrinth/CurseForge switch or provider-specific HTTP behavior
+- multi-provider aggregation, dependency solving and materialization remain later work
+
+Validation:
+
+```text
+dart analyze
+No issues found!
+
+dart test
+00:00 +12: All tests passed!
+
+git diff --check main...HEAD
+PASS
+
+git status
+clean
+
+validated production HEAD
+55534a1b4979dfcbf46c715716add01c9297bd01
+```
+
+Dedicated handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-07_MINECRAFT_CONTENT_PROVIDER_SERVICE_FOUNDATION.md
+```
 ## Minecraft content model foundation checkpoint
 
 ```text
@@ -1322,29 +1368,27 @@ In particular:
 
 ## Next action
 
-The content model foundation is complete and validated. No next implementation checkpoint is automatically approved.
+The content model foundation and provider/service foundation are complete and validated. No next implementation checkpoint is automatically approved.
 
 Natural continuation for `minecraft_content_service/`:
 
 ```text
-MtnMinecraftContentService
-→ explicit provider registry
-→ MtnMinecraftContentProvider base contract
-→ Modrinth provider adapter
-→ CurseForge provider adapter
-→ provider-independent search/project/version mapping
+MtnMinecraftContentProviderModrinth
+→ Modrinth HTTP/read foundation
+→ search mapping
+→ project/content mapping
+→ version/file/dependency mapping
 ```
 
-That continuation must preserve the current rules:
+The next provider checkpoint must preserve these rules:
 
-- providers do not self-register
-- provider identity remains extensible
-- provider-specific metadata is preserved without polluting generic core models
-- do not deduplicate Modrinth and CurseForge projects by name/slug heuristics
-- canonical provider IDs remain authoritative inside each provider
-- HTTP/provider work stays independent from `minecraft_info_provider/`
-- dependency solving and materialization remain separate later checkpoints unless explicitly approved
-
+- Modrinth endpoints, wire tokens and mapping logic stay inside the concrete Modrinth provider subtree
+- generic core must not gain Modrinth conditionals
+- registration remains explicit through `MtnMinecraftContentProviderList`
+- canonical provider IDs remain authoritative inside the provider
+- do not cross-provider deduplicate by name or slug heuristics
+- version loading must preserve the existing logical `MtnMinecraftContent` instance
+- dependency solving and artifact materialization remain separate later checkpoints
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
 ```text

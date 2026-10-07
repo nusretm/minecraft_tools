@@ -1,6 +1,6 @@
 name: minecraft_content_service
-description: Pure Dart Minecraft content catalog, version, dependency, and relation models.
-version: 1.0.0-dev.1
+description: Pure Dart Minecraft content catalog, provider, version, dependency, and relation service foundation.
+version: 1.0.0-dev.2
 publish_to: none
 
 environment:
