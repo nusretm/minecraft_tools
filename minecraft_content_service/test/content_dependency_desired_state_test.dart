@@ -14,8 +14,10 @@ void main() {
 
       final planA = _plan(rootA, <MtnMinecraftContentVersion>[rootA, b, sharedFirst]);
       final planX = _plan(rootX, <MtnMinecraftContentVersion>[rootX, c, sharedLater]);
+      final plans = <MtnMinecraftContentDependencyInstallPlan>[planA, planX];
 
-      final state = MtnMinecraftContentService().composeDependencyInstallPlans(<MtnMinecraftContentDependencyInstallPlan>[planA, planX]);
+      final state = MtnMinecraftContentService().composeDependencyInstallPlans(plans);
+      plans.clear();
 
       expect(state.plans, <MtnMinecraftContentDependencyInstallPlan>[planA, planX]);
       expect(state.directVersions, <MtnMinecraftContentVersion>[rootA, rootX]);
