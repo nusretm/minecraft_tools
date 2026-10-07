@@ -12,6 +12,17 @@ Last updated: 2026-10-07
 
 ## Repository state
 
+Content file selection merge:
+
+```text
+PR: #42
+main merge commit:
+b39f9ef5ed7dda2c4e6ab182aead2668f6263230
+Add content file selection foundation
+```
+
+Post-merge continuity closeout commits are docs-only and follow that functional merge commit.
+
 Installed-state reconciliation merge:
 
 ```text
@@ -179,7 +190,7 @@ production/test HEAD: 035df4bf9db4e4b95709e08e515499c3e3565062
 merge commit: 322bdf08325ae8a4c714bd9d84b2c127c27ab24b
 ```
 
-Latest completed checkpoint:
+Previous completed checkpoint:
 
 ```text
 feature/minecraft-content-installed-state-reconciliation
@@ -192,15 +203,17 @@ production/test HEAD: 6df0ce3a1f509a18e7b65d43f97547f0859c63bc
 merge commit: 8b12429e831aba8b71239b13d483bc7061d53a6c
 ```
 
-Current active checkpoint:
+Latest completed checkpoint:
 
 ```text
 feature/minecraft-content-file-selection
-IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
-MERGE NOT REQUESTED
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
+PR: #42
 baseline main: 6af90fc33e8d27119efa86d6a746a5ee4b6f49de
 validated feature HEAD: a952582509eb89cd44fe21f5580e26d7d075cdd5
+merged feature HEAD: 899dc2c26cf6f25828bb064b6c1ee04b723237a9
 production/test HEAD: f68e773cbfe24c9427558fafb0c4008bc9facd63
+merge commit: b39f9ef5ed7dda2c4e6ab182aead2668f6263230
 ```
 
 Package version:
@@ -214,11 +227,14 @@ minecraft_content_service
 
 ```text
 Branch: feature/minecraft-content-file-selection
-Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
 Package: minecraft_content_service/
+PR: #42
 Baseline main: 6af90fc33e8d27119efa86d6a746a5ee4b6f49de
 Validated feature HEAD: a952582509eb89cd44fe21f5580e26d7d075cdd5
+Merged feature HEAD: 899dc2c26cf6f25828bb064b6c1ee04b723237a9
 Production/test HEAD: f68e773cbfe24c9427558fafb0c4008bc9facd63
+Merge commit: b39f9ef5ed7dda2c4e6ab182aead2668f6263230
 ```
 
 Public/service surface:
@@ -2771,18 +2787,11 @@ In particular:
 
 ## Next action
 
-The active content-service checkpoint is:
+The content file-selection foundation is implementation-complete, validated, continuity-closed, merged through PR #42, and recorded in continuity.
 
-```text
-feature/minecraft-content-file-selection
-IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
-MERGE NOT REQUESTED
-validated feature HEAD: a952582509eb89cd44fe21f5580e26d7d075cdd5
-```
+No content-service implementation checkpoint is currently active or automatically approved.
 
-This checkpoint is ready for merge review but merge still requires separate explicit user approval.
-
-Download-source resolution becomes the likely next content-service checkpoint only after this file-selection foundation is merged.
+Download-source resolution is now the natural next content-service checkpoint and should be scoped separately before implementation.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
