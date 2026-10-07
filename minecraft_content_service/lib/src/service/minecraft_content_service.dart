@@ -11,19 +11,15 @@ class MtnMinecraftContentService {
   final MtnMinecraftContentProviderList providers;
 
   Future<MtnMinecraftContentSearchResult> search(String providerName, MtnMinecraftContentSearchRequest request) {
-    return _requireReadyProvider(providerName).search(request);
+    return providers.requireReadyFromName(providerName).search(request);
   }
 
   Future<MtnMinecraftContent> getContent(String providerName, String id) {
     if (id.isEmpty) throw ArgumentError.value(id, 'id', 'Content id cannot be empty.');
-    return _requireReadyProvider(providerName).getContent(id);
+    return providers.requireReadyFromName(providerName).getContent(id);
   }
 
   Future<MtnMinecraftContentVersionListResult> getVersions(String providerName, MtnMinecraftContent content, MtnMinecraftContentVersionListRequest request) {
-    return _requireReadyProvider(providerName).getVersions(content, request);
-  }
-
-  MtnMinecraftContentProvider _requireReadyProvider(String providerName) {
-    return providers.requireFromName(providerName).requireReady();
+    return providers.requireReadyFromName(providerName).getVersions(content, request);
   }
 }
