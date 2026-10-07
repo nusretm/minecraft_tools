@@ -16,14 +16,14 @@ Merged baseline:
 
 ```text
 main
-e1dc811ed85681f766d2711ac546b8ffa4a1b7e3
-Merge pull request #31 from nusretm/feature/minecraft-content-cli-example
+bbed501912ef540ce3e203becd6f889c301e232b
+Merge pull request #32 from nusretm/feature/minecraft-content-provider-curseforge-foundation
 ```
 
 Current checkpoint branch:
 
 ```text
-feature/minecraft-content-provider-curseforge-foundation
+feature/minecraft-content-provider-readiness-rate-limit
 IMPLEMENTED / VALIDATED
 MERGE NOT REQUESTED
 ```
@@ -31,17 +31,90 @@ MERGE NOT REQUESTED
 Current branch production HEAD before continuity closeout:
 
 ```text
-7a504338029f58c0808190d1e43d3b9c79146526
-Remove redundant CurseForge loader assertion
+bd2f43c028833a9095cd11840f021090da5c776a
+Record provider runtime foundation
 ```
 
 Package version:
 
 ```text
 minecraft_content_service
-1.0.0-dev.4
+1.0.0-dev.5
 ```
 
+## Minecraft content provider readiness / rate-limit foundation checkpoint
+
+```text
+Branch: feature/minecraft-content-provider-readiness-rate-limit
+Status: IMPLEMENTED / VALIDATED
+Package: minecraft_content_service/
+```
+
+Locked semantics:
+
+- provider registration and provider readiness are independent
+- `registered` means the registry knows the provider; it does not imply the provider can be used
+- `ready` is decided by each concrete provider from its own configuration prerequisites
+- temporary rate limiting does not change `ready`
+- `MtnMinecraftContentProviderList.readyItems` exposes currently usable registered providers
+- `requireReadyFromName()` rejects registered-but-not-ready providers with `MtnMinecraftContentProviderNotReadyException`
+- `MtnMinecraftContentService` routes explicit provider operations only through ready providers
+- direct built-in provider calls also guard readiness before network work starts
+
+CurseForge readiness:
+
+- CurseForge can now be constructed and registered without an API key
+- missing / blank API key => `ready == false`
+- setting a non-empty API key later => `ready == true`
+- clearing the API key => `ready == false`
+- the API key remains private and is never exposed through the public provider state
+
+Request runtime:
+
+- the base provider owns a serialized request gate/queue
+- built-in provider HTTP operations pass through that gate
+- requests queued behind a temporarily limited provider wait until its known reset point
+- readiness is checked before queueing and again before execution
+- provider-owned rate-limit state is exposed through immutable `MtnMinecraftContentProviderRateLimit` snapshots
+- observable fields are `limit`, `remaining`, `resetAt`, `limited`, and derived `resetIn`
+
+Modrinth rate-limit behavior:
+
+- Modrinth response headers remain provider-specific and do not leak into generic core
+- `X-Ratelimit-Limit`, `X-Ratelimit-Remaining`, and `X-Ratelimit-Reset` update generic rate-limit state
+- no fixed 300/minute production constant is hardcoded
+- a 429 response is retried at most once when Modrinth supplies a usable retry/reset duration
+
+CurseForge rate-limit behavior:
+
+- no undocumented fixed request quota is invented
+- HTTP 429 is retried at most once only when `Retry-After` is actually returned and usable
+- absence of a known retry duration leaves the provider-specific HTTP error visible to the caller
+
+Validation on 2026-10-07:
+
+```text
+dart analyze
+No issues found!
+
+dart test
+00:00 +31: All tests passed!
+
+git diff --check main...HEAD
+PASS
+
+git status
+clean
+
+validated production HEAD
+bd2f43c028833a9095cd11840f021090da5c776a
+```
+
+Dedicated handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-07_MINECRAFT_CONTENT_PROVIDER_READINESS_RATE_LIMIT.md
+```
 ## Minecraft content CurseForge provider foundation checkpoint
 
 ```text
@@ -1623,20 +1696,23 @@ In particular:
 
 ## Next action
 
-The content model, generic provider/service foundation, Modrinth provider, CurseForge provider and Modrinth live CLI search path are complete and validated. No next implementation checkpoint is automatically approved.
+The content model, provider/service foundation, Modrinth provider, CurseForge provider, Modrinth live CLI smoke, and provider readiness/rate-limit runtime foundation are complete and validated. No next implementation checkpoint is automatically approved.
 
-Natural short continuation for `minecraft_content_service/`:
+CurseForge live smoke remains deliberately deferred because no application API key is currently available. The provider can stay registered with `ready == false` until that prerequisite exists.
+
+Natural next content-service checkpoint:
 
 ```text
-extend example/mc_content.dart with CurseForge provider selection
-→ supply CurseForge API key outside source code
-→ run the same content/query/Minecraft-version/loader search path
-→ record a live CurseForge smoke
+multi-provider search foundation
+→ execute the same generic search request against registered ready providers
+→ automatically skip registered providers with ready == false
+→ preserve every provider result as a separate MtnMinecraftContent
+→ no name/slug deduplication
+→ no automatic cross-provider association
+→ user chooses which provider result to use
 ```
 
-After both provider live paths are proven, later design work may consider multi-provider aggregation/fallback and explicit cross-provider association. Those are separate checkpoints and must not be inferred from matching names/slugs.
-
-Dependency solving, download/materialization and provider aggregation remain out of scope until separately approved.
+Dependency solving, download/materialization, cross-provider association, and CurseForge live smoke remain separate future checkpoints.
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
 ```text
