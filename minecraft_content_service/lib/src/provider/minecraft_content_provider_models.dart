@@ -63,6 +63,20 @@ class MtnMinecraftContentDependencyResolution {
   bool get versionResolved => version != null;
 }
 
+class MtnMinecraftContentVersionSelectionRequest {
+  MtnMinecraftContentVersionSelectionRequest({
+    List<String>? gameVersions,
+    List<MtnMinecraftModLoaderType>? modLoaders,
+    List<MtnMinecraftContentVersionReleaseType>? releaseTypes,
+  }) : gameVersions = List<String>.unmodifiable(gameVersions ?? <String>[]),
+       modLoaders = List<MtnMinecraftModLoaderType>.unmodifiable(modLoaders ?? <MtnMinecraftModLoaderType>[]),
+       releaseTypes = List<MtnMinecraftContentVersionReleaseType>.unmodifiable(releaseTypes ?? <MtnMinecraftContentVersionReleaseType>[]);
+
+  final List<String> gameVersions;
+  final List<MtnMinecraftModLoaderType> modLoaders;
+  final List<MtnMinecraftContentVersionReleaseType> releaseTypes;
+}
+
 class MtnMinecraftContentVersionListRequest {
   MtnMinecraftContentVersionListRequest({
     List<String>? gameVersions,
