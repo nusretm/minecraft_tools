@@ -16,7 +16,9 @@ Implementation: COMPLETE
 Validation: COMPLETE
 Continuity: CLOSED
 Validated feature HEAD: e4c241d83d252ba9ea0ab24184198d63b7faf5a5
-Merge: APPROVED
+Merge: COMPLETE
+PR: #45
+Merge commit: c1d03bf9caad65cae6771c63491eb421fdd1c6bd
 ```
 
 No `dart format` was run.
@@ -253,4 +255,4 @@ content_dependency_reconciliation_test.dart
 
 No `dart format` was run.
 
-The checkpoint is implementation-complete, validated, and continuity-closed. Merge has been separately approved by the user.
+The checkpoint is implementation-complete, validated, continuity-closed, and merged through PR #45 at merge commit `c1d03bf9caad65cae6771c63491eb421fdd1c6bd`.
