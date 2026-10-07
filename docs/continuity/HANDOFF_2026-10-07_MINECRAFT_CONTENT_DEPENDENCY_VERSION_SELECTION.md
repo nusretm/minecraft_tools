@@ -11,11 +11,17 @@ Branch: feature/minecraft-content-dependency-version-selection
 Implementation: COMPLETE
 Validation: COMPLETE
 Continuity: CLOSED
-Merge: NOT REQUESTED
-Baseline main:
-6c2cae386bd0b4a825fd7330d093de01f43c82dd
+Merge: COMPLETE
+Pull request:
+#36
 Validated feature HEAD:
 e64a5596817f4a174b1e5cb952ef619a04eaed15
+Merged feature HEAD:
+549a55bfd2c4f29bd136d3f8a36683ee4c077403
+Merge commit:
+519311136091e6ed85c90628ac3ce2393f166997
+Baseline main:
+6c2cae386bd0b4a825fd7330d093de01f43c82dd
 ```
 
 Package version: `1.0.0-dev.8`.
@@ -158,10 +164,22 @@ e64a5596817f4a174b1e5cb952ef619a04eaed15
 
 No `dart format` was run.
 
+## Post-merge closure
+
+The validated and continuity-closed feature branch was merged through pull request #36.
+
+```text
+PR: #36
+feature: feature/minecraft-content-dependency-version-selection
+validated feature HEAD: e64a5596817f4a174b1e5cb952ef619a04eaed15
+merged feature HEAD: 549a55bfd2c4f29bd136d3f8a36683ee4c077403
+merge commit: 519311136091e6ed85c90628ac3ce2393f166997
+```
+
+The commits after the validated feature HEAD contain continuity-only closeout changes. No production implementation changed after authoritative validation.
+
 ## Next action
 
-This checkpoint is implementation-complete, validated, and continuity-closed.
-
-Merge is not yet requested and still requires separate explicit user approval.
+This checkpoint is implementation-complete, validated, continuity-closed, and merged.
 
 Recursive dependency graph solving remains the likely next content-service checkpoint, but it is not automatically approved.
