@@ -117,7 +117,7 @@ void main() {
       final optional = _edge(root, MtnMinecraftContentDependencyType.optional);
       final bundled = _edge(root, MtnMinecraftContentDependencyType.bundled);
       final tool = _edge(root, MtnMinecraftContentDependencyType.tool);
-      final incompatible = _edge(root, MtnMinecraftContentDependencyType.incompatible);
+      final incompatible = _edge(root, MtnMinecraftContentDependencyType.incompatible, resolvedContent: root.content);
       final graph = MtnMinecraftContentDependencyGraph(
         root: root,
         versions: <MtnMinecraftContentVersion>[root],
@@ -259,6 +259,39 @@ void main() {
       expect(plan.incompatibleEdges, <MtnMinecraftContentDependencyGraphEdge>[cIncompatibleV1]);
       expect(plan.conflicts.whereType<MtnMinecraftContentDependencyInstallConflictIncompatible>(), isEmpty);
       expect(plan.installable, isTrue);
+    });
+
+    test('exact incompatibility is blocking when its exact version is install-reachable', () {
+      final root = _version('root:v1', _content('root'));
+      final contentB = _content('b');
+      final bV1 = _version('b:v1', contentB);
+      final c = _version('c:v1', _content('c'));
+
+      final rootToB = _edge(root, MtnMinecraftContentDependencyType.required, target: bV1);
+      final rootToC = _edge(root, MtnMinecraftContentDependencyType.required, target: c);
+      final exactDependency = MtnMinecraftContentDependency(
+        type: MtnMinecraftContentDependencyType.incompatible,
+        version: bV1,
+      );
+      final cIncompatibleV1 = _edge(
+        c,
+        MtnMinecraftContentDependencyType.incompatible,
+        dependency: exactDependency,
+        target: bV1,
+      );
+      final graph = MtnMinecraftContentDependencyGraph(
+        root: root,
+        versions: <MtnMinecraftContentVersion>[root, bV1, c],
+        edges: <MtnMinecraftContentDependencyGraphEdge>[rootToB, rootToC, cIncompatibleV1],
+      );
+
+      final plan = MtnMinecraftContentService().planDependencyInstall(graph, MtnMinecraftContentDependencyInstallRequest());
+
+      final incompatibilities = plan.conflicts.whereType<MtnMinecraftContentDependencyInstallConflictIncompatible>().toList();
+      expect(incompatibilities, hasLength(1));
+      expect(incompatibilities.single.edge, same(cIncompatibleV1));
+      expect(incompatibilities.single.conflictingVersion, same(bV1));
+      expect(plan.installable, isFalse);
     });
 
     test('plan and request collections are immutable and planning does not mutate version direct state', () {
