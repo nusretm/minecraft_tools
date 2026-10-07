@@ -57,6 +57,7 @@ void main() {
         name: 'Fabric API 1',
         version: '1',
         releaseType: MtnMinecraftContentVersionReleaseType.release,
+        gameVersions: <String>['1.21.1'],
         modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
       );
       final provider = _FakeContentProvider(name: 'provider-a', content: content, versions: <MtnMinecraftContentVersion>[version]);
