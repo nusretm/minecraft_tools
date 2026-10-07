@@ -183,7 +183,10 @@ void main() {
         ],
       );
 
-      final result = await provider.getVersions(content, MtnMinecraftContentVersionListRequest());
+      final result = await provider.getVersions(
+        content,
+        MtnMinecraftContentVersionListRequest(modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.vanilla]),
+      );
       expect(result.versions.single.modLoaders, <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.vanilla]);
     });
 
@@ -216,6 +219,16 @@ void main() {
       );
       await expectLater(
         provider.getVersions(content, MtnMinecraftContentVersionListRequest(modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric, MtnMinecraftModLoaderType.quilt])),
+        throwsArgumentError,
+      );
+      await expectLater(
+        provider.search(
+          MtnMinecraftContentSearchRequest(
+            types: <MtnMinecraftContentType>[MtnMinecraftContentType.mod],
+            gameVersions: <String>['26.1.2'],
+            modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric, MtnMinecraftModLoaderType.quilt],
+          ),
+        ),
         throwsArgumentError,
       );
     });
