@@ -17,7 +17,7 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
        _ownsClient = client == null,
        baseUri = baseUri ?? Uri.parse('https://api.curseforge.com/'),
        super(name: providerName) {
-    if (apiKey.trim().isEmpty) throw ArgumentError.value(apiKey, 'apiKey', 'CurseForge API key cannot be empty.');
+    if (apiKey.trim().isEmpty) throw ArgumentError('CurseForge API key cannot be empty.');
     if (!this.baseUri.hasScheme || this.baseUri.host.isEmpty) throw ArgumentError.value(this.baseUri, 'baseUri', 'CurseForge baseUri must be absolute.');
   }
 
@@ -69,13 +69,13 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
   @override
   Future<MtnMinecraftContentVersionListResult> getVersions(MtnMinecraftContent content, MtnMinecraftContentVersionListRequest request) async {
     final modId = MtnMinecraftContentProviderCurseForgeMapper.providerId(name, content);
-    MtnMinecraftContentProviderCurseForgeMapper.validateVersionRequest(request);
+    MtnMinecraftContentProviderCurseForgeMapper.validateVersionRequest(content, request);
 
     final files = <Map<String, dynamic>>[];
     var index = 0;
 
     while (index < 10000) {
-      final query = MtnMinecraftContentProviderCurseForgeMapper.versionQuery(request, index: index, pageSize: 50);
+      final query = MtnMinecraftContentProviderCurseForgeMapper.versionQuery(content, request, index: index, pageSize: 50);
       final envelope = await _getEnvelope(baseUri.resolve('v1/mods/$modId/files').replace(queryParameters: query));
       final page = MtnMinecraftContentProviderCurseForgeMapper.dataList(envelope);
       files.addAll(page);
