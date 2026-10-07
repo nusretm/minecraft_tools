@@ -12,29 +12,33 @@ Last updated: 2026-10-07
 
 ## Repository state
 
-Current merged main:
+Dependency identity resolution merge:
 
 ```text
 main
-510620a5e22f60a1cb2cf5e90c6bd6e1d47d6d12
-Merge pull request #35 from nusretm/docs/minecraft-content-multi-provider-search-post-merge-sync
-Sync multi-provider search continuity after merge
+2f9097e1cb1bf29bcede4709ab89d89ec43c6715
+Merge dependency identity resolution foundation
 ```
 
-Current checkpoint branch:
+Authoritative post-merge local state supplied by the user before continuity closeout commits:
+
+```text
+Branch: main
+origin/main: same
+Working tree: clean
+HEAD: 2f9097e1cb1bf29bcede4709ab89d89ec43c6715
+```
+
+Dependency identity resolution checkpoint:
 
 ```text
 feature/minecraft-content-dependency-identity-resolution
-IMPLEMENTED / VALIDATION PENDING
-MERGE NOT REQUESTED
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
+validated feature HEAD: 4323cfae7244d18ba3859ae4cdbbb37c2e3c74ed
+merge commit: 2f9097e1cb1bf29bcede4709ab89d89ec43c6715
 ```
 
-Production HEAD before continuity updates:
-
-```text
-81ce76076caeec90c01665983be8add387411ed3
-Record dependency identity resolution foundation
-```
+Post-merge continuity closeout is docs-only and follows the functional merge commit above.
 
 Multi-provider search checkpoint:
 
@@ -56,9 +60,10 @@ minecraft_content_service
 
 ```text
 Branch: feature/minecraft-content-dependency-identity-resolution
-Status: IMPLEMENTED / VALIDATION PENDING
+Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
 Package: minecraft_content_service/
-Production HEAD before continuity updates: 81ce76076caeec90c01665983be8add387411ed3
+Validated feature HEAD: 4323cfae7244d18ba3859ae4cdbbb37c2e3c74ed
+Merge commit: 2f9097e1cb1bf29bcede4709ab89d89ec43c6715
 ```
 
 Public/service surface:
@@ -102,10 +107,36 @@ Still deliberately out of scope:
 - CurseForge live smoke
 - deferred item client-definition/model/texture rendering
 
-Validation:
+Validation on 2026-10-07:
 
 ```text
-PENDING USER-SUPPLIED LOCAL DART VALIDATION
+dart analyze
+Analyzing minecraft_content_service...
+No issues found!
+
+dart test test/content_provider_service_test.dart
+00:00 +13: All tests passed!
+
+dart test test/content_provider_modrinth_test.dart
+00:00 +7: All tests passed!
+
+dart test test/content_provider_curseforge_test.dart
+00:00 +10: All tests passed!
+
+dart test
+00:00 +37: All tests passed!
+
+git diff --check main...HEAD
+PASS
+
+git status
+clean
+
+validated feature HEAD
+4323cfae7244d18ba3859ae4cdbbb37c2e3c74ed
+
+merged main HEAD supplied by user
+2f9097e1cb1bf29bcede4709ab89d89ec43c6715
 ```
 
 No `dart format` was run.
@@ -1832,27 +1863,18 @@ In particular:
 
 ## Next action
 
-The dependency identity resolution foundation is implemented on:
+The dependency identity resolution foundation is implementation-complete, validated, continuity-closed, merged, and pushed to `origin/main`.
 
-```text
-feature/minecraft-content-dependency-identity-resolution
-```
+No content-service implementation checkpoint is currently active or automatically approved.
 
-Authoritative local validation is now required before this checkpoint can be marked VALIDATED or continuity-closed.
+Potential next content-service work remains separate and requires a new explicit scope/implementation approval:
 
-Required validation:
-
-```text
-dart analyze
-dart test
-git diff --check main...HEAD
-git status
-git rev-parse HEAD
-```
-
-The user's local output is authoritative. Do not merge this feature branch until validation is supplied, continuity is closed, and the user separately approves merge.
-
-Recursive dependency graph solving, version-selection policy, artifact download/materialization, broader provider-error policy, cross-provider association, and CurseForge live smoke remain separate future checkpoints.
+- recursive dependency graph solving
+- dependency version-selection policy
+- artifact selection/download/materialization
+- broader multi-provider error policy
+- cross-provider association only if a concrete requirement appears
+- CurseForge live smoke when an application API key is available
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
