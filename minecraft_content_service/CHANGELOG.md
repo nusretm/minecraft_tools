@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.0-dev.17
+
+- Add immutable materialization targets and install/retain/replace/remove action models.
+- Add `MtnMinecraftContentMaterializationPlan` and `MtnMinecraftContentService.planContentMaterialization()`.
+- Require one caller-provided installation-root-relative target for every canonical download item.
+- Reuse dev.16 installation-artifact path validation instead of duplicating path policy.
+- Require the exact managed installation state whose installed-state view produced reconciliation.
+- Preserve reconciliation categories without treating action lists as execution order.
+- Derive `resultingInstallationState` in desired-state order, retaining existing artifacts and replacing/installing only the planned targets.
+- Allow paths owned only by removed/replaced artifacts to be reused while rejecting collisions in the resulting managed state.
+- Keep path identity OS-neutral and case-sensitive at this planning layer.
+- Keep filesystem I/O, staging, verification, publication, deletion, rollback, installation-manifest persistence, target-OS collision policy, and launcher download-manager adaptation out of this checkpoint.
+
 ## 1.0.0-dev.16
 
 - Add immutable `MtnMinecraftContentInstallationArtifact` and `MtnMinecraftContentInstallationState` as the managed physical-artifact ownership foundation.
