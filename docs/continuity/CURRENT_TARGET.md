@@ -192,11 +192,123 @@ production/test HEAD: 6df0ce3a1f509a18e7b65d43f97547f0859c63bc
 merge commit: 8b12429e831aba8b71239b13d483bc7061d53a6c
 ```
 
+Current active checkpoint:
+
+```text
+feature/minecraft-content-file-selection
+IMPLEMENTED / VALIDATION PENDING
+MERGE NOT REQUESTED
+baseline main: 6af90fc33e8d27119efa86d6a746a5ee4b6f49de
+production/test HEAD: f68e773cbfe24c9427558fafb0c4008bc9facd63
+```
+
 Package version:
 
 ```text
 minecraft_content_service
-1.0.0-dev.13
+1.0.0-dev.14
+```
+
+## Minecraft content file selection foundation checkpoint
+
+```text
+Branch: feature/minecraft-content-file-selection
+Status: IMPLEMENTED / VALIDATION PENDING
+Package: minecraft_content_service/
+Baseline main: 6af90fc33e8d27119efa86d6a746a5ee4b6f49de
+Production/test HEAD: f68e773cbfe24c9427558fafb0c4008bc9facd63
+```
+
+Public/service surface:
+
+- `MtnMinecraftContentFileSelection`
+- `MtnMinecraftContentFileSelectionIssue`
+- `MtnMinecraftContentFileSelectionIssueNoFiles`
+- `MtnMinecraftContentFileSelectionIssueAmbiguous`
+- `MtnMinecraftContentFileSelectionIssueUnavailable`
+- `MtnMinecraftContentFileSelectionPlan`
+- `MtnMinecraftContentService.selectReconciliationFiles(reconciliation)`
+
+Locked target boundary:
+
+- file selection evaluates only install and replacement desired targets
+- retain targets require no new desired artifact selection
+- removal targets do not expose authoritative installed physical file/path information and are not guessed
+- install/replace targets are evaluated in complete desired-state order rather than grouped reconciliation order
+
+Locked selection semantics:
+
+```text
+0 files
+  -> no-files issue
+
+1 file + available != false
+  -> select sole file
+
+1 file + available == false
+  -> unavailable issue
+
+2+ files + exactly 1 primary + primary available != false
+  -> select primary
+
+2+ files + exactly 1 primary + primary available == false
+  -> unavailable issue
+
+2+ files + 0 primary
+  -> ambiguous issue
+
+2+ files + 2+ primary
+  -> ambiguous issue
+```
+
+Additional rules:
+
+- single-file selection does not require `primary == true`
+- `available == null` is unknown and remains selectable
+- no fallback from unavailable selected primary to a non-primary alternative
+- null `downloadUrl` is not a selection blocker
+- hashes, sizes, fingerprints, modules, provider metadata and raw file type do not participate in generic selection
+- generic selector does not switch on provider
+- provider-specific file normalization stays in provider mappers
+- all install/replace targets are represented exactly once by either a selection or issue
+- selection issues are aggregated rather than causing first-error failure
+- `selectable == issues.isEmpty`
+- results and ambiguous candidate lists are immutable
+- source reconciliation/desired/version/file models are not mutated
+
+Still deliberately out of scope:
+
+- provider API calls
+- download-source resolution
+- CurseForge download-URL lookup
+- downloads
+- filesystem paths / target directories
+- installed file discovery
+- removal file lookup
+- managed installation manifest
+- hashes/integrity verification
+- materialization / execution ordering
+- transactions / backup / rollback
+- unknown/manual file cleanup
+- supplementary artifact-role inference
+- extension-based heuristics
+- raw file-type interpretation
+- `MtnMinecraftContentList` schema changes
+- `versionConstraint` interpretation
+- deferred item client-definition/model/texture rendering
+
+Validation:
+
+```text
+PENDING USER-SUPPLIED LOCAL DART VALIDATION
+```
+
+No `dart format` was run.
+
+Dedicated handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-07_MINECRAFT_CONTENT_FILE_SELECTION.md
 ```
 
 ## Minecraft content installed-state reconciliation foundation checkpoint
@@ -2628,11 +2740,38 @@ In particular:
 
 ## Next action
 
-The installed-state reconciliation foundation is implementation-complete, validated, continuity-closed, merged through PR #41, and recorded in continuity.
+The active content-service checkpoint is:
 
-No content-service implementation checkpoint is currently active or automatically approved.
+```text
+feature/minecraft-content-file-selection
+IMPLEMENTED / VALIDATION PENDING
+MERGE NOT REQUESTED
+```
 
-Artifact/file selection is now the natural next content-service checkpoint and should be scoped separately before implementation.
+Run authoritative local validation:
+
+```text
+cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
+
+dart analyze
+dart test test/content_file_selection_test.dart
+dart test test/content_dependency_reconciliation_test.dart
+dart test test/content_dependency_desired_state_test.dart
+dart test test/content_dependency_install_policy_test.dart
+dart test test/content_provider_service_test.dart
+dart test
+
+cd ..
+git diff --check main...HEAD
+git status
+git rev-parse HEAD
+```
+
+Do not mark this checkpoint VALIDATED or continuity-closed until user-supplied local output is available.
+
+After successful validation, update continuity and wait for separate explicit merge approval.
+
+Download-source resolution becomes the likely next content-service checkpoint only after file selection is validated and merged.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
@@ -2640,4 +2779,4 @@ The item client-definition/model/texture resource foundation remains separately 
 docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
 ```
 
-Do not start artifact/download work, execution/materialization, or deferred resource rendering without explicit user approval.
+Do not start download-source resolution, downloads, execution/materialization, or deferred resource rendering without explicit user approval.
