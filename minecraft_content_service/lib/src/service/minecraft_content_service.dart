@@ -266,6 +266,7 @@ class MtnMinecraftContentService {
             installEdges.add(edge);
             includeVersion(target);
             expand(target);
+            break;
 
           case MtnMinecraftContentDependencyType.optional:
             optionalEdges.add(edge);
@@ -274,15 +275,19 @@ class MtnMinecraftContentService {
             installEdges.add(edge);
             includeVersion(target);
             expand(target);
+            break;
 
           case MtnMinecraftContentDependencyType.bundled:
             bundledEdges.add(edge);
+            break;
 
           case MtnMinecraftContentDependencyType.tool:
             toolEdges.add(edge);
+            break;
 
           case MtnMinecraftContentDependencyType.incompatible:
             incompatibleEdges.add(edge);
+            break;
         }
       }
     }
