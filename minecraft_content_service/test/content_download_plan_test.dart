@@ -132,6 +132,58 @@ void main() {
       expect(plan.downloadable, isFalse);
     });
 
+    test('reports invalid provider-resolved URL as a source issue', () async {
+      final provider = _DownloadContentProvider(name: 'source', source: Uri.parse('/relative.jar'));
+      final version = _version(
+        'a:v1',
+        _content('a'),
+        file: _file(
+          'a.jar',
+          downloadUrl: null,
+          providers: <MtnMinecraftContentProviderMetadata>[MtnMinecraftContentProviderMetadata(provider: 'source')],
+        ),
+      );
+      final selection = _selectionPlan(<MtnMinecraftContentVersion>[version]);
+
+      final plan = await MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]).planSelectedFileDownloads(selection);
+
+      final issue = plan.issues.single as MtnMinecraftContentDownloadIssueInvalidUrl;
+      expect(issue.providerName, 'source');
+      expect(issue.value, '/relative.jar');
+      expect(plan.downloadable, isFalse);
+    });
+
+    test('empty selection produces an empty downloadable batch', () async {
+      final service = MtnMinecraftContentService();
+      final desired = service.composeDependencyInstallPlans(const <MtnMinecraftContentDependencyInstallPlan>[]);
+      final reconciliation = service.reconcileDependencyState(
+        MtnMinecraftContentDependencyInstalledState(versions: const <MtnMinecraftContentVersion>[]),
+        desired,
+      );
+      final selection = service.selectReconciliationFiles(reconciliation);
+
+      final plan = await service.planSelectedFileDownloads(selection);
+
+      expect(selection.selectable, isTrue);
+      expect(plan.items, isEmpty);
+      expect(plan.issues, isEmpty);
+      expect(plan.downloadable, isTrue);
+    });
+
+    test('download plan requires every canonical selection to be represented exactly once', () {
+      final version = _version('a:v1', _content('a'), file: _file('a.jar'));
+      final selection = _selectionPlan(<MtnMinecraftContentVersion>[version]);
+
+      expect(
+        () => MtnMinecraftContentDownloadPlan(
+          selection: selection,
+          items: const <MtnMinecraftContentDownloadItem>[],
+          issues: const <MtnMinecraftContentDownloadIssue>[],
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('rejects download planning before file-selection blockers are resolved', () async {
       final content = _content('a');
       final version = MtnMinecraftContentVersion(
