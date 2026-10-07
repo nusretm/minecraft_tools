@@ -92,7 +92,7 @@ void main() {
     });
 
     test('removes every managed current version when desired state is empty', () {
-      final a = _version('a:v1', _content('a'));
+      final a = _version('a:v1', _content('a'), direct: true);
       final b = _version('b:v1', _content('b'));
       final current = MtnMinecraftContentDependencyInstalledState(versions: <MtnMinecraftContentVersion>[a, b]);
       final desired = _desired(const <MtnMinecraftContentDependencyInstallPlan>[]);
