@@ -106,6 +106,45 @@ void main() {
       expect(content.providers.single.metadata['mainFileId'], 9001);
     });
 
+    test('getVersion resolves an exact file and its owning content', () async {
+      final requests = <http.Request>[];
+      final client = MockClient((request) async {
+        requests.add(request);
+
+        if (request.method == 'POST' && request.url.path == '/v1/mods/files') {
+          expect(jsonDecode(request.body), <String, dynamic>{'fileIds': <dynamic>[9001]});
+          return _jsonResponse(<String, dynamic>{
+            'data': <Map<String, dynamic>>[
+              _fileJson(id: 9001, releaseType: 1, displayName: 'Skyblocker 1.0', date: '2026-07-01T00:00:00Z'),
+            ],
+          });
+        }
+
+        if (request.url.path == '/v1/categories') {
+          return _jsonResponse(<String, dynamic>{'data': _classes()});
+        }
+
+        if (request.url.path == '/v1/mods/12345') {
+          return _jsonResponse(<String, dynamic>{'data': _modJson()});
+        }
+
+        if (request.url.path == '/v1/mods/12345/description') {
+          return _jsonResponse(<String, dynamic>{'data': '<p>Full description</p>'});
+        }
+
+        throw StateError('Unexpected request: ${request.url}');
+      });
+
+      final provider = MtnMinecraftContentProviderCurseForge(apiKey: 'secret-key', client: client);
+      final version = await provider.getVersion('9001');
+
+      expect(requests.first.method, 'POST');
+      expect(requests.first.url.path, '/v1/mods/files');
+      expect(version.key, 'curseforge:9001');
+      expect(version.content.key, 'curseforge:12345');
+      expect(version.modLoaders, <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric]);
+    });
+
     test('getVersions maps CurseForge files, hashes, fingerprint, modules, and dependencies', () async {
       late http.Request fileRequest;
       final client = MockClient((request) async {
@@ -283,6 +322,7 @@ void main() {
       final provider = MtnMinecraftContentProviderCurseForge(apiKey: 'secret-key', client: client);
 
       await expectLater(provider.getContent('slug-is-not-an-id'), throwsArgumentError);
+      await expectLater(provider.getVersion('not-a-file-id'), throwsArgumentError);
 
       await expectLater(
         provider.search(MtnMinecraftContentSearchRequest(types: <MtnMinecraftContentType>[MtnMinecraftContentType.mod])),
