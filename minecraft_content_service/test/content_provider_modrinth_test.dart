@@ -74,6 +74,7 @@ void main() {
         <dynamic>['categories:fabric'],
       ]);
 
+      expect(result.provider, MtnMinecraftContentProviderModrinth.providerName);
       expect(result.offset, 10);
       expect(result.limit, 25);
       expect(result.total, 40);
