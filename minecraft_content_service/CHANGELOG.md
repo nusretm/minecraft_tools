@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0-dev.7
+
+- Add exact provider version lookup through `MtnMinecraftContentProvider.getVersion()` and `MtnMinecraftContentService.getVersion()`.
+- Add `MtnMinecraftContentDependencyResolution` and non-recursive `resolveDependency()` orchestration.
+- Resolve exact provider version identities before content-only identities while preserving unresolved file-name/version-constraint declarations.
+- Validate provider content identity when dependency declarations include a provider content ID.
+- Add Modrinth exact version lookup through `/version/{id}` and CurseForge file lookup through `POST /v1/mods/files`.
+- Keep recursive graph solving, version selection, artifact selection, downloads, cross-provider lookup and association out of this checkpoint.
+
 ## 1.0.0-dev.6
 
 - Add `MtnMinecraftContentService.searchAll()` for multi-provider search across registered ready providers.

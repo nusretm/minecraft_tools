@@ -127,6 +127,39 @@ void main() {
       expect(content.providers.single.metadata['downloads'], 5000);
     });
 
+    test('getVersion resolves an exact version and its owning content', () async {
+      final requests = <http.Request>[];
+      final client = MockClient((request) async {
+        requests.add(request);
+
+        if (request.url.path == '/v2/version/DEPVER01') {
+          return http.Response(
+            jsonEncode(_versionJson(id: 'DEPVER01', version: '1.0.0', type: 'release', date: '2026-01-01T00:00:00Z')),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+
+        if (request.url.path == '/v2/project/AABBCCDD') {
+          return http.Response(
+            jsonEncode(_projectJson()),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+
+        throw StateError('Unexpected request: ${request.url}');
+      });
+
+      final provider = MtnMinecraftContentProviderModrinth(userAgent: 'nusretm/minecraft_tools/1.0', client: client);
+      final version = await provider.getVersion('DEPVER01');
+
+      expect(requests.map((request) => request.url.path), <String>['/v2/version/DEPVER01', '/v2/project/AABBCCDD']);
+      expect(version.key, 'modrinth:DEPVER01');
+      expect(version.content.key, 'modrinth:AABBCCDD');
+      expect(version.content.providers.single.id, 'AABBCCDD');
+    });
+
     test('getVersions maps files and dependencies, filters releases, and keeps content identity', () async {
       late http.Request captured;
       final client = MockClient((request) async {

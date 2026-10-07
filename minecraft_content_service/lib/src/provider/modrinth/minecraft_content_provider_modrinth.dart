@@ -56,6 +56,17 @@ class MtnMinecraftContentProviderModrinth extends MtnMinecraftContentProvider {
   }
 
   @override
+  Future<MtnMinecraftContentVersion> getVersion(String id) async {
+    requireReady();
+    if (id.trim().isEmpty) throw ArgumentError.value(id, 'id', 'Modrinth version id cannot be empty.');
+
+    final map = await _getMap(baseUri.resolve('version/${Uri.encodeComponent(id.trim())}'));
+    final projectId = MtnMinecraftContentModel.stringFromMap(map['project_id']);
+    final content = await getContent(projectId);
+    return MtnMinecraftContentProviderModrinthMapper.version(name, content, map);
+  }
+
+  @override
   Future<MtnMinecraftContentVersionListResult> getVersions(MtnMinecraftContent content, MtnMinecraftContentVersionListRequest request) async {
     requireReady();
 

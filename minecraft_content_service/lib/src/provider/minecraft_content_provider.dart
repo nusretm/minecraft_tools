@@ -104,6 +104,8 @@ abstract class MtnMinecraftContentProvider {
 
   Future<MtnMinecraftContent> getContent(String id);
 
+  Future<MtnMinecraftContentVersion> getVersion(String id);
+
   Future<MtnMinecraftContentVersionListResult> getVersions(MtnMinecraftContent content, MtnMinecraftContentVersionListRequest request);
 }
 

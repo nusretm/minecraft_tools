@@ -136,7 +136,7 @@ class MtnMinecraftContentProviderModrinthMapper {
     MtnMinecraftContentVersionListRequest request,
     List<Object?> values,
   ) {
-    final versions = values.map(MtnMinecraftContentModel.mapFromMap).map((map) => _version(providerName, content, map)).where((version) {
+    final versions = values.map(MtnMinecraftContentModel.mapFromMap).map((map) => version(providerName, content, map)).where((version) {
       return request.releaseTypes.isEmpty || request.releaseTypes.contains(version.releaseType);
     }).toList(growable: true);
 
@@ -186,7 +186,7 @@ class MtnMinecraftContentProviderModrinthMapper {
     );
   }
 
-  static MtnMinecraftContentVersion _version(String providerName, MtnMinecraftContent content, Map<String, dynamic> map) {
+  static MtnMinecraftContentVersion version(String providerName, MtnMinecraftContent content, Map<String, dynamic> map) {
     final id = MtnMinecraftContentModel.stringFromMap(map['id']);
     final projectId = MtnMinecraftContentModel.stringFromMap(map['project_id']);
     final expectedProjectId = providerId(providerName, content);

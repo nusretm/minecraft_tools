@@ -260,17 +260,17 @@ class MtnMinecraftContentProviderCurseForgeMapper {
     MtnMinecraftContentVersionListRequest request,
     List<Map<String, dynamic>> files,
   ) {
-    final expectedModId = providerId(providerName, content);
     final versions = <MtnMinecraftContentVersion>[];
 
     for (final file in files) {
-      final modId = MtnMinecraftContentModel.intFromMap(file['modId'], fallback: -1);
-      if (modId != expectedModId) throw FormatException('CurseForge file belongs to project $modId instead of $expectedModId.');
-
-      final releaseType = _releaseType(MtnMinecraftContentModel.intFromMap(file['releaseType'], fallback: -1));
-      if (request.releaseTypes.isNotEmpty && !request.releaseTypes.contains(releaseType)) continue;
-
-      versions.add(_version(providerName, content, request, file, releaseType));
+      final mappedVersion = version(
+        providerName,
+        content,
+        file,
+        loaderHint: request.modLoaders.isEmpty ? null : request.modLoaders.single,
+      );
+      if (request.releaseTypes.isNotEmpty && !request.releaseTypes.contains(mappedVersion.releaseType)) continue;
+      versions.add(mappedVersion);
     }
 
     versions.sort((a, b) {
@@ -296,12 +296,26 @@ class MtnMinecraftContentProviderCurseForgeMapper {
     );
   }
 
+  static MtnMinecraftContentVersion version(
+    String providerName,
+    MtnMinecraftContent content,
+    Map<String, dynamic> file, {
+    MtnMinecraftModLoaderType? loaderHint,
+  }) {
+    final expectedModId = providerId(providerName, content);
+    final modId = MtnMinecraftContentModel.intFromMap(file['modId'], fallback: -1);
+    if (modId != expectedModId) throw FormatException('CurseForge file belongs to project $modId instead of $expectedModId.');
+
+    final releaseType = _releaseType(MtnMinecraftContentModel.intFromMap(file['releaseType'], fallback: -1));
+    return _version(providerName, content, file, releaseType, loaderHint);
+  }
+
   static MtnMinecraftContentVersion _version(
     String providerName,
     MtnMinecraftContent content,
-    MtnMinecraftContentVersionListRequest request,
     Map<String, dynamic> file,
     MtnMinecraftContentVersionReleaseType releaseType,
+    MtnMinecraftModLoaderType? loaderHint,
   ) {
     final fileId = MtnMinecraftContentModel.intFromMap(file['id'], fallback: -1);
     if (fileId <= 0) throw const FormatException('CurseForge file id must be positive.');
@@ -370,7 +384,7 @@ class MtnMinecraftContentProviderCurseForgeMapper {
       version: versionName,
       releaseType: releaseType,
       gameVersions: _gameVersions(file),
-      modLoaders: _versionLoaders(content, request, file),
+      modLoaders: _versionLoaders(content, loaderHint, file),
       publishedAt: MtnMinecraftContentModel.nullableDateTimeFromMap(file['fileDate']),
       files: <MtnMinecraftContentFile>[contentFile],
       dependencies: dependencies,
@@ -399,11 +413,11 @@ class MtnMinecraftContentProviderCurseForgeMapper {
 
   static List<MtnMinecraftModLoaderType> _versionLoaders(
     MtnMinecraftContent content,
-    MtnMinecraftContentVersionListRequest request,
+    MtnMinecraftModLoaderType? loaderHint,
     Map<String, dynamic> file,
   ) {
     if (content is! MtnMinecraftContentMod) return const <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.vanilla];
-    if (request.modLoaders.isNotEmpty) return <MtnMinecraftModLoaderType>[request.modLoaders.single];
+    if (loaderHint != null) return <MtnMinecraftModLoaderType>[loaderHint];
 
     final result = <MtnMinecraftModLoaderType>[];
     for (final value in MtnMinecraftContentModel.stringListFromMap(file['gameVersions'])) {

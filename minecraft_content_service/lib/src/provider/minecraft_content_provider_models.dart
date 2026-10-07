@@ -45,6 +45,24 @@ class MtnMinecraftContentSearchResult {
   final bool hasMore;
 }
 
+class MtnMinecraftContentDependencyResolution {
+  MtnMinecraftContentDependencyResolution({
+    required this.dependency,
+    MtnMinecraftContent? content,
+    this.version,
+  }) : content = version?.content ?? content {
+    if (version != null && content != null && !identical(version!.content, content)) throw ArgumentError.value(content, 'content', 'Resolved dependency content must match the resolved version content.');
+  }
+
+  final MtnMinecraftContentDependency dependency;
+  final MtnMinecraftContent? content;
+  final MtnMinecraftContentVersion? version;
+
+  bool get contentResolved => content != null;
+
+  bool get versionResolved => version != null;
+}
+
 class MtnMinecraftContentVersionListRequest {
   MtnMinecraftContentVersionListRequest({
     List<String>? gameVersions,

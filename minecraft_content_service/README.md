@@ -29,8 +29,11 @@ Current foundation includes:
 - `MtnMinecraftContentService.searchAll()` across all currently ready registered providers
 - provider-tagged per-provider search results with independent pagination
 - no cross-provider name/slug deduplication or automatic association
+- exact provider version lookup through `getVersion()`
+- non-recursive dependency identity resolution through `resolveDependency()`
+- provider/content/version identity validation without cross-provider guessing
 
-Dependency solving and update/materialization reconciliation remain separate later checkpoints.
+Recursive dependency graph solving, version-selection policy and update/materialization reconciliation remain separate later checkpoints.
 
 
 ## CLI example
