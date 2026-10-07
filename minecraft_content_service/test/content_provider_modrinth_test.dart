@@ -56,7 +56,7 @@ void main() {
         ),
       );
 
-      expect(captured.headers['User-Agent'], 'nusretm/minecraft_tools/1.0');
+      expect(captured.headers.entries.firstWhere((entry) => entry.key.toLowerCase() == 'user-agent').value, 'nusretm/minecraft_tools/1.0');
       expect(captured.url.path, '/v2/search');
       expect(captured.url.queryParameters['query'], 'example');
       expect(captured.url.queryParameters['offset'], '10');
