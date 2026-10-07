@@ -16,9 +16,24 @@ Current merged main:
 
 ```text
 main
-0655506983ee2300ede96df67d395bda2141a3b9
-Merge pull request #34 from nusretm/feature/minecraft-content-multi-provider-search
-Add multi-provider content search foundation
+510620a5e22f60a1cb2cf5e90c6bd6e1d47d6d12
+Merge pull request #35 from nusretm/docs/minecraft-content-multi-provider-search-post-merge-sync
+Sync multi-provider search continuity after merge
+```
+
+Current checkpoint branch:
+
+```text
+feature/minecraft-content-dependency-identity-resolution
+IMPLEMENTED / VALIDATION PENDING
+MERGE NOT REQUESTED
+```
+
+Production HEAD before continuity updates:
+
+```text
+81ce76076caeec90c01665983be8add387411ed3
+Record dependency identity resolution foundation
 ```
 
 Multi-provider search checkpoint:
@@ -27,29 +42,78 @@ Multi-provider search checkpoint:
 feature/minecraft-content-multi-provider-search
 IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
 merge commit: 0655506983ee2300ede96df67d395bda2141a3b9
-```
-
-Validated production HEAD before merge:
-
-```text
-7b36e4b890f71dc1a274a8ebb254972f02ea7c12
-Bump content service for multi-provider search
-```
-
-Post-merge local state supplied by the user:
-
-```text
-Branch: main
-HEAD: 0655506983ee2300ede96df67d395bda2141a3b9
-origin/main: same
-Working tree: clean
+post-merge continuity sync: 510620a5e22f60a1cb2cf5e90c6bd6e1d47d6d12
 ```
 
 Package version:
 
 ```text
 minecraft_content_service
-1.0.0-dev.6
+1.0.0-dev.7
+```
+
+## Minecraft content dependency identity resolution foundation checkpoint
+
+```text
+Branch: feature/minecraft-content-dependency-identity-resolution
+Status: IMPLEMENTED / VALIDATION PENDING
+Package: minecraft_content_service/
+Production HEAD before continuity updates: 81ce76076caeec90c01665983be8add387411ed3
+```
+
+Public/service surface:
+
+- `MtnMinecraftContentProvider.getVersion(id)`
+- `MtnMinecraftContentService.getVersion(providerName, id)`
+- `MtnMinecraftContentService.resolveDependency(dependency)`
+- `MtnMinecraftContentDependencyResolution`
+
+Locked semantics:
+
+- already resolved dependency versions are reused without provider dispatch
+- provider identity is never guessed
+- explicit `providerVersionId` resolves through that exact registered ready provider
+- exact version resolution also resolves the version's owning content
+- declared `providerContentId` is validated against the resolved owning content
+- content-only dependencies remain content-only when no exact version identity exists
+- `fileName` and `versionConstraint` remain unresolved declarations
+- no cross-provider fallback, lookup, association, deduplication or winner selection is performed
+- the original `MtnMinecraftContentDependency` is not mutated
+
+Provider integration:
+
+- Modrinth exact version lookup remains under `src/provider/modrinth/`
+- CurseForge exact file/version lookup remains under `src/provider/curseforge/`
+- generic core contains no Modrinth/CurseForge endpoint, wire-token or special-case branch
+- CurseForge GET/POST requests share the existing provider-owned readiness/rate-limit request path
+
+Still deliberately out of scope:
+
+- recursive dependency graph solving
+- cycle detection
+- version-selection policy
+- Minecraft-version / loader / release preference policy
+- dependency install/conflict policy
+- version-constraint evaluation
+- artifact selection
+- download/materialization
+- broader multi-provider error policy
+- cross-provider association
+- CurseForge live smoke
+- deferred item client-definition/model/texture rendering
+
+Validation:
+
+```text
+PENDING USER-SUPPLIED LOCAL DART VALIDATION
+```
+
+No `dart format` was run.
+
+Dedicated handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-07_MINECRAFT_CONTENT_DEPENDENCY_IDENTITY_RESOLUTION.md
 ```
 
 ## Minecraft content multi-provider search foundation checkpoint
@@ -1768,13 +1832,27 @@ In particular:
 
 ## Next action
 
-The content model, provider/service foundation, Modrinth provider, CurseForge provider, Modrinth live CLI smoke, provider readiness/rate-limit runtime foundation, and multi-provider search foundation are complete and validated.
+The dependency identity resolution foundation is implemented on:
 
-The multi-provider search foundation is merged into `main` at `0655506983ee2300ede96df67d395bda2141a3b9`. The user-supplied post-merge local state confirms `main`, `origin/main`, and the local HEAD are synchronized with a clean working tree.
+```text
+feature/minecraft-content-dependency-identity-resolution
+```
 
-CurseForge live smoke remains deliberately deferred because no application API key is currently available. The provider can stay registered with `ready == false` until that prerequisite exists.
+Authoritative local validation is now required before this checkpoint can be marked VALIDATED or continuity-closed.
 
-No new implementation checkpoint is active or automatically approved. Dependency solving, download/materialization, provider-error policy for broader orchestration, cross-provider association, and CurseForge live smoke remain separate future work.
+Required validation:
+
+```text
+dart analyze
+dart test
+git diff --check main...HEAD
+git status
+git rev-parse HEAD
+```
+
+The user's local output is authoritative. Do not merge this feature branch until validation is supplied, continuity is closed, and the user separately approves merge.
+
+Recursive dependency graph solving, version-selection policy, artifact download/materialization, broader provider-error policy, cross-provider association, and CurseForge live smoke remain separate future checkpoints.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
@@ -1782,4 +1860,4 @@ The item client-definition/model/texture resource foundation remains separately 
 docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
 ```
 
-Do not start either a new content-service checkpoint or the deferred resource work without explicit user approval.
+Do not start the next content-service checkpoint or the deferred resource work without explicit user approval.
