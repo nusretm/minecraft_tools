@@ -14,8 +14,8 @@ Continuity: OPEN UNTIL VALIDATION
 Merge: NOT REQUESTED
 Baseline main:
 28bc28c42feaec81013aebcb738d60fafbaaacfd
-Implementation HEAD before continuity updates:
-8ff719c9744f89d2cb33407432200a0ebbad0ca0
+Production/test HEAD after analyzer directive-order fix:
+035df4bf9db4e4b95709e08e515499c3e3565062
 ```
 
 Package version: `1.0.0-dev.12`.
