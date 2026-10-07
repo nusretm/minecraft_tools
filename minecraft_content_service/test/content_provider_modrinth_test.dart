@@ -166,6 +166,7 @@ void main() {
       expect(version.key, 'modrinth:V2');
       expect(version.environment, MtnMinecraftContentEnvironment.clientAndServer);
       expect(version.files.single.fileName, 'example.jar');
+      expect(version.files.single.primary, isTrue);
       expect(version.files.single.providers.single.id, isNull);
       expect(version.files.single.hashes.map((hash) => hash.algorithm), containsAll(<String>['sha1', 'sha512']));
       expect(version.dependencies.single.type, MtnMinecraftContentDependencyType.required);
@@ -286,7 +287,7 @@ Map<String, dynamic> _versionJson({
         'hashes': <String, dynamic>{'sha512': 'abc512', 'sha1': 'abc1'},
         'url': 'https://cdn.modrinth.com/example.jar',
         'filename': 'example.jar',
-        'primary': true,
+        'primary': false,
         'size': 12345,
         'file_type': null,
       },
