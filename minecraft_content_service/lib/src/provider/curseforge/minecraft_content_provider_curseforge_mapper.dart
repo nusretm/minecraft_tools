@@ -29,11 +29,17 @@ class MtnMinecraftContentProviderCurseForgeMapper {
     return (Map<MtnMinecraftContentType, int>.unmodifiable(byType), Map<int, MtnMinecraftContentType>.unmodifiable(byId));
   }
 
-  static Map<String, String> searchQuery(MtnMinecraftContentSearchRequest request, int gameId, int classId) {
+  static void validateSearchRequest(MtnMinecraftContentSearchRequest request) {
+    if (request.types.length != 1) throw ArgumentError.value(request.types, 'request.types', 'CurseForge search requires exactly one content type.');
     if (request.offset + request.limit > 10000) throw ArgumentError.value(request.offset, 'request.offset', 'CurseForge requires offset + limit to be at most 10000.');
     if (request.gameVersions.length > 4) throw ArgumentError.value(request.gameVersions, 'request.gameVersions', 'CurseForge search accepts at most four game versions.');
     if (request.modLoaders.length > 1) throw ArgumentError.value(request.modLoaders, 'request.modLoaders', 'CurseForge search currently supports one mod loader filter at a time.');
     if (request.modLoaders.isNotEmpty && request.gameVersions.isEmpty) throw ArgumentError.value(request.modLoaders, 'request.modLoaders', 'CurseForge loader search requires at least one game version.');
+    if (request.modLoaders.isNotEmpty) _loaderWireValue(request.modLoaders.single);
+  }
+
+  static Map<String, String> searchQuery(MtnMinecraftContentSearchRequest request, int gameId, int classId) {
+    validateSearchRequest(request);
 
     final query = <String, String>{
       'gameId': gameId.toString(),
@@ -212,6 +218,7 @@ class MtnMinecraftContentProviderCurseForgeMapper {
   }
 
   static void validateVersionRequest(MtnMinecraftContent content, MtnMinecraftContentVersionListRequest request) {
+    if (request.offset + request.limit > 10000) throw ArgumentError.value(request.offset, 'request.offset', 'CurseForge requires offset + limit to be at most 10000.');
     if (request.gameVersions.length > 1) throw ArgumentError.value(request.gameVersions, 'request.gameVersions', 'CurseForge file listing accepts at most one game version.');
     if (request.modLoaders.length > 1) throw ArgumentError.value(request.modLoaders, 'request.modLoaders', 'CurseForge file listing accepts at most one mod loader.');
     if (request.modLoaders.isEmpty) return;
@@ -227,7 +234,7 @@ class MtnMinecraftContentProviderCurseForgeMapper {
 
     return <String, String>{
       if (request.gameVersions.isNotEmpty) 'gameVersion': request.gameVersions.single,
-      if (shouldSendLoader) 'modLoaderType': _loaderWireValue(loader).toString(),
+      if (shouldSendLoader) 'modLoaderType': _loaderWireValue(loader!).toString(),
       'index': index.toString(),
       'pageSize': pageSize.toString(),
     };
