@@ -9,11 +9,13 @@ Repository: nusretm/minecraft_tools
 Package: minecraft_content_service/
 Branch: feature/minecraft-content-dependency-version-selection
 Implementation: COMPLETE
-Validation: PENDING USER-SUPPLIED LOCAL DART VALIDATION
-Continuity: OPEN UNTIL VALIDATION
+Validation: COMPLETE
+Continuity: CLOSED
 Merge: NOT REQUESTED
 Baseline main:
 6c2cae386bd0b4a825fd7330d093de01f43c82dd
+Validated feature HEAD:
+e64a5596817f4a174b1e5cb952ef619a04eaed15
 ```
 
 Package version: `1.0.0-dev.8`.
@@ -129,33 +131,37 @@ The fake provider now applies generic compatibility filters and pagination so se
 
 ## Validation
 
-Authoritative local validation is pending.
-
-Required validation:
+Authoritative user-supplied local validation on 2026-10-07:
 
 ```text
-cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
-
 dart analyze
-dart test test/content_provider_service_test.dart
-dart test
+Analyzing minecraft_content_service...
+No issues found!
 
-cd ..
+dart test test/content_provider_service_test.dart
+00:00 +17: All tests passed!
+
+dart test
+00:00 +41: All tests passed!
+
 git diff --check main...HEAD
+PASS
+
 git status
+On branch feature/minecraft-content-dependency-version-selection
+Your branch is up to date with 'origin/feature/minecraft-content-dependency-version-selection'.
+nothing to commit, working tree clean
+
 git rev-parse HEAD
+e64a5596817f4a174b1e5cb952ef619a04eaed15
 ```
 
-Per repository rules, user-supplied local Dart output is authoritative.
-
-Do not mark this checkpoint VALIDATED or continuity-closed until those results are supplied.
+No `dart format` was run.
 
 ## Next action
 
-Run authoritative local validation on the feature branch.
+This checkpoint is implementation-complete, validated, and continuity-closed.
 
-If validation fails, fix only this approved checkpoint scope.
-
-If validation passes, record the exact supplied results in this handoff and `docs/continuity/CURRENT_TARGET.md`, close continuity, and wait for separate explicit merge approval.
+Merge is not yet requested and still requires separate explicit user approval.
 
 Recursive dependency graph solving remains the likely next content-service checkpoint, but it is not automatically approved.
