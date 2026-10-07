@@ -31,9 +31,12 @@ Current foundation includes:
 - no cross-provider name/slug deduplication or automatic association
 - exact provider version lookup through `getVersion()`
 - non-recursive dependency identity resolution through `resolveDependency()`
+- dependency-compatible version selection through `resolveDependencyVersion()`
+- immutable game-version / loader / release-type selection filters without public pagination policy
 - provider/content/version identity validation without cross-provider guessing
+- newest compatible normalized provider version selection while preserving content-only resolution when no match exists
 
-Recursive dependency graph solving, version-selection policy and update/materialization reconciliation remain separate later checkpoints.
+Recursive dependency graph solving, version-constraint interpretation, install/conflict policy and update/materialization reconciliation remain separate later checkpoints.
 
 
 ## CLI example
