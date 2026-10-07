@@ -40,6 +40,31 @@ class MtnMinecraftContentDependencyReconciliationPlan {
        retains = List<MtnMinecraftContentDependencyDesiredVersion>.unmodifiable(retains),
        replacements = List<MtnMinecraftContentDependencyReconciliationReplacement>.unmodifiable(replacements),
        removals = List<MtnMinecraftContentVersion>.unmodifiable(removals) {
+    if (!desired.installable) throw ArgumentError.value(desired, 'desired', 'Reconciliation plan requires an installable desired state.');
+
+    final desiredByKey = <String, MtnMinecraftContentDependencyDesiredVersion>{
+      for (final item in desired.versions) item.version.key: item,
+    };
+    final currentByKey = <String, MtnMinecraftContentVersion>{
+      for (final item in current.versions) item.key: item,
+    };
+
+    for (final item in this.installs) {
+      if (!identical(desiredByKey[item.version.key], item)) throw ArgumentError.value(item, 'installs', 'Install actions must reference canonical desired-state entries.');
+    }
+    for (final item in this.retains) {
+      if (!identical(desiredByKey[item.version.key], item)) throw ArgumentError.value(item, 'retains', 'Retain actions must reference canonical desired-state entries.');
+      final currentVersion = currentByKey[item.version.key];
+      if (currentVersion == null || currentVersion.content.key != item.version.content.key) throw ArgumentError.value(item, 'retains', 'Retain actions require the same installed version and logical content.');
+    }
+    for (final item in this.replacements) {
+      if (!identical(desiredByKey[item.desired.version.key], item.desired)) throw ArgumentError.value(item, 'replacements', 'Replacement actions must reference canonical desired-state entries.');
+      if (!identical(currentByKey[item.current.key], item.current)) throw ArgumentError.value(item, 'replacements', 'Replacement actions must reference canonical installed-state versions.');
+    }
+    for (final item in this.removals) {
+      if (!identical(currentByKey[item.key], item)) throw ArgumentError.value(item, 'removals', 'Removal actions must reference canonical installed-state versions.');
+    }
+
     final desiredKeys = <String>{
       ...this.installs.map((item) => item.version.key),
       ...this.retains.map((item) => item.version.key),
