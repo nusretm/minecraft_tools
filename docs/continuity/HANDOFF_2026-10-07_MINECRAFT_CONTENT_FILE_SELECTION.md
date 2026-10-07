@@ -11,13 +11,19 @@ Branch: feature/minecraft-content-file-selection
 Implementation: COMPLETE
 Validation: COMPLETE
 Continuity: CLOSED
-Merge: NOT REQUESTED
+Merge: COMPLETE
+Pull request:
+#42
 Baseline main:
 6af90fc33e8d27119efa86d6a746a5ee4b6f49de
 Validated feature HEAD:
 a952582509eb89cd44fe21f5580e26d7d075cdd5
+Merged feature HEAD:
+899dc2c26cf6f25828bb064b6c1ee04b723237a9
 Production/test HEAD:
 f68e773cbfe24c9427558fafb0c4008bc9facd63
+Merge commit:
+b39f9ef5ed7dda2c4e6ab182aead2668f6263230
 ```
 
 Package version: `1.0.0-dev.14`.
@@ -427,10 +433,23 @@ a952582509eb89cd44fe21f5580e26d7d075cdd5
 
 No `dart format` was run.
 
+## Post-merge closure
+
+The validated and continuity-closed feature branch was merged through pull request #42.
+
+```text
+PR: #42
+feature: feature/minecraft-content-file-selection
+validated feature HEAD: a952582509eb89cd44fe21f5580e26d7d075cdd5
+merged feature HEAD: 899dc2c26cf6f25828bb064b6c1ee04b723237a9
+production/test HEAD: f68e773cbfe24c9427558fafb0c4008bc9facd63
+merge commit: b39f9ef5ed7dda2c4e6ab182aead2668f6263230
+```
+
+The commits after the validated feature HEAD contain continuity-only closeout changes. No production implementation changed after authoritative validation.
+
 ## Next action
 
-This checkpoint is implementation-complete, validated, and continuity-closed.
+This checkpoint is implementation-complete, validated, continuity-closed, and merged.
 
-Merge is not yet requested and still requires separate explicit user approval.
-
-Download-source resolution becomes the likely next checkpoint only after this file-selection checkpoint is merged. It is not automatically approved.
+Download-source resolution becomes the likely next checkpoint, but it remains a separate scope and is not automatically approved.
