@@ -8,7 +8,7 @@ class MtnMinecraftContentDependencyGraph {
     required List<MtnMinecraftContentDependencyGraphEdge> edges,
   }) : versions = List<MtnMinecraftContentVersion>.unmodifiable(versions),
        edges = List<MtnMinecraftContentDependencyGraphEdge>.unmodifiable(edges) {
-    if (this.versions.isEmpty || this.versions.first.key != root.key) throw ArgumentError.value(this.versions, 'versions', 'Dependency graph versions must begin with the root version.');
+    if (this.versions.isEmpty || !identical(this.versions.first, root)) throw ArgumentError.value(this.versions, 'versions', 'Dependency graph versions must begin with the exact root version instance.');
   }
 
   final MtnMinecraftContentVersion root;
