@@ -100,10 +100,11 @@ Current active checkpoint:
 
 ```text
 feature/minecraft-content-dependency-semantic-normalization
-IMPLEMENTED / VALIDATION PENDING
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
 MERGE NOT REQUESTED
 baseline main: 604f0ad6964e6c1147f9969619e5c16b5391a5b6
-implementation HEAD before continuity updates: fd3793b062deccb19490185cff3be3c958272ebe
+validated feature HEAD: c395e50d545d776223f978a486db2af8686c3f01
+implementation HEAD: fd3793b062deccb19490185cff3be3c958272ebe
 ```
 
 Package version:
@@ -117,10 +118,11 @@ minecraft_content_service
 
 ```text
 Branch: feature/minecraft-content-dependency-semantic-normalization
-Status: IMPLEMENTED / VALIDATION PENDING
+Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
 Package: minecraft_content_service/
 Baseline main: 604f0ad6964e6c1147f9969619e5c16b5391a5b6
-Implementation HEAD before continuity updates: fd3793b062deccb19490185cff3be3c958272ebe
+Validated feature HEAD: c395e50d545d776223f978a486db2af8686c3f01
+Implementation HEAD: fd3793b062deccb19490185cff3be3c958272ebe
 ```
 
 Generic dependency semantics:
@@ -173,10 +175,33 @@ Still deliberately out of scope:
 - cross-provider association
 - deferred item client-definition/model/texture rendering
 
-Validation:
+Validation on 2026-10-07:
 
 ```text
-PENDING USER-SUPPLIED LOCAL DART VALIDATION
+dart analyze
+Analyzing minecraft_content_service...
+No issues found!
+
+dart test test/content_provider_modrinth_test.dart
+00:00 +8: All tests passed!
+
+dart test test/content_provider_curseforge_test.dart
+00:00 +11: All tests passed!
+
+dart test test/content_provider_service_test.dart
+00:00 +22: All tests passed!
+
+dart test
+00:00 +48: All tests passed!
+
+git diff --check main...HEAD
+PASS
+
+git status
+clean
+
+validated feature HEAD
+c395e50d545d776223f978a486db2af8686c3f01
 ```
 
 No `dart format` was run.
@@ -2168,30 +2193,12 @@ The active content-service checkpoint is:
 
 ```text
 feature/minecraft-content-dependency-semantic-normalization
-IMPLEMENTED / VALIDATION PENDING
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
 MERGE NOT REQUESTED
+validated feature HEAD: c395e50d545d776223f978a486db2af8686c3f01
 ```
 
-Run authoritative local validation:
-
-```text
-cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
-
-dart analyze
-dart test test/content_provider_modrinth_test.dart
-dart test test/content_provider_curseforge_test.dart
-dart test test/content_provider_service_test.dart
-dart test
-
-cd ..
-git diff --check main...HEAD
-git status
-git rev-parse HEAD
-```
-
-Do not mark this checkpoint VALIDATED or continuity-closed until user-supplied local output is available.
-
-After successful validation, update continuity and wait for separate explicit merge approval.
+This checkpoint is ready for merge review but merge still requires separate explicit user approval.
 
 Dependency install/conflict policy remains the likely next content-service checkpoint but is not automatically approved.
 
