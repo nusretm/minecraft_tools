@@ -67,8 +67,12 @@ Current foundation includes:
 - immutable managed installation state with duplicate version/content/path ownership protection
 - an installation-state view over the existing dependency installed-state model for reconciliation reuse
 - neutral relative-path safety validation without hardcoding `mods/`, resource-pack directories, absolute paths, or target-OS case rules
+- pure materialization planning that combines reconciliation, download items, managed installation artifacts, and caller-owned final relative targets
+- explicit install / retain / replace / remove materialization action families without imposing filesystem execution order
+- deterministic resulting managed installation state derived in desired-state order
+- final-state exact-path collision rejection while allowing paths released by replace/remove actions to be reused
 
-Version-constraint interpretation, installation-manifest persistence, byte transfer, launcher download-manager adaptation, filesystem execution, integrity verification, and update/materialization remain separate later checkpoints.
+Version-constraint interpretation, installation-manifest persistence, byte transfer, launcher download-manager adaptation, filesystem execution, integrity verification, staging/publication, target-OS path policy, and materialization execution remain separate later checkpoints.
 
 
 ## CLI example

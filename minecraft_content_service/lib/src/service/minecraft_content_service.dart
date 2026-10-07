@@ -13,6 +13,9 @@ import 'minecraft_content_download_plan.dart';
 import 'minecraft_content_download_planner.dart';
 import 'minecraft_content_file_selection.dart';
 import 'minecraft_content_file_selector.dart';
+import 'minecraft_content_installation_state.dart';
+import 'minecraft_content_materialization_plan.dart';
+import 'minecraft_content_materialization_planner.dart';
 
 class MtnMinecraftContentService {
   MtnMinecraftContentService({
@@ -247,6 +250,14 @@ class MtnMinecraftContentService {
     MtnMinecraftContentFileSelectionPlan selection,
   ) {
     return MtnMinecraftContentDownloadPlanner(providers).plan(selection);
+  }
+
+  MtnMinecraftContentMaterializationPlan planContentMaterialization(
+    MtnMinecraftContentDownloadPlan download,
+    MtnMinecraftContentInstallationState installation,
+    Iterable<MtnMinecraftContentMaterializationTarget> targets,
+  ) {
+    return const MtnMinecraftContentMaterializationPlanner().plan(download, installation, targets);
   }
 
   MtnMinecraftContentDependencyInstallPlan planDependencyInstall(

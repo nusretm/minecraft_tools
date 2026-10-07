@@ -2795,70 +2795,69 @@ In particular:
 
 ## Next action
 
-dev.16 merge:
+The active content-service checkpoint is:
 
 ```text
-PR: #44
-merge commit:
-4a5457180f87abd805588fa0f8afa5fe1fe595df
-Add managed installation artifact state foundation
-```
-
-The completed content-service checkpoint is:
-
-```text
-dev.16 — Managed Installation Artifact State Foundation
-branch: feature/minecraft-content-installation-artifact-state
-baseline main: 17bddddc6449302eb6984ceb9ef665abee5b156e
-production/test HEAD: 135d5a41113c7859d819bf2f598a9cd5a72c115a
-status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
-package: minecraft_content_service 1.0.0-dev.16
+dev.17 — Content Materialization Plan Foundation
+branch: feature/minecraft-content-materialization-plan
+baseline main: 42445d7847af62963afec43b9f18da16337e0b8c
+production/test HEAD: e4c241d83d252ba9ea0ab24184198d63b7faf5a5
+status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+package: minecraft_content_service 1.0.0-dev.17
 ```
 
 Implemented boundary:
 
 ```text
-managed installed version
+ReconciliationPlan
         +
-exact canonical normalized file
+DownloadPlan
         +
-caller-owned installation-root-relative path
+InstallationState
+        +
+caller-provided final relative paths
         ↓
-MtnMinecraftContentInstallationArtifact
-        ↓
-MtnMinecraftContentInstallationState
-        ↓
-existing MtnMinecraftContentDependencyInstalledState view
-        ↓
-existing reconciliation unchanged
+MtnMinecraftContentMaterializationPlan
+        ├─ installs
+        ├─ retains
+        ├─ replacements
+        ├─ removals
+        └─ resultingInstallationState
 ```
 
 Locked design:
 
-- installation state owns managed physical-artifact identity; provider/catalog models do not
-- each artifact references the exact canonical file instance owned by its installed version
-- paths are neutral relative paths, never absolute local machine paths
-- generic core does not hardcode `mods/`, `resourcepacks/`, or other destination directories
-- unsafe paths, traversal segments, backslashes, Windows drive prefixes, duplicate exact paths, duplicate version keys, and duplicate logical-content ownership are rejected
-- path comparison is intentionally exact/case-sensitive at this layer; target-OS collision policy belongs to later materialization
-- existing reconciliation receives the installation state's version view rather than being rewritten
+- materialization planning is synchronous, provider-independent, network-free and filesystem-free
+- planning requires a fully downloadable dev.15 download plan
+- planning requires the exact dev.16 installation state whose installed-state view produced reconciliation
+- every canonical download item receives exactly one caller-owned installation-root-relative target
+- target construction reuses dev.16 installation-artifact canonical file/path validation
+- generic core does not choose `mods/`, `resourcepacks/`, or any other destination directory
+- install/retain/replace/remove action lists mirror reconciliation categories and are not filesystem execution order
+- retained actions keep the existing authoritative installed artifact
+- replacements keep both the authoritative current artifact and the new target artifact
+- removals keep the authoritative current artifact
+- resulting installation state is derived in complete desired-state order
+- paths released by replace/remove may be reused by new targets
+- exact collisions among resulting managed artifacts are rejected by dev.16 state invariants
+- path identity remains OS-neutral and case-sensitive; target-OS collision policy is deferred
 
 Still out of scope:
 
-- filesystem discovery or existence checks
-- installation manifest serialization/persistence
+- `dart:io` filesystem work
 - download execution
+- launcher DownloadJob/DownloadManager adapter
 - staging directories
 - hash/size verification
-- target-OS path collision handling
-- file publication
-- replacement/removal execution
+- target-OS case/canonical collision preflight
+- file copy/rename/delete
+- atomic publication
 - rollback/transactions
-- manual/unmanaged file cleanup
-- launcher adapter implementation
+- installation-manifest persistence
+- unmanaged/manual file cleanup
 - deferred resource rendering
 
-Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `0701ee126b37f3f9c2a30f0fbc52f122650f6b4d`. Production/test HEAD remains `135d5a41113c7859d819bf2f598a9cd5a72c115a`; subsequent pre-merge changes were continuity-only. PR #44 merged at `4a5457180f87abd805588fa0f8afa5fe1fe595df`.
+Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `e4c241d83d252ba9ea0ab24184198d63b7faf5a5`. Merge has been separately approved by the user.
 
 Validation:
 
@@ -2866,20 +2865,11 @@ Validation:
 dart analyze
 No issues found!
 
-content_installation_state_test.dart
-8/8 passed
-
-content_dependency_reconciliation_test.dart
-11/11 passed
-
-content_file_selection_test.dart
-12/12 passed
-
-content_download_plan_test.dart
+content_materialization_plan_test.dart
 9/9 passed
 
 full dart test
-109/109 passed
+118/118 passed
 
 git diff --check main...HEAD
 PASS
@@ -2888,23 +2878,32 @@ working tree
 clean
 
 validated feature HEAD:
-0701ee126b37f3f9c2a30f0fbc52f122650f6b4d
+e4c241d83d252ba9ea0ab24184198d63b7faf5a5
 ```
+
+Earlier focused validation:
+- installation state 8/8
+- download plan 9/9
+- file selection 12/12
+- dependency reconciliation 11/11
 
 Active continuity document:
 
 ```text
-docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_ARTIFACT_STATE.md
+docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_MATERIALIZATION_PLAN.md
 ```
 
 Completion handoff:
 
 ```text
-docs/continuity/HANDOFF_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_ARTIFACT_STATE.md
+docs/continuity/HANDOFF_2026-10-08_MINECRAFT_CONTENT_MATERIALIZATION_PLAN.md
 ```
 
-The completed dev.15 handoff remains:
+Previous completed checkpoint:
 
 ```text
-docs/continuity/HANDOFF_2026-10-08_MINECRAFT_CONTENT_BATCH_DOWNLOAD_FOUNDATION.md
+dev.16 — Managed Installation Artifact State Foundation
+PR: #44
+merge commit: 4a5457180f87abd805588fa0f8afa5fe1fe595df
+post-merge main: 42445d7847af62963afec43b9f18da16337e0b8c
 ```
