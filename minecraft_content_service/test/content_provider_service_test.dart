@@ -36,6 +36,15 @@ void main() {
 
       expect(providers.items.single, same(provider));
       expect(providers.items.single.ready, isFalse);
+      expect(providers.readyItems, isEmpty);
+      expect(
+        () => providers.requireReadyFromName('provider-a'),
+        throwsA(isA<MtnMinecraftContentProviderNotReadyException>()),
+      );
+
+      provider.ready = true;
+      expect(providers.readyItems, <MtnMinecraftContentProvider>[provider]);
+      expect(providers.requireReadyFromName('provider-a'), same(provider));
     });
   });
 
