@@ -12,6 +12,17 @@ Last updated: 2026-10-07
 
 ## Repository state
 
+Installed-state reconciliation merge:
+
+```text
+PR: #41
+main merge commit:
+8b12429e831aba8b71239b13d483bc7061d53a6c
+Add installed state reconciliation foundation
+```
+
+Post-merge continuity closeout commits are docs-only and follow that functional merge commit.
+
 Dependency desired state merge:
 
 ```text
@@ -155,7 +166,7 @@ production/test HEAD: 4e41c35de65d9770388d5f2c955551ac6a505690
 merge commit: a6f5e60a9bc48974be611ced297b508bd4a0ccf2
 ```
 
-Latest completed checkpoint:
+Previous completed checkpoint:
 
 ```text
 feature/minecraft-content-dependency-desired-state
@@ -168,15 +179,17 @@ production/test HEAD: 035df4bf9db4e4b95709e08e515499c3e3565062
 merge commit: 322bdf08325ae8a4c714bd9d84b2c127c27ab24b
 ```
 
-Current active checkpoint:
+Latest completed checkpoint:
 
 ```text
 feature/minecraft-content-installed-state-reconciliation
-IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
-MERGE NOT REQUESTED
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
+PR: #41
 baseline main: d6d79f3dcdaf2fa92104871fbde554c65682cc98
 validated feature HEAD: de8b978d4c3a56ebb0a9ef01e3e59d12cae4aaeb
+merged feature HEAD: 63097e77a5bf9afeefa3951afef079d7245fa3a0
 production/test HEAD: 6df0ce3a1f509a18e7b65d43f97547f0859c63bc
+merge commit: 8b12429e831aba8b71239b13d483bc7061d53a6c
 ```
 
 Package version:
@@ -190,11 +203,14 @@ minecraft_content_service
 
 ```text
 Branch: feature/minecraft-content-installed-state-reconciliation
-Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
 Package: minecraft_content_service/
+PR: #41
 Baseline main: d6d79f3dcdaf2fa92104871fbde554c65682cc98
 Validated feature HEAD: de8b978d4c3a56ebb0a9ef01e3e59d12cae4aaeb
+Merged feature HEAD: 63097e77a5bf9afeefa3951afef079d7245fa3a0
 Production/test HEAD: 6df0ce3a1f509a18e7b65d43f97547f0859c63bc
+Merge commit: 8b12429e831aba8b71239b13d483bc7061d53a6c
 ```
 
 Public/service surface:
@@ -2612,18 +2628,11 @@ In particular:
 
 ## Next action
 
-The active content-service checkpoint is:
+The installed-state reconciliation foundation is implementation-complete, validated, continuity-closed, merged through PR #41, and recorded in continuity.
 
-```text
-feature/minecraft-content-installed-state-reconciliation
-IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
-MERGE NOT REQUESTED
-validated feature HEAD: de8b978d4c3a56ebb0a9ef01e3e59d12cae4aaeb
-```
+No content-service implementation checkpoint is currently active or automatically approved.
 
-This checkpoint is ready for merge review but merge still requires separate explicit user approval.
-
-Artifact/file selection becomes the likely next content-service checkpoint only after this reconciliation foundation is merged.
+Artifact/file selection is now the natural next content-service checkpoint and should be scoped separately before implementation.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
