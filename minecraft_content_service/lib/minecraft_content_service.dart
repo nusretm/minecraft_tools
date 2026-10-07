@@ -12,6 +12,7 @@ export 'src/service/minecraft_content_dependency_install_plan.dart';
 export 'src/service/minecraft_content_dependency_reconciliation.dart';
 export 'src/service/minecraft_content_download_plan.dart';
 export 'src/service/minecraft_content_file_selection.dart';
+export 'src/service/minecraft_content_installation_manifest.dart';
 export 'src/service/minecraft_content_installation_state.dart';
 export 'src/service/minecraft_content_materialization_plan.dart';
 export 'src/service/minecraft_content_service.dart';
