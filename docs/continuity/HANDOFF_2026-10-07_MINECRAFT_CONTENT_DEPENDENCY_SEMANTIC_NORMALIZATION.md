@@ -9,12 +9,14 @@ Repository: nusretm/minecraft_tools
 Package: minecraft_content_service/
 Branch: feature/minecraft-content-dependency-semantic-normalization
 Implementation: COMPLETE
-Validation: PENDING USER-SUPPLIED LOCAL DART VALIDATION
-Continuity: OPEN UNTIL VALIDATION
+Validation: COMPLETE
+Continuity: CLOSED
 Merge: NOT REQUESTED
 Baseline main:
 604f0ad6964e6c1147f9969619e5c16b5391a5b6
-Implementation HEAD before continuity updates:
+Validated feature HEAD:
+c395e50d545d776223f978a486db2af8686c3f01
+Implementation HEAD:
 fd3793b062deccb19490185cff3be3c958272ebe
 ```
 
@@ -154,35 +156,43 @@ Existing `required` behavior and all provider identity/version behavior remain u
 
 ## Validation
 
-Authoritative local validation is pending.
-
-Required validation:
+Authoritative user-supplied local validation on 2026-10-07:
 
 ```text
-cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
-
 dart analyze
-dart test test/content_provider_modrinth_test.dart
-dart test test/content_provider_curseforge_test.dart
-dart test test/content_provider_service_test.dart
-dart test
+Analyzing minecraft_content_service...
+No issues found!
 
-cd ..
+dart test test/content_provider_modrinth_test.dart
+00:00 +8: All tests passed!
+
+dart test test/content_provider_curseforge_test.dart
+00:00 +11: All tests passed!
+
+dart test test/content_provider_service_test.dart
+00:00 +22: All tests passed!
+
+dart test
+00:00 +48: All tests passed!
+
 git diff --check main...HEAD
+PASS
+
 git status
+On branch feature/minecraft-content-dependency-semantic-normalization
+Your branch is up to date with 'origin/feature/minecraft-content-dependency-semantic-normalization'.
+nothing to commit, working tree clean
+
 git rev-parse HEAD
+c395e50d545d776223f978a486db2af8686c3f01
 ```
 
-Per repository rules, user-supplied local Dart output is authoritative.
-
-Do not mark this checkpoint VALIDATED or continuity-closed until those results are supplied.
+No `dart format` was run.
 
 ## Next action
 
-Run authoritative local validation on the feature branch.
+This checkpoint is implementation-complete, validated, and continuity-closed.
 
-If validation fails, fix only this approved semantic-normalization checkpoint.
-
-If validation passes, record the supplied results here and in `docs/continuity/CURRENT_TARGET.md`, close continuity, and wait for separate explicit merge approval.
+Merge is not yet requested and still requires separate explicit user approval.
 
 Dependency install/conflict policy remains the likely next content-service checkpoint, but it is not automatically approved.
