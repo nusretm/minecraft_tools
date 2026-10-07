@@ -1,3 +1,4 @@
+import '../model/minecraft_content_models.dart';
 import 'minecraft_content_dependency_desired_state.dart';
 import 'minecraft_content_dependency_reconciliation.dart';
 import 'minecraft_content_download_plan.dart';
