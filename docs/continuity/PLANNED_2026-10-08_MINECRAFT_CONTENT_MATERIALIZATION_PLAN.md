@@ -10,11 +10,13 @@ Package: minecraft_content_service/
 Checkpoint: dev.17 — Content Materialization Plan Foundation
 Branch: feature/minecraft-content-materialization-plan
 Baseline main: 42445d7847af62963afec43b9f18da16337e0b8c
-Production/test HEAD: 66a6876d963a55d744dfab64a000d1c665cd2539
+Production/test HEAD: e4c241d83d252ba9ea0ab24184198d63b7faf5a5
 Package version: 1.0.0-dev.17
 Implementation: COMPLETE
-Validation: PENDING
-Merge: NOT REQUESTED
+Validation: COMPLETE
+Continuity: CLOSED
+Validated feature HEAD: e4c241d83d252ba9ea0ab24184198d63b7faf5a5
+Merge: APPROVED
 ```
 
 No `dart format` was run.
@@ -207,32 +209,48 @@ That is a later execution design.
 - unmanaged/manual file cleanup
 - resource/item rendering
 
-## Validation required
+## Validation
 
-Run from `minecraft_content_service/`:
+Initial local validation identified only six `prefer_interpolation_to_compose_strings` lint infos. Those diagnostic strings were corrected without changing behavior.
+
+Authoritative user-supplied local validation after the lint correction on 2026-10-08:
 
 ```text
 dart analyze
+No issues found!
+
 dart test test/content_materialization_plan_test.dart
-dart test test/content_installation_state_test.dart
-dart test test/content_download_plan_test.dart
-dart test test/content_file_selection_test.dart
-dart test test/content_dependency_reconciliation_test.dart
+9/9 passed
+
 dart test
-```
+118/118 passed
 
-Then from repository root:
-
-```text
 git diff --check main...HEAD
+PASS
+
 git status
+working tree clean
+
 git rev-parse HEAD
+e4c241d83d252ba9ea0ab24184198d63b7faf5a5
 ```
 
-Expected feature HEAD before continuity-only follow-up commits:
+Earlier focused validation on the same implementation family also passed:
 
 ```text
-66a6876d963a55d744dfab64a000d1c665cd2539
+content_installation_state_test.dart
+8/8
+
+content_download_plan_test.dart
+9/9
+
+content_file_selection_test.dart
+12/12
+
+content_dependency_reconciliation_test.dart
+11/11
 ```
 
-Do not merge without separate explicit user approval.
+No `dart format` was run.
+
+The checkpoint is implementation-complete, validated, and continuity-closed. Merge has been separately approved by the user.
