@@ -752,6 +752,39 @@ void main() {
       expect(graph.unresolvedEdges, isEmpty);
     });
 
+    test('resolveDependencyGraph marks a direct self dependency as cyclic without duplicating the root', () async {
+      final content = MtnMinecraftContentMod(
+        key: 'provider-a:a',
+        name: 'A',
+        providers: <MtnMinecraftContentProviderMetadata>[MtnMinecraftContentProviderMetadata(provider: 'provider-a', id: 'a')],
+      );
+      final root = MtnMinecraftContentVersion(
+        key: 'provider-a:a-v1',
+        content: content,
+        name: 'A 1',
+        version: '1',
+        releaseType: MtnMinecraftContentVersionReleaseType.release,
+        modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+        dependencies: <MtnMinecraftContentDependency>[
+          MtnMinecraftContentDependency(type: MtnMinecraftContentDependencyType.required, provider: 'provider-a', providerContentId: 'a', providerVersionId: 'a-v1'),
+        ],
+      );
+      final provider = _GraphContentProvider(
+        name: 'provider-a',
+        contentsById: <String, MtnMinecraftContent>{'a': content},
+        versionsById: <String, MtnMinecraftContentVersion>{'a-v1': root},
+      );
+      final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]);
+
+      final graph = await service.resolveDependencyGraph(root, MtnMinecraftContentVersionSelectionRequest());
+
+      expect(graph.versions, <MtnMinecraftContentVersion>[root]);
+      expect(graph.edges, hasLength(1));
+      expect(graph.cyclicEdges.single.target, same(root));
+      expect(graph.cyclicEdges.single.cyclic, isTrue);
+      expect(provider.versionIds, <String>['a-v1']);
+    });
+
     test('resolveDependencyGraph keeps providers isolated and graph collections immutable', () async {
       final rootContent = MtnMinecraftContentMod(key: 'root', name: 'Root');
       final contentA = MtnMinecraftContentMod(
