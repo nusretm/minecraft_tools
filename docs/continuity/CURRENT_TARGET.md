@@ -53,9 +53,10 @@ Current active checkpoint:
 
 ```text
 feature/minecraft-content-dependency-version-selection
-IMPLEMENTED / VALIDATION PENDING
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
 MERGE NOT REQUESTED
 baseline main: 6c2cae386bd0b4a825fd7330d093de01f43c82dd
+validated feature HEAD: e64a5596817f4a174b1e5cb952ef619a04eaed15
 ```
 
 Package version:
@@ -69,9 +70,10 @@ minecraft_content_service
 
 ```text
 Branch: feature/minecraft-content-dependency-version-selection
-Status: IMPLEMENTED / VALIDATION PENDING
+Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
 Package: minecraft_content_service/
 Baseline main: 6c2cae386bd0b4a825fd7330d093de01f43c82dd
+Validated feature HEAD: e64a5596817f4a174b1e5cb952ef619a04eaed15
 ```
 
 Public/service surface:
@@ -116,10 +118,27 @@ Still deliberately out of scope:
 - CurseForge live smoke
 - deferred item client-definition/model/texture rendering
 
-Validation:
+Validation on 2026-10-07:
 
 ```text
-PENDING USER-SUPPLIED LOCAL DART VALIDATION
+dart analyze
+Analyzing minecraft_content_service...
+No issues found!
+
+dart test test/content_provider_service_test.dart
+00:00 +17: All tests passed!
+
+dart test
+00:00 +41: All tests passed!
+
+git diff --check main...HEAD
+PASS
+
+git status
+clean
+
+validated feature HEAD
+e64a5596817f4a174b1e5cb952ef619a04eaed15
 ```
 
 No `dart format` was run.
@@ -1941,28 +1960,12 @@ The active content-service checkpoint is:
 
 ```text
 feature/minecraft-content-dependency-version-selection
-IMPLEMENTED / VALIDATION PENDING
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
 MERGE NOT REQUESTED
+validated feature HEAD: e64a5596817f4a174b1e5cb952ef619a04eaed15
 ```
 
-Run authoritative local validation:
-
-```text
-cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
-
-dart analyze
-dart test test/content_provider_service_test.dart
-dart test
-
-cd ..
-git diff --check main...HEAD
-git status
-git rev-parse HEAD
-```
-
-Do not mark this checkpoint VALIDATED or continuity-closed until user-supplied local output is available.
-
-After successful validation, update continuity and wait for separate explicit merge approval.
+This checkpoint is ready for merge review but merge still requires separate explicit user approval.
 
 Recursive dependency graph solving is the likely following content-service checkpoint but is not automatically approved.
 
