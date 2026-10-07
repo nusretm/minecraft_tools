@@ -294,11 +294,67 @@ void main() {
       );
     });
 
-    test('requires a non-empty API key', () {
-      expect(
-        () => MtnMinecraftContentProviderCurseForge(apiKey: '   ', client: MockClient((request) async => http.Response('{}', 200))),
-        throwsArgumentError,
+    test('can stay registered while API key readiness changes', () async {
+      var requestCount = 0;
+      final provider = MtnMinecraftContentProviderCurseForge(
+        client: MockClient((request) async {
+          requestCount++;
+          return http.Response('{}', 200);
+        }),
       );
+
+      expect(provider.ready, isFalse);
+
+      await expectLater(
+        provider.search(MtnMinecraftContentSearchRequest(types: <MtnMinecraftContentType>[MtnMinecraftContentType.mod])),
+        throwsA(isA<MtnMinecraftContentProviderNotReadyException>()),
+      );
+      expect(requestCount, 0);
+
+      provider.apiKey = ' secret-key ';
+      expect(provider.ready, isTrue);
+
+      provider.apiKey = '   ';
+      expect(provider.ready, isFalse);
+
+      provider.apiKey = null;
+      expect(provider.ready, isFalse);
+    });
+
+    test('retries one 429 response when CurseForge supplies Retry-After', () async {
+      var requestCount = 0;
+      final client = MockClient((request) async {
+        requestCount++;
+
+        if (requestCount == 1) {
+          return http.Response(
+            '{"error":"rate_limited"}',
+            429,
+            headers: <String, String>{'retry-after': '0'},
+          );
+        }
+
+        if (request.url.path == '/v1/categories') {
+          return _jsonResponse(<String, dynamic>{'data': _classes()});
+        }
+
+        if (request.url.path == '/v1/mods/search') {
+          return _jsonResponse(<String, dynamic>{
+            'data': <Map<String, dynamic>>[],
+            'pagination': <String, dynamic>{'index': 0, 'pageSize': 10, 'resultCount': 0, 'totalCount': 0},
+          });
+        }
+
+        throw StateError('Unexpected request: ${request.url}');
+      });
+
+      final provider = MtnMinecraftContentProviderCurseForge(apiKey: 'secret-key', client: client);
+      final result = await provider.search(
+        MtnMinecraftContentSearchRequest(types: <MtnMinecraftContentType>[MtnMinecraftContentType.mod], limit: 10),
+      );
+
+      expect(requestCount, 3);
+      expect(result.contents, isEmpty);
     });
   });
 }
