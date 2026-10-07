@@ -65,10 +65,10 @@ void main() {
         releaseTypes: <MtnMinecraftContentVersionReleaseType>[MtnMinecraftContentVersionReleaseType.release],
         limit: 20,
       );
-      final versionsResult = await service.getVersions('provider-a', 'remote-content-id', versionsRequest);
+      final versionsResult = await service.getVersions('provider-a', content, versionsRequest);
 
       expect(versionsResult.versions.single, same(version));
-      expect(provider.lastVersionsContentId, 'remote-content-id');
+      expect(provider.lastVersionsContent, same(content));
       expect(provider.lastVersionsRequest, same(versionsRequest));
     });
 
@@ -84,7 +84,7 @@ void main() {
         throwsStateError,
       );
       expect(
-        () => service.getVersions('missing-provider', 'content-id', MtnMinecraftContentVersionListRequest()),
+        () => service.getVersions('missing-provider', MtnMinecraftContentMod(key: 'content-a', name: 'Content A'), MtnMinecraftContentVersionListRequest()),
         throwsStateError,
       );
     });
@@ -95,7 +95,6 @@ void main() {
       final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]);
 
       expect(() => service.getContent('provider-a', ''), throwsArgumentError);
-      expect(() => service.getVersions('provider-a', '', MtnMinecraftContentVersionListRequest()), throwsArgumentError);
     });
   });
 
@@ -129,7 +128,7 @@ class _FakeContentProvider extends MtnMinecraftContentProvider {
   int searchCount = 0;
   MtnMinecraftContentSearchRequest? lastSearchRequest;
   String? lastContentId;
-  String? lastVersionsContentId;
+  MtnMinecraftContent? lastVersionsContent;
   MtnMinecraftContentVersionListRequest? lastVersionsRequest;
 
   @override
@@ -152,8 +151,8 @@ class _FakeContentProvider extends MtnMinecraftContentProvider {
   }
 
   @override
-  Future<MtnMinecraftContentVersionListResult> getVersions(String contentId, MtnMinecraftContentVersionListRequest request) async {
-    lastVersionsContentId = contentId;
+  Future<MtnMinecraftContentVersionListResult> getVersions(MtnMinecraftContent content, MtnMinecraftContentVersionListRequest request) async {
+    lastVersionsContent = content;
     lastVersionsRequest = request;
     return MtnMinecraftContentVersionListResult(
       versions: versions,
