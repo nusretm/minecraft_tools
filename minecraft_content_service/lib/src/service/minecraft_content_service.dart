@@ -70,6 +70,79 @@ class MtnMinecraftContentService {
     return MtnMinecraftContentDependencyResolution(dependency: dependency, content: content);
   }
 
+  Future<MtnMinecraftContentDependencyResolution> resolveDependencyVersion(
+    MtnMinecraftContentDependency dependency,
+    MtnMinecraftContentVersionSelectionRequest request,
+  ) async {
+    final identity = await resolveDependency(dependency);
+    if (identity.versionResolved || !identity.contentResolved) return identity;
+
+    final providerName = dependency.provider;
+    final content = identity.content;
+    if (providerName == null || content == null) return identity;
+
+    const pageSize = 50;
+    var page = await getVersions(
+      providerName,
+      content,
+      MtnMinecraftContentVersionListRequest(
+        gameVersions: request.gameVersions,
+        modLoaders: request.modLoaders,
+        releaseTypes: request.releaseTypes,
+        offset: 0,
+        limit: pageSize,
+      ),
+    );
+
+    if (page.versions.isEmpty && !page.hasMore) return identity;
+    if (!page.hasMore) return MtnMinecraftContentDependencyResolution(dependency: dependency, version: page.versions.last);
+
+    final total = page.total;
+    if (total != null) {
+      if (total <= 0) return identity;
+
+      final lastPageOffset = ((total - 1) ~/ pageSize) * pageSize;
+      if (lastPageOffset != 0) {
+        page = await getVersions(
+          providerName,
+          content,
+          MtnMinecraftContentVersionListRequest(
+            gameVersions: request.gameVersions,
+            modLoaders: request.modLoaders,
+            releaseTypes: request.releaseTypes,
+            offset: lastPageOffset,
+            limit: pageSize,
+          ),
+        );
+      }
+
+      if (page.versions.isEmpty) return identity;
+      return MtnMinecraftContentDependencyResolution(dependency: dependency, version: page.versions.last);
+    }
+
+    MtnMinecraftContentVersion? latest = page.versions.isEmpty ? null : page.versions.last;
+    while (page.hasMore) {
+      final nextOffset = page.offset + page.limit;
+      if (nextOffset <= page.offset) throw StateError('Version pagination did not advance for provider $providerName.');
+
+      page = await getVersions(
+        providerName,
+        content,
+        MtnMinecraftContentVersionListRequest(
+          gameVersions: request.gameVersions,
+          modLoaders: request.modLoaders,
+          releaseTypes: request.releaseTypes,
+          offset: nextOffset,
+          limit: pageSize,
+        ),
+      );
+      if (page.versions.isNotEmpty) latest = page.versions.last;
+    }
+
+    if (latest == null) return identity;
+    return MtnMinecraftContentDependencyResolution(dependency: dependency, version: latest);
+  }
+
   void _requireDependencyContentIdentity(MtnMinecraftContentDependency dependency, String providerName, MtnMinecraftContent content) {
     final expected = dependency.providerContentId;
     if (expected == null || expected.isEmpty) return;
