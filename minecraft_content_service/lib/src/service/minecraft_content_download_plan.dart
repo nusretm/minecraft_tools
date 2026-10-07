@@ -5,11 +5,16 @@ class MtnMinecraftContentDownloadItem {
     required this.selection,
     required this.url,
   }) {
-    if (!_usableDownloadUri(url)) throw ArgumentError.value(url, 'url', 'Download URL must be an absolute HTTP or HTTPS URI.');
+    if (!isUsableUrl(url)) throw ArgumentError.value(url, 'url', 'Download URL must be an absolute HTTP or HTTPS URI.');
   }
 
   final MtnMinecraftContentFileSelection selection;
   final Uri url;
+
+  static bool isUsableUrl(Uri url) {
+    if (!url.hasScheme || url.host.isEmpty) return false;
+    return url.scheme == 'http' || url.scheme == 'https';
+  }
 }
 
 abstract class MtnMinecraftContentDownloadIssue {
@@ -26,7 +31,6 @@ class MtnMinecraftContentDownloadIssueInvalidUrl extends MtnMinecraftContentDown
     required this.value,
     this.providerName,
   }) {
-    if (value.isEmpty) throw ArgumentError.value(value, 'value', 'Invalid download URL value cannot be empty.');
     if (providerName != null && providerName!.isEmpty) throw ArgumentError.value(providerName, 'providerName', 'Provider name cannot be empty.');
   }
 
@@ -133,9 +137,4 @@ class MtnMinecraftContentDownloadPlan {
   final List<MtnMinecraftContentDownloadIssue> issues;
 
   bool get downloadable => issues.isEmpty;
-}
-
-bool _usableDownloadUri(Uri uri) {
-  if (!uri.hasScheme || uri.host.isEmpty) return false;
-  return uri.scheme == 'http' || uri.scheme == 'https';
 }

@@ -19,7 +19,7 @@ class MtnMinecraftContentDownloadPlanner {
       final directUrl = selected.file.downloadUrl;
       if (directUrl != null) {
         final uri = Uri.tryParse(directUrl);
-        if (uri == null || !_usableDownloadUri(uri)) {
+        if (uri == null || !MtnMinecraftContentDownloadItem.isUsableUrl(uri)) {
           issues.add(
             MtnMinecraftContentDownloadIssueInvalidUrl(
               selection: selected,
@@ -97,7 +97,7 @@ class MtnMinecraftContentDownloadPlanner {
           continue;
         }
 
-        if (!_usableDownloadUri(uri)) {
+        if (!MtnMinecraftContentDownloadItem.isUsableUrl(uri)) {
           issues.add(
             MtnMinecraftContentDownloadIssueInvalidUrl(
               selection: selected,
@@ -131,9 +131,4 @@ class MtnMinecraftContentDownloadPlanner {
       issues: issues,
     );
   }
-}
-
-bool _usableDownloadUri(Uri uri) {
-  if (!uri.hasScheme || uri.host.isEmpty) return false;
-  return uri.scheme == 'http' || uri.scheme == 'https';
 }
