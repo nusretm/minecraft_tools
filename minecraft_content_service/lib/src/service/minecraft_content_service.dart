@@ -14,6 +14,12 @@ class MtnMinecraftContentService {
     return providers.requireReadyFromName(providerName).search(request);
   }
 
+  Future<List<MtnMinecraftContentSearchResult>> searchAll(MtnMinecraftContentSearchRequest request) {
+    return Future.wait(
+      providers.readyItems.map((provider) => provider.search(request)),
+    );
+  }
+
   Future<MtnMinecraftContent> getContent(String providerName, String id) {
     if (id.isEmpty) throw ArgumentError.value(id, 'id', 'Content id cannot be empty.');
     return providers.requireReadyFromName(providerName).getContent(id);
