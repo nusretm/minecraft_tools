@@ -49,11 +49,85 @@ merge commit: 0655506983ee2300ede96df67d395bda2141a3b9
 post-merge continuity sync: 510620a5e22f60a1cb2cf5e90c6bd6e1d47d6d12
 ```
 
+Current active checkpoint:
+
+```text
+feature/minecraft-content-dependency-version-selection
+IMPLEMENTED / VALIDATION PENDING
+MERGE NOT REQUESTED
+baseline main: 6c2cae386bd0b4a825fd7330d093de01f43c82dd
+```
+
 Package version:
 
 ```text
 minecraft_content_service
-1.0.0-dev.7
+1.0.0-dev.8
+```
+
+## Minecraft content dependency version selection foundation checkpoint
+
+```text
+Branch: feature/minecraft-content-dependency-version-selection
+Status: IMPLEMENTED / VALIDATION PENDING
+Package: minecraft_content_service/
+Baseline main: 6c2cae386bd0b4a825fd7330d093de01f43c82dd
+```
+
+Public/service surface:
+
+- `MtnMinecraftContentVersionSelectionRequest`
+- `MtnMinecraftContentService.resolveDependencyVersion(dependency, request)`
+
+Locked semantics:
+
+- existing resolved versions are reused without provider version-list calls
+- exact `providerVersionId` remains exact identity and is not replaced by selection policy
+- provider identity is never guessed
+- content identity resolves first through the existing `resolveDependency()`
+- selection begins only for resolved content with no resolved version and an explicit provider
+- selection filters are Minecraft version, mod loader, and release type
+- public selection requests do not expose pagination
+- provider pagination remains an internal service detail
+- known `total` allows direct final-page lookup after the first page
+- unknown `total` falls back to forward page traversal
+- provider-normalized ordering remains authoritative and the final compatible normalized version is selected
+- no compatible version preserves content-only resolution rather than throwing
+- `versionConstraint` remains uninterpreted
+- dependency relation type does not influence version choice
+- no cross-provider fallback, lookup, association, filename heuristic, or dependency mutation occurs
+
+Provider boundary:
+
+- no Modrinth/CurseForge endpoint or wire behavior was added to generic core
+- existing provider `getVersions()` implementations remain the provider-specific filtering/mapping boundary
+- provider-specific filter limitations remain explicit rather than being hidden by generic approximation
+
+Still deliberately out of scope:
+
+- recursive dependency traversal / graph construction
+- cycle and duplicate graph handling
+- `versionConstraint` interpretation
+- install policy for required/optional/incompatible/embedded/included/tool relations
+- artifact/file selection
+- download/materialization
+- cross-provider association
+- broader provider-error aggregation policy
+- CurseForge live smoke
+- deferred item client-definition/model/texture rendering
+
+Validation:
+
+```text
+PENDING USER-SUPPLIED LOCAL DART VALIDATION
+```
+
+No `dart format` was run.
+
+Dedicated handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-07_MINECRAFT_CONTENT_DEPENDENCY_VERSION_SELECTION.md
 ```
 
 ## Minecraft content dependency identity resolution foundation checkpoint
@@ -1863,18 +1937,34 @@ In particular:
 
 ## Next action
 
-The dependency identity resolution foundation is implementation-complete, validated, continuity-closed, merged, and pushed to `origin/main`.
+The active content-service checkpoint is:
 
-No content-service implementation checkpoint is currently active or automatically approved.
+```text
+feature/minecraft-content-dependency-version-selection
+IMPLEMENTED / VALIDATION PENDING
+MERGE NOT REQUESTED
+```
 
-Potential next content-service work remains separate and requires a new explicit scope/implementation approval:
+Run authoritative local validation:
 
-- recursive dependency graph solving
-- dependency version-selection policy
-- artifact selection/download/materialization
-- broader multi-provider error policy
-- cross-provider association only if a concrete requirement appears
-- CurseForge live smoke when an application API key is available
+```text
+cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
+
+dart analyze
+dart test test/content_provider_service_test.dart
+dart test
+
+cd ..
+git diff --check main...HEAD
+git status
+git rev-parse HEAD
+```
+
+Do not mark this checkpoint VALIDATED or continuity-closed until user-supplied local output is available.
+
+After successful validation, update continuity and wait for separate explicit merge approval.
+
+Recursive dependency graph solving is the likely following content-service checkpoint but is not automatically approved.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
@@ -1882,4 +1972,4 @@ The item client-definition/model/texture resource foundation remains separately 
 docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
 ```
 
-Do not start the next content-service checkpoint or the deferred resource work without explicit user approval.
+Do not start recursive graph work, artifact/download work, or the deferred resource work without explicit user approval.
