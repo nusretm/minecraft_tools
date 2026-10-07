@@ -24,16 +24,20 @@ class MtnMinecraftContentSearchRequest {
 
 class MtnMinecraftContentSearchResult {
   MtnMinecraftContentSearchResult({
+    required this.provider,
     required List<MtnMinecraftContent> contents,
     required this.offset,
     required this.limit,
     required this.hasMore,
     this.total,
   }) : contents = List<MtnMinecraftContent>.unmodifiable(contents) {
+    if (provider.isEmpty) throw ArgumentError.value(provider, 'provider', 'Provider name cannot be empty.');
+    if (provider.trim() != provider) throw ArgumentError.value(provider, 'provider', 'Provider name cannot contain leading or trailing whitespace.');
     _validatePage(offset, limit);
     if (total != null && total! < 0) throw ArgumentError.value(total, 'total', 'Total cannot be negative.');
   }
 
+  final String provider;
   final List<MtnMinecraftContent> contents;
   final int offset;
   final int limit;

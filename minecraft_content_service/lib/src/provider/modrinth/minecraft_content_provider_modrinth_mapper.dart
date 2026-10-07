@@ -47,6 +47,7 @@ class MtnMinecraftContentProviderModrinthMapper {
     final total = MtnMinecraftContentModel.intFromMap(map['total_hits']);
 
     return MtnMinecraftContentSearchResult(
+      provider: providerName,
       contents: contents,
       offset: offset,
       limit: limit == 0 ? 1 : limit,

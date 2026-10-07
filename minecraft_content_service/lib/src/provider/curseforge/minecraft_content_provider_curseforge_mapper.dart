@@ -88,6 +88,7 @@ class MtnMinecraftContentProviderCurseForgeMapper {
     final contents = items.map((item) => content(providerName, contentType, item)).toList(growable: false);
 
     return MtnMinecraftContentSearchResult(
+      provider: providerName,
       contents: contents,
       offset: offset,
       limit: pageSize < 1 ? request.limit : pageSize,
