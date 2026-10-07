@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.0-dev.11
+
+- Add immutable `MtnMinecraftContentDependencyInstallRequest` and `MtnMinecraftContentDependencyInstallPlan`.
+- Add `MtnMinecraftContentService.planDependencyInstall()` as a synchronous, provider-independent, network-free policy layer over a resolved dependency graph.
+- Traverse only install-reachable `required` and `embeddedLibrary` branches, plus explicitly selected optional version keys.
+- Keep `bundled`, `tool`, and `incompatible` edges out of install traversal while preserving their active-source classifications.
+- Treat unresolved required / embedded-library edges as blocking install-plan failures.
+- Reject optional selection keys that are not resolved optional graph targets and prevent nested optional selections from bypassing inactive parents.
+- Add blocking multiple-version conflicts when more than one version of the same logical content is install-reachable.
+- Add blocking active-source incompatibility conflicts with exact-version and content-level matching semantics.
+- Keep unresolved incompatibility non-blocking and do not narrow content-level incompatibility to the graph-selected target version.
+- Keep graph cycles non-conflicting, deduplicate install versions by `version.key`, and avoid mutating graph/content/version/direct state.
+- Keep version-constraint interpretation, installed-state reconciliation, automatic conflict winner selection, artifact/file selection, downloads, and materialization out of this checkpoint.
+
 ## 1.0.0-dev.10
 
 - Replace ambiguous generic dependency types `embedded` / `included` with semantic `embeddedLibrary` / `bundled`.

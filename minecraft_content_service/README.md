@@ -40,8 +40,12 @@ Current foundation includes:
 - shared-version node collapse by `version.key`, unresolved edge preservation, and explicit cycle marking without infinite recursion
 - provider-independent dependency semantics: `required`, `optional`, `incompatible`, `embeddedLibrary`, `bundled`, and `tool`
 - Modrinth `embedded` dependencies normalize to `bundled`; CurseForge `EmbeddedLibrary` and `Include` remain distinct as `embeddedLibrary` and `bundled`
+- pure dependency install planning through `planDependencyInstall()` without provider or filesystem access
+- install-reachable traversal for required / embedded-library dependencies plus caller-selected optional versions
+- explicit bundled/tool cut-off, unresolved install blockers, multiple-version conflicts, and active-source incompatibility conflicts
+- immutable dependency install requests, plans, edge classifications, and conflict result models
 
-Version-constraint interpretation, install/conflict policy, artifact selection/download, and update/materialization reconciliation remain separate later checkpoints.
+Version-constraint interpretation, installed-state reconciliation, automatic conflict winner selection, artifact selection/download, and update/materialization remain separate later checkpoints.
 
 
 ## CLI example

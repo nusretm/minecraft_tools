@@ -3,6 +3,8 @@ import '../provider/minecraft_content_provider.dart';
 import '../provider/minecraft_content_provider_list.dart';
 import '../provider/minecraft_content_provider_models.dart';
 import 'minecraft_content_dependency_graph.dart';
+import 'minecraft_content_dependency_install_plan.dart';
+import 'minecraft_content_dependency_install_planner.dart';
 
 class MtnMinecraftContentService {
   MtnMinecraftContentService({
@@ -212,6 +214,13 @@ class MtnMinecraftContentService {
       versions: versions,
       edges: edges,
     );
+  }
+
+  MtnMinecraftContentDependencyInstallPlan planDependencyInstall(
+    MtnMinecraftContentDependencyGraph graph,
+    MtnMinecraftContentDependencyInstallRequest request,
+  ) {
+    return const MtnMinecraftContentDependencyInstallPlanner().plan(graph, request);
   }
 
   void _requireDependencyContentIdentity(MtnMinecraftContentDependency dependency, String providerName, MtnMinecraftContent content) {
