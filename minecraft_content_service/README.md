@@ -20,8 +20,10 @@ Current foundation includes:
 - provider-independent search and version-list request/result contracts
 - `MtnMinecraftContentProviderModrinth` read-only Modrinth v2 search/project/version integration
 - Modrinth project, version, file and dependency mapping with raw provider metadata preservation
+- `MtnMinecraftContentProviderCurseForge` authenticated CurseForge v1 search/project/file integration
+- CurseForge class discovery plus project, file/version, hash, fingerprint, module and dependency mapping
 
-CurseForge integration, multi-provider aggregation, dependency solving and update/materialization reconciliation remain separate later checkpoints.
+Multi-provider aggregation, dependency solving and update/materialization reconciliation remain separate later checkpoints.
 
 
 ## CLI example
