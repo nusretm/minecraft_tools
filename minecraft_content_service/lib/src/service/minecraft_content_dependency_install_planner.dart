@@ -1,5 +1,6 @@
 import '../model/minecraft_content_models.dart';
 import 'minecraft_content_dependency_graph.dart';
+import 'minecraft_content_dependency_install_conflict_evaluator.dart';
 import 'minecraft_content_dependency_install_plan.dart';
 
 class MtnMinecraftContentDependencyInstallPlanner {
@@ -85,56 +86,11 @@ class MtnMinecraftContentDependencyInstallPlanner {
     includeVersion(graph.root);
     expand(graph.root);
 
-    final conflicts = <MtnMinecraftContentDependencyInstallConflict>[];
-    final versionsByContentKey = <String, List<MtnMinecraftContentVersion>>{};
-    for (final version in installVersions) {
-      versionsByContentKey.putIfAbsent(version.content.key, () => <MtnMinecraftContentVersion>[]).add(version);
-    }
-    for (final entry in versionsByContentKey.entries) {
-      if (entry.value.length < 2) continue;
-      conflicts.add(
-        MtnMinecraftContentDependencyInstallConflictMultipleVersions(
-          contentKey: entry.key,
-          versions: entry.value,
-        ),
-      );
-    }
-
-    for (final edge in incompatibleEdges) {
-      if (edge.target == null) continue;
-
-      final dependency = edge.dependency;
-      final providerVersionId = dependency.providerVersionId;
-      final exactVersion = dependency.version;
-      final exactDeclaration = exactVersion != null || (providerVersionId != null && providerVersionId.isNotEmpty);
-
-      if (exactDeclaration) {
-        final versionKey = exactVersion?.key ?? edge.target?.key;
-        final conflictingVersion = versionKey == null ? null : installVersionsByKey[versionKey];
-        if (conflictingVersion != null) {
-          conflicts.add(
-            MtnMinecraftContentDependencyInstallConflictIncompatible(
-              edge: edge,
-              conflictingVersion: conflictingVersion,
-            ),
-          );
-        }
-        continue;
-      }
-
-      final contentKey = edge.resolution.content?.key ?? dependency.content?.key ?? edge.target?.content.key;
-      if (contentKey == null) continue;
-
-      for (final installedVersion in installVersions) {
-        if (installedVersion.content.key != contentKey) continue;
-        conflicts.add(
-          MtnMinecraftContentDependencyInstallConflictIncompatible(
-            edge: edge,
-            conflictingVersion: installedVersion,
-          ),
-        );
-      }
-    }
+    const conflictEvaluator = MtnMinecraftContentDependencyInstallConflictEvaluator();
+    final conflicts = <MtnMinecraftContentDependencyInstallConflict>[
+      ...conflictEvaluator.multipleVersions(installVersions),
+      for (final edge in incompatibleEdges) ...conflictEvaluator.incompatible(edge, installVersions),
+    ];
 
     return MtnMinecraftContentDependencyInstallPlan(
       root: graph.root,
