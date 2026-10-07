@@ -351,15 +351,14 @@ class MtnMinecraftContentProviderCurseForgeMapper {
 
     for (final item in sortable) {
       final value = MtnMinecraftContentModel.nullableStringFromMap(item['gameVersionName']) ?? MtnMinecraftContentModel.nullableStringFromMap(item['gameVersion']);
-      if (value != null && !result.contains(value)) result.add(value);
+      if (value == null || _isNonMinecraftVersionTag(value)) continue;
+      if (!result.contains(value)) result.add(value);
     }
 
     if (result.isNotEmpty) return result;
 
     for (final value in MtnMinecraftContentModel.stringListFromMap(file['gameVersions'])) {
-      if (_loaderFromWireName(value) != null) continue;
-      final normalized = value.toLowerCase();
-      if (normalized == 'client' || normalized == 'server') continue;
+      if (_isNonMinecraftVersionTag(value)) continue;
       if (!result.contains(value)) result.add(value);
     }
 
@@ -441,6 +440,12 @@ class MtnMinecraftContentProviderCurseForgeMapper {
     if (values.contains('shaders') || values.contains('shaderpacks')) return MtnMinecraftContentType.shaderPack;
     if (values.contains('datapacks')) return MtnMinecraftContentType.dataPack;
     return null;
+  }
+
+  static bool _isNonMinecraftVersionTag(String value) {
+    if (_loaderFromWireName(value) != null) return true;
+    final normalized = _normalize(value);
+    return normalized == 'client' || normalized == 'server';
   }
 
   static String _normalize(String value) {
