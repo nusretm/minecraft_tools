@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0-dev.4
+
+- Add authenticated `MtnMinecraftContentProviderCurseForge` foundation.
+- Discover Minecraft CurseForge content classes through the categories endpoint instead of hardcoding class IDs.
+- Add CurseForge v1 search, project/description and paginated file/version requests.
+- Map CurseForge file IDs, hashes, fingerprints, modules and dependency relation types into the generic model.
+- Preserve raw provider response maps without exposing API keys.
+- Keep unsupported multi-class and multi-version-file filter shapes explicit instead of returning incorrect pagination.
+
 ## 1.0.0-dev.3
 
 - Add read-only `MtnMinecraftContentProviderModrinth` foundation.
