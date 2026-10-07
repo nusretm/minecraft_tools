@@ -2801,8 +2801,8 @@ The active content-service checkpoint is:
 dev.17 — Content Materialization Plan Foundation
 branch: feature/minecraft-content-materialization-plan
 baseline main: 42445d7847af62963afec43b9f18da16337e0b8c
-production/test HEAD: 66a6876d963a55d744dfab64a000d1c665cd2539
-status: IMPLEMENTED / VALIDATION PENDING
+production/test HEAD: e4c241d83d252ba9ea0ab24184198d63b7faf5a5
+status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
 package: minecraft_content_service 1.0.0-dev.17
 ```
 
@@ -2857,12 +2857,46 @@ Still out of scope:
 - unmanaged/manual file cleanup
 - deferred resource rendering
 
-Next required action is authoritative local validation on the feature branch. Do not merge until validation is complete and the user separately approves merge.
+Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `e4c241d83d252ba9ea0ab24184198d63b7faf5a5`. Merge has been separately approved by the user.
+
+Validation:
+
+```text
+dart analyze
+No issues found!
+
+content_materialization_plan_test.dart
+9/9 passed
+
+full dart test
+118/118 passed
+
+git diff --check main...HEAD
+PASS
+
+working tree
+clean
+
+validated feature HEAD:
+e4c241d83d252ba9ea0ab24184198d63b7faf5a5
+```
+
+Earlier focused validation:
+- installation state 8/8
+- download plan 9/9
+- file selection 12/12
+- dependency reconciliation 11/11
 
 Active continuity document:
 
 ```text
 docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_MATERIALIZATION_PLAN.md
+```
+
+Completion handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-08_MINECRAFT_CONTENT_MATERIALIZATION_PLAN.md
 ```
 
 Previous completed checkpoint:
