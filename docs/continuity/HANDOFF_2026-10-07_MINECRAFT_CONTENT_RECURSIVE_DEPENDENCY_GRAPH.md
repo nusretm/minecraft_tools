@@ -9,12 +9,14 @@ Repository: nusretm/minecraft_tools
 Package: minecraft_content_service/
 Branch: feature/minecraft-content-recursive-dependency-graph
 Implementation: COMPLETE
-Validation: PENDING USER-SUPPLIED LOCAL DART VALIDATION
-Continuity: OPEN UNTIL VALIDATION
+Validation: COMPLETE
+Continuity: CLOSED
 Merge: NOT REQUESTED
 Baseline main:
 b6a729cd3cfb78141196b7774726ac4b06224da8
-Production/test HEAD before final continuity sync:
+Validated feature HEAD:
+4bcc8ee5a72129bec5d371366ceb6c94fda04f74
+Production/test HEAD:
 4fd032395c081f143a2186519569ac06f8cb54cf
 ```
 
@@ -196,33 +198,37 @@ A dedicated multi-content fake provider is used only by tests so existing provid
 
 ## Validation
 
-Authoritative local validation is pending.
-
-Required validation:
+Authoritative user-supplied local validation on 2026-10-07:
 
 ```text
-cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
-
 dart analyze
-dart test test/content_provider_service_test.dart
-dart test
+Analyzing minecraft_content_service...
+No issues found!
 
-cd ..
+dart test test/content_provider_service_test.dart
+00:00 +22: All tests passed!
+
+dart test
+00:00 +46: All tests passed!
+
 git diff --check main...HEAD
+PASS
+
 git status
+On branch feature/minecraft-content-recursive-dependency-graph
+Your branch is up to date with 'origin/feature/minecraft-content-recursive-dependency-graph'.
+nothing to commit, working tree clean
+
 git rev-parse HEAD
+4bcc8ee5a72129bec5d371366ceb6c94fda04f74
 ```
 
-Per repository rules, user-supplied local Dart output is authoritative.
-
-Do not mark this checkpoint VALIDATED or continuity-closed until those results are supplied.
+No `dart format` was run.
 
 ## Next action
 
-Run authoritative local validation on the feature branch.
+This checkpoint is implementation-complete, validated, and continuity-closed.
 
-If validation fails, fix only this approved recursive dependency graph checkpoint.
-
-If validation passes, record the supplied results here and in `docs/continuity/CURRENT_TARGET.md`, close continuity, and wait for separate explicit merge approval.
+Merge is not yet requested and still requires separate explicit user approval.
 
 Install/conflict policy and artifact/materialization work remain separate future checkpoints and are not automatically approved.
