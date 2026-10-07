@@ -22,3 +22,14 @@ Current foundation includes:
 - Modrinth project, version, file and dependency mapping with raw provider metadata preservation
 
 CurseForge integration, multi-provider aggregation, dependency solving and update/materialization reconciliation remain separate later checkpoints.
+
+
+## CLI example
+
+A small live provider search example is available at `example/mc_content.dart`.
+
+```powershell
+dart run example/mc_content.dart --provider modrinth --content mod --filter "Skyblocker" --mc-version 26.1.2 --loader fabric
+```
+
+The example currently supports the Modrinth provider and maps provider, content type, query, Minecraft version, and loader arguments into the generic content search request.
