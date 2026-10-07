@@ -11,13 +11,19 @@ Branch: feature/minecraft-content-dependency-semantic-normalization
 Implementation: COMPLETE
 Validation: COMPLETE
 Continuity: CLOSED
-Merge: NOT REQUESTED
+Merge: COMPLETE
+Pull request:
+#38
 Baseline main:
 604f0ad6964e6c1147f9969619e5c16b5391a5b6
 Validated feature HEAD:
 c395e50d545d776223f978a486db2af8686c3f01
+Merged feature HEAD:
+6e436b08e62a15ad1adb6f4871d796e02d674cdb
 Implementation HEAD:
 fd3793b062deccb19490185cff3be3c958272ebe
+Merge commit:
+a6094999cf05c345fe9ffdc0c421e45ccd0e61dc
 ```
 
 Package version: `1.0.0-dev.10`.
@@ -189,10 +195,23 @@ c395e50d545d776223f978a486db2af8686c3f01
 
 No `dart format` was run.
 
+## Post-merge closure
+
+The validated and continuity-closed feature branch was merged through pull request #38.
+
+```text
+PR: #38
+feature: feature/minecraft-content-dependency-semantic-normalization
+validated feature HEAD: c395e50d545d776223f978a486db2af8686c3f01
+merged feature HEAD: 6e436b08e62a15ad1adb6f4871d796e02d674cdb
+implementation HEAD: fd3793b062deccb19490185cff3be3c958272ebe
+merge commit: a6094999cf05c345fe9ffdc0c421e45ccd0e61dc
+```
+
+The commits after the validated feature HEAD contain continuity-only closeout changes. No production implementation changed after authoritative validation.
+
 ## Next action
 
-This checkpoint is implementation-complete, validated, and continuity-closed.
-
-Merge is not yet requested and still requires separate explicit user approval.
+This checkpoint is implementation-complete, validated, continuity-closed, and merged.
 
 Dependency install/conflict policy remains the likely next content-service checkpoint, but it is not automatically approved.
