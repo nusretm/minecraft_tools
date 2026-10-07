@@ -311,6 +311,8 @@ class MtnMinecraftContentService {
     }
 
     for (final edge in incompatibleEdges) {
+      if (edge.target == null) continue;
+
       final dependency = edge.dependency;
       final providerVersionId = dependency.providerVersionId;
       final exactVersion = dependency.version;
