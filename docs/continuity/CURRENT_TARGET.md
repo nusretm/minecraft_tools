@@ -196,9 +196,10 @@ Current active checkpoint:
 
 ```text
 feature/minecraft-content-file-selection
-IMPLEMENTED / VALIDATION PENDING
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
 MERGE NOT REQUESTED
 baseline main: 6af90fc33e8d27119efa86d6a746a5ee4b6f49de
+validated feature HEAD: a952582509eb89cd44fe21f5580e26d7d075cdd5
 production/test HEAD: f68e773cbfe24c9427558fafb0c4008bc9facd63
 ```
 
@@ -213,9 +214,10 @@ minecraft_content_service
 
 ```text
 Branch: feature/minecraft-content-file-selection
-Status: IMPLEMENTED / VALIDATION PENDING
+Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
 Package: minecraft_content_service/
 Baseline main: 6af90fc33e8d27119efa86d6a746a5ee4b6f49de
+Validated feature HEAD: a952582509eb89cd44fe21f5580e26d7d075cdd5
 Production/test HEAD: f68e773cbfe24c9427558fafb0c4008bc9facd63
 ```
 
@@ -297,10 +299,39 @@ Still deliberately out of scope:
 - `versionConstraint` interpretation
 - deferred item client-definition/model/texture rendering
 
-Validation:
+Validation on 2026-10-07:
 
 ```text
-PENDING USER-SUPPLIED LOCAL DART VALIDATION
+dart analyze
+Analyzing minecraft_content_service...
+No issues found!
+
+dart test test/content_file_selection_test.dart
+00:00 +12: All tests passed!
+
+dart test test/content_dependency_reconciliation_test.dart
+00:00 +11: All tests passed!
+
+dart test test/content_dependency_desired_state_test.dart
+00:00 +10: All tests passed!
+
+dart test test/content_dependency_install_policy_test.dart
+00:00 +11: All tests passed!
+
+dart test test/content_provider_service_test.dart
+00:00 +22: All tests passed!
+
+dart test
+00:00 +92: All tests passed!
+
+git diff --check main...HEAD
+PASS
+
+git status
+clean
+
+validated feature HEAD
+a952582509eb89cd44fe21f5580e26d7d075cdd5
 ```
 
 No `dart format` was run.
@@ -2744,34 +2775,14 @@ The active content-service checkpoint is:
 
 ```text
 feature/minecraft-content-file-selection
-IMPLEMENTED / VALIDATION PENDING
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
 MERGE NOT REQUESTED
+validated feature HEAD: a952582509eb89cd44fe21f5580e26d7d075cdd5
 ```
 
-Run authoritative local validation:
+This checkpoint is ready for merge review but merge still requires separate explicit user approval.
 
-```text
-cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
-
-dart analyze
-dart test test/content_file_selection_test.dart
-dart test test/content_dependency_reconciliation_test.dart
-dart test test/content_dependency_desired_state_test.dart
-dart test test/content_dependency_install_policy_test.dart
-dart test test/content_provider_service_test.dart
-dart test
-
-cd ..
-git diff --check main...HEAD
-git status
-git rev-parse HEAD
-```
-
-Do not mark this checkpoint VALIDATED or continuity-closed until user-supplied local output is available.
-
-After successful validation, update continuity and wait for separate explicit merge approval.
-
-Download-source resolution becomes the likely next content-service checkpoint only after file selection is validated and merged.
+Download-source resolution becomes the likely next content-service checkpoint only after this file-selection foundation is merged.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
