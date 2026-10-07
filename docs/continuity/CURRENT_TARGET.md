@@ -12,6 +12,17 @@ Last updated: 2026-10-07
 
 ## Repository state
 
+Recursive dependency graph merge:
+
+```text
+PR: #37
+main merge commit:
+3238bf8d345b58b20c12643e01828bc6db3847d6
+Add recursive dependency graph foundation
+```
+
+Post-merge continuity closeout commits are docs-only and follow that functional merge commit.
+
 Dependency version selection merge:
 
 ```text
@@ -72,15 +83,17 @@ merged feature HEAD: 549a55bfd2c4f29bd136d3f8a36683ee4c077403
 merge commit: 519311136091e6ed85c90628ac3ce2393f166997
 ```
 
-Current active checkpoint:
+Latest completed checkpoint:
 
 ```text
 feature/minecraft-content-recursive-dependency-graph
-IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
-MERGE NOT REQUESTED
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
+PR: #37
 baseline main: b6a729cd3cfb78141196b7774726ac4b06224da8
 validated feature HEAD: 4bcc8ee5a72129bec5d371366ceb6c94fda04f74
+merged feature HEAD: 05600a538a4d046879beeee913bd6cabf171e0a4
 production/test HEAD: 4fd032395c081f143a2186519569ac06f8cb54cf
+merge commit: 3238bf8d345b58b20c12643e01828bc6db3847d6
 ```
 
 Package version:
@@ -94,11 +107,14 @@ minecraft_content_service
 
 ```text
 Branch: feature/minecraft-content-recursive-dependency-graph
-Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
 Package: minecraft_content_service/
+PR: #37
 Baseline main: b6a729cd3cfb78141196b7774726ac4b06224da8
 Validated feature HEAD: 4bcc8ee5a72129bec5d371366ceb6c94fda04f74
+Merged feature HEAD: 05600a538a4d046879beeee913bd6cabf171e0a4
 Production/test HEAD: 4fd032395c081f143a2186519569ac06f8cb54cf
+Merge commit: 3238bf8d345b58b20c12643e01828bc6db3847d6
 ```
 
 Public/service surface:
@@ -2064,18 +2080,18 @@ In particular:
 
 ## Next action
 
-The active content-service checkpoint is:
+The recursive dependency graph foundation is implementation-complete, validated, continuity-closed, merged through PR #37, and recorded in continuity.
 
-```text
-feature/minecraft-content-recursive-dependency-graph
-IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
-MERGE NOT REQUESTED
-validated feature HEAD: 4bcc8ee5a72129bec5d371366ceb6c94fda04f74
-```
+No content-service implementation checkpoint is currently active or automatically approved.
 
-This checkpoint is ready for merge review but merge still requires separate explicit user approval.
+Potential next content-service work remains separate and requires a new explicit scope/implementation approval:
 
-Install/conflict policy, artifact selection/download/materialization, and broader graph error policy remain separate future checkpoints.
+- dependency install policy
+- incompatible/conflict handling
+- version-constraint interpretation
+- artifact/file selection
+- download/materialization
+- broader graph error aggregation/recovery policy
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
