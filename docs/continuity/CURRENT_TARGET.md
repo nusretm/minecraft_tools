@@ -79,7 +79,7 @@ feature/minecraft-content-recursive-dependency-graph
 IMPLEMENTED / VALIDATION PENDING
 MERGE NOT REQUESTED
 baseline main: b6a729cd3cfb78141196b7774726ac4b06224da8
-production/test HEAD before final continuity sync: ba971c307e5ec9692b64e580d46b9d49661ef0c9
+production/test HEAD before final continuity sync: 4fd032395c081f143a2186519569ac06f8cb54cf
 ```
 
 Package version:
@@ -96,7 +96,7 @@ Branch: feature/minecraft-content-recursive-dependency-graph
 Status: IMPLEMENTED / VALIDATION PENDING
 Package: minecraft_content_service/
 Baseline main: b6a729cd3cfb78141196b7774726ac4b06224da8
-Production/test HEAD before final continuity sync: ba971c307e5ec9692b64e580d46b9d49661ef0c9
+Production/test HEAD before final continuity sync: 4fd032395c081f143a2186519569ac06f8cb54cf
 ```
 
 Public/service surface:
