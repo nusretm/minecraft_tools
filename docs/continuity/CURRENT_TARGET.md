@@ -72,11 +72,84 @@ merged feature HEAD: 549a55bfd2c4f29bd136d3f8a36683ee4c077403
 merge commit: 519311136091e6ed85c90628ac3ce2393f166997
 ```
 
+Current active checkpoint:
+
+```text
+feature/minecraft-content-recursive-dependency-graph
+IMPLEMENTED / VALIDATION PENDING
+MERGE NOT REQUESTED
+baseline main: b6a729cd3cfb78141196b7774726ac4b06224da8
+production/test HEAD before continuity updates: 3427fd94c997cce5e985a4903aa1fe6486e1c3b6
+```
+
 Package version:
 
 ```text
 minecraft_content_service
-1.0.0-dev.8
+1.0.0-dev.9
+```
+
+## Minecraft content recursive dependency graph foundation checkpoint
+
+```text
+Branch: feature/minecraft-content-recursive-dependency-graph
+Status: IMPLEMENTED / VALIDATION PENDING
+Package: minecraft_content_service/
+Baseline main: b6a729cd3cfb78141196b7774726ac4b06224da8
+Production/test HEAD before continuity updates: 3427fd94c997cce5e985a4903aa1fe6486e1c3b6
+```
+
+Public/service surface:
+
+- `MtnMinecraftContentDependencyGraph`
+- `MtnMinecraftContentDependencyGraphEdge`
+- `MtnMinecraftContentService.resolveDependencyGraph(root, request)`
+
+Locked semantics:
+
+- caller-selected root version is preserved and becomes the first graph node
+- traversal is deterministic depth-first in dependency declaration order
+- every edge reuses the existing `resolveDependencyVersion()` behavior
+- unresolved dependencies remain graph edges with no target
+- unresolved edges do not abort graph construction
+- resolved nodes are canonicalized by `version.key`
+- shared nodes are stored and expanded once while every incoming edge remains visible
+- the first runtime version object observed for a key becomes the canonical graph node
+- direct and deep cycles are retained as `cyclic == true` edges and stop recursive expansion at that edge
+- dependency types remain metadata only; required/optional/incompatible/embedded/included/tool do not change traversal
+- provider identity is never guessed or crossed
+- graph collections are immutable
+- root/version/dependency inputs are not mutated
+- runtime graph edges remain distinct from persisted `MtnMinecraftContentRelation`
+
+Still deliberately out of scope:
+
+- root-version selection
+- `versionConstraint` parsing/evaluation
+- install policy
+- incompatible conflict resolution
+- embedded/included/tool installation semantics
+- dependency winner selection
+- artifact/file selection
+- download/materialization
+- cross-provider association
+- graph persistence/schema changes
+- broader dependency failure aggregation/recovery policy
+- CurseForge live smoke
+- deferred item client-definition/model/texture rendering
+
+Validation:
+
+```text
+PENDING USER-SUPPLIED LOCAL DART VALIDATION
+```
+
+No `dart format` was run.
+
+Dedicated handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-07_MINECRAFT_CONTENT_RECURSIVE_DEPENDENCY_GRAPH.md
 ```
 
 ## Minecraft content dependency version selection foundation checkpoint
@@ -1972,11 +2045,34 @@ In particular:
 
 ## Next action
 
-The dependency version selection foundation is implementation-complete, validated, continuity-closed, merged through PR #36, and recorded in continuity.
+The active content-service checkpoint is:
 
-No content-service implementation checkpoint is currently active or automatically approved.
+```text
+feature/minecraft-content-recursive-dependency-graph
+IMPLEMENTED / VALIDATION PENDING
+MERGE NOT REQUESTED
+```
 
-Recursive dependency graph solving is the likely next content-service checkpoint and should be scoped separately before implementation.
+Run authoritative local validation:
+
+```text
+cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
+
+dart analyze
+dart test test/content_provider_service_test.dart
+dart test
+
+cd ..
+git diff --check main...HEAD
+git status
+git rev-parse HEAD
+```
+
+Do not mark this checkpoint VALIDATED or continuity-closed until user-supplied local output is available.
+
+After successful validation, update continuity and wait for separate explicit merge approval.
+
+Install/conflict policy, artifact selection/download/materialization, and broader graph error policy remain separate future checkpoints.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
@@ -1984,4 +2080,4 @@ The item client-definition/model/texture resource foundation remains separately 
 docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
 ```
 
-Do not start recursive graph work, artifact/download work, or the deferred resource work without explicit user approval.
+Do not start those later checkpoints or the deferred resource work without explicit user approval.
