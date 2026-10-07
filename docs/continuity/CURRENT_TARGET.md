@@ -1,6 +1,6 @@
 # Minecraft Tools — Current Target
 
-Last updated: 2026-10-07
+Last updated: 2026-10-08
 
 ## Repository
 
@@ -2795,16 +2795,49 @@ In particular:
 
 ## Next action
 
-The content file-selection foundation is implementation-complete, validated, continuity-closed, merged through PR #42, and recorded in continuity.
-
-No content-service implementation checkpoint is currently active or automatically approved.
-
-The agreed next architecture direction is batch-oriented download planning and source resolution:
+The active content-service checkpoint is:
 
 ```text
-proposed dev.15
-Batch Download Plan / Source Resolution Foundation
+dev.15 — Batch Download Plan / Source Resolution Foundation
+branch: feature/minecraft-content-download-plan
+baseline main: 8e227cf7e33ac968e9189ad4babbc1483cfc53f3
+implementation HEAD: 245315c3dd980adc5f4e6750204e0b018222d01f
+status: IMPLEMENTED / VALIDATION PENDING
+package: minecraft_content_service 1.0.0-dev.15
 ```
+
+Implemented boundary:
+
+```text
+selectable FileSelectionPlan
+        ↓
+resolve every selected source
+        ├─ reuse valid direct HTTP/HTTPS URL
+        └─ provider-owned source resolution when direct URL is absent
+        ↓
+aggregate all source-resolution issues
+        ↓
+one immutable DownloadPlan
+```
+
+The generic planner contains no Modrinth/CurseForge switch. File provider identity is read from normalized file provider metadata only when direct URL resolution is unavailable. CurseForge owns its project/file ID interpretation, authenticated download-URL endpoint call, and wire behavior.
+
+Any source-resolution issue makes the complete plan non-downloadable. Successful items may remain visible for diagnostics, but an incomplete batch must not be handed to an executor.
+
+Still out of scope:
+
+- byte transfer
+- launcher `DownloadList` / `DownloadManager` dependency
+- concurrency / retry / progress / cancellation
+- target paths and filesystem materialization
+- hash / size verification
+- publication
+- replacement/removal execution
+- managed installation manifest
+- rollback / transactions
+- deferred resource rendering
+
+Next required action is authoritative local validation on the feature branch. Do not merge until validation is complete and the user separately approves merge.
 
 Authoritative planning document:
 
@@ -2812,32 +2845,8 @@ Authoritative planning document:
 docs/continuity/PLANNED_2026-10-07_MINECRAFT_CONTENT_BATCH_DOWNLOAD_FOUNDATION.md
 ```
 
-Key locked direction:
-
-```text
-all selected install/replace files
-        ↓
-resolve all download sources
-        ↓
-one complete neutral content DownloadPlan
-        ↓
-launcher adapter
-        ↓
-one launcher DownloadList
-        ↓
-one downloadManager.add(downloadList)
-```
-
-`minecraft_content_service` must not depend directly on launcher `DownloadManager` / `DownloadList` types.
-
-Actual byte transfer, retry/concurrency/progress/cancellation, filesystem materialization, installed artifact tracking and removal execution remain separate later concerns unless explicitly rescoped.
-
-Start the next chat by auditing provider/file identity and source-resolution API boundaries, then lock dev.15 scope before implementation.
-
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
 ```text
 docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
 ```
-
-Do not start dev.15 implementation, download execution/materialization, or deferred resource rendering without explicit user approval.

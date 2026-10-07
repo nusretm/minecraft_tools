@@ -11,15 +11,20 @@ Planning baseline main HEAD:
 53ff05a8147f3f747ecdff650571ad8d3553fe2c
 
 Planning status:
-DESIGN DIRECTION RECORDED
-IMPLEMENTATION NOT STARTED
-NO FEATURE BRANCH YET
+DESIGN LOCKED
+IMPLEMENTATION COMPLETE
+VALIDATION PENDING
+FEATURE BRANCH: feature/minecraft-content-download-plan
+IMPLEMENTATION HEAD: 245315c3dd980adc5f4e6750204e0b018222d01f
 NO MERGE REQUESTED
+
+Implementation baseline main:
+8e227cf7e33ac968e9189ad4babbc1483cfc53f3
 ```
 
 This document records the agreed architecture direction after completion of the content file-selection foundation.
 
-Implementation still requires explicit user approval in a new checkpoint.
+Implementation was explicitly approved on 2026-10-08 and is now present on the feature branch above. Authoritative local Dart validation is still pending; this document must not be treated as a completed/merged handoff yet.
 
 ## Completed prerequisite chain
 
@@ -521,9 +526,14 @@ In particular:
 
 ## Next action
 
-Start a new chat from current clean `main` and audit the exact provider/file identity and provider API boundaries required for dev.15.
+Validate the implemented feature branch locally before continuity closeout or merge:
 
-Do not implement dev.15 until the user approves the scoped design.
+```text
+feature/minecraft-content-download-plan
+245315c3dd980adc5f4e6750204e0b018222d01f
+```
+
+Required validation remains `dart analyze`, focused download-plan/provider tests, the full package test suite, `git diff --check`, and clean working-tree confirmation. Do not merge until the user separately approves merge.
 
 Deferred resource rendering remains separate:
 
