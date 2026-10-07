@@ -12,6 +12,17 @@ Last updated: 2026-10-07
 
 ## Repository state
 
+Dependency semantic normalization merge:
+
+```text
+PR: #38
+main merge commit:
+a6094999cf05c345fe9ffdc0c421e45ccd0e61dc
+Normalize dependency semantics
+```
+
+Post-merge continuity closeout commits are docs-only and follow that functional merge commit.
+
 Recursive dependency graph merge:
 
 ```text
@@ -83,7 +94,7 @@ merged feature HEAD: 549a55bfd2c4f29bd136d3f8a36683ee4c077403
 merge commit: 519311136091e6ed85c90628ac3ce2393f166997
 ```
 
-Latest completed checkpoint:
+Previous completed checkpoint:
 
 ```text
 feature/minecraft-content-recursive-dependency-graph
@@ -96,15 +107,17 @@ production/test HEAD: 4fd032395c081f143a2186519569ac06f8cb54cf
 merge commit: 3238bf8d345b58b20c12643e01828bc6db3847d6
 ```
 
-Current active checkpoint:
+Latest completed checkpoint:
 
 ```text
 feature/minecraft-content-dependency-semantic-normalization
-IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
-MERGE NOT REQUESTED
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
+PR: #38
 baseline main: 604f0ad6964e6c1147f9969619e5c16b5391a5b6
 validated feature HEAD: c395e50d545d776223f978a486db2af8686c3f01
+merged feature HEAD: 6e436b08e62a15ad1adb6f4871d796e02d674cdb
 implementation HEAD: fd3793b062deccb19490185cff3be3c958272ebe
+merge commit: a6094999cf05c345fe9ffdc0c421e45ccd0e61dc
 ```
 
 Package version:
@@ -118,11 +131,14 @@ minecraft_content_service
 
 ```text
 Branch: feature/minecraft-content-dependency-semantic-normalization
-Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
 Package: minecraft_content_service/
+PR: #38
 Baseline main: 604f0ad6964e6c1147f9969619e5c16b5391a5b6
 Validated feature HEAD: c395e50d545d776223f978a486db2af8686c3f01
+Merged feature HEAD: 6e436b08e62a15ad1adb6f4871d796e02d674cdb
 Implementation HEAD: fd3793b062deccb19490185cff3be3c958272ebe
+Merge commit: a6094999cf05c345fe9ffdc0c421e45ccd0e61dc
 ```
 
 Generic dependency semantics:
@@ -2189,18 +2205,11 @@ In particular:
 
 ## Next action
 
-The active content-service checkpoint is:
+The dependency semantic normalization foundation is implementation-complete, validated, continuity-closed, merged through PR #38, and recorded in continuity.
 
-```text
-feature/minecraft-content-dependency-semantic-normalization
-IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
-MERGE NOT REQUESTED
-validated feature HEAD: c395e50d545d776223f978a486db2af8686c3f01
-```
+No content-service implementation checkpoint is currently active or automatically approved.
 
-This checkpoint is ready for merge review but merge still requires separate explicit user approval.
-
-Dependency install/conflict policy remains the likely next content-service checkpoint but is not automatically approved.
+Dependency install/conflict policy remains the likely next content-service checkpoint and should be scoped separately before implementation.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
