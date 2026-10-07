@@ -187,6 +187,10 @@ class MtnMinecraftContentProviderModrinthMapper {
 
   static MtnMinecraftContentVersion _version(String providerName, MtnMinecraftContent content, Map<String, dynamic> map) {
     final id = MtnMinecraftContentModel.stringFromMap(map['id']);
+    final projectId = MtnMinecraftContentModel.stringFromMap(map['project_id']);
+    final expectedProjectId = providerId(providerName, content);
+    if (projectId != expectedProjectId) throw FormatException('Modrinth version $id belongs to project $projectId instead of $expectedProjectId.');
+
     final dependencies = MtnMinecraftContentModel.mapListFromMap(map['dependencies']).map((dependency) {
       return MtnMinecraftContentDependency(
         type: _dependencyType(MtnMinecraftContentModel.stringFromMap(dependency['dependency_type'])),
@@ -198,20 +202,26 @@ class MtnMinecraftContentProviderModrinthMapper {
       );
     }).toList(growable: false);
 
-    final files = MtnMinecraftContentModel.mapListFromMap(map['files']).map((file) {
+    final fileMaps = MtnMinecraftContentModel.mapListFromMap(map['files']);
+    final hasPrimaryFile = fileMaps.any((file) => MtnMinecraftContentModel.boolFromMap(file['primary']));
+    final files = <MtnMinecraftContentFile>[];
+    for (var index = 0; index < fileMaps.length; index++) {
+      final file = fileMaps[index];
       final hashMap = MtnMinecraftContentModel.mapFromMap(file['hashes']);
       final hashes = hashMap.entries.map((entry) => MtnMinecraftContentFileHash(algorithm: entry.key, value: entry.value.toString())).toList(growable: false);
-      return MtnMinecraftContentFile(
-        fileName: MtnMinecraftContentModel.stringFromMap(file['filename']),
-        downloadUrl: MtnMinecraftContentModel.nullableStringFromMap(file['url']),
-        size: MtnMinecraftContentModel.nullableIntFromMap(file['size']),
-        primary: MtnMinecraftContentModel.boolFromMap(file['primary']),
-        available: true,
-        type: MtnMinecraftContentModel.nullableStringFromMap(file['file_type']),
-        hashes: hashes,
-        providers: <MtnMinecraftContentProviderMetadata>[MtnMinecraftContentProviderMetadata(provider: providerName, metadata: file)],
+      files.add(
+        MtnMinecraftContentFile(
+          fileName: MtnMinecraftContentModel.stringFromMap(file['filename']),
+          downloadUrl: MtnMinecraftContentModel.nullableStringFromMap(file['url']),
+          size: MtnMinecraftContentModel.nullableIntFromMap(file['size']),
+          primary: MtnMinecraftContentModel.boolFromMap(file['primary']) || (!hasPrimaryFile && index == 0),
+          available: true,
+          type: MtnMinecraftContentModel.nullableStringFromMap(file['file_type']),
+          hashes: hashes,
+          providers: <MtnMinecraftContentProviderMetadata>[MtnMinecraftContentProviderMetadata(provider: providerName, metadata: file)],
+        ),
       );
-    }).toList(growable: false);
+    }
 
     return MtnMinecraftContentVersion(
       key: '$providerName:$id',
