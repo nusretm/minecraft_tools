@@ -13,10 +13,12 @@ Planning baseline main HEAD:
 Planning status:
 DESIGN LOCKED
 IMPLEMENTATION COMPLETE
-VALIDATION PENDING
+VALIDATED
+CONTINUITY CLOSED
 FEATURE BRANCH: feature/minecraft-content-download-plan
-IMPLEMENTATION HEAD: 245315c3dd980adc5f4e6750204e0b018222d01f
-NO MERGE REQUESTED
+PRODUCTION/TEST HEAD: 245315c3dd980adc5f4e6750204e0b018222d01f
+VALIDATED FEATURE HEAD: 4c1113af904999c15e7f23328030a80b575c9958
+MERGE APPROVED
 
 Implementation baseline main:
 8e227cf7e33ac968e9189ad4babbc1483cfc53f3
@@ -24,7 +26,7 @@ Implementation baseline main:
 
 This document records the agreed architecture direction after completion of the content file-selection foundation.
 
-Implementation was explicitly approved on 2026-10-08 and is now present on the feature branch above. Authoritative local Dart validation is still pending; this document must not be treated as a completed/merged handoff yet.
+Implementation was explicitly approved on 2026-10-08. Authoritative local Dart validation completed successfully at feature HEAD `4c1113af904999c15e7f23328030a80b575c9958`. Subsequent changes before merge are continuity-only.
 
 ## Completed prerequisite chain
 
@@ -524,16 +526,50 @@ In particular:
 - keep checkpoints small
 - do not start execution/materialization automatically
 
-## Next action
+## Validation
 
-Validate the implemented feature branch locally before continuity closeout or merge:
+Authoritative user-supplied local validation on 2026-10-08:
 
 ```text
-feature/minecraft-content-download-plan
-245315c3dd980adc5f4e6750204e0b018222d01f
+dart analyze
+No issues found!
+
+content_download_plan_test.dart
+9/9 passed
+
+content_file_selection_test.dart
+12/12 passed
+
+content_dependency_reconciliation_test.dart
+11/11 passed
+
+content_dependency_desired_state_test.dart
+10/10 passed
+
+content_dependency_install_policy_test.dart
+11/11 passed
+
+content_provider_service_test.dart
+22/22 passed
+
+full dart test
+101/101 passed
+
+git diff --check main...HEAD
+PASS
+
+working tree
+clean
+
+validated feature HEAD
+4c1113af904999c15e7f23328030a80b575c9958
 ```
 
-Required validation remains `dart analyze`, focused download-plan/provider tests, the full package test suite, `git diff --check`, and clean working-tree confirmation. Do not merge until the user separately approves merge.
+No `dart format` was run.
+
+## Next action
+
+The checkpoint is implementation-complete, validated, and continuity-closed. Merge has been separately approved by the user.
 
 Deferred resource rendering remains separate:
 
