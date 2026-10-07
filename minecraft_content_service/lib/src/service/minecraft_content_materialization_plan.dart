@@ -153,7 +153,7 @@ class MtnMinecraftContentMaterializationPlan {
     final resultingArtifacts = <MtnMinecraftContentInstallationArtifact>[];
     for (final desired in reconciliation.desired.versions) {
       final artifact = installArtifactByDesiredKey[desired.version.key] ?? retainArtifactByDesiredKey[desired.version.key] ?? replacementArtifactByDesiredKey[desired.version.key];
-      if (artifact == null) throw ArgumentError('Materialization actions do not produce a resulting artifact for desired version ' + desired.version.key + '.');
+      if (artifact == null) throw ArgumentError('Materialization actions do not produce a resulting artifact for desired version ${desired.version.key}.');
       resultingArtifacts.add(artifact);
     }
 
