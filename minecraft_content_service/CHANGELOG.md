@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.0-dev.8
+
+- Add immutable `MtnMinecraftContentVersionSelectionRequest` without exposing pagination as selection policy.
+- Add `MtnMinecraftContentService.resolveDependencyVersion()` on top of the existing identity resolver.
+- Preserve already-resolved and exact provider version identities without version-list dispatch.
+- Resolve content identity first, then select the newest compatible normalized provider version using game-version, loader, and release-type filters.
+- Use provider pagination only as an internal selection detail; jump to the final page when a total is known and advance page-by-page otherwise.
+- Preserve content-only resolution when no compatible version exists.
+- Keep `versionConstraint`, recursive dependency traversal, install/conflict policy, artifact selection, downloads, and cross-provider fallback out of this checkpoint.
+
 ## 1.0.0-dev.7
 
 - Add exact provider version lookup through `MtnMinecraftContentProvider.getVersion()` and `MtnMinecraftContentService.getVersion()`.
