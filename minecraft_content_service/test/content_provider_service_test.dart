@@ -72,6 +72,7 @@ void main() {
       );
       final searchResult = await service.search('provider-a', searchRequest);
 
+      expect(searchResult.provider, 'provider-a');
       expect(searchResult.contents.single, same(content));
       expect(provider.lastSearchRequest, same(searchRequest));
       expect(provider.searchCount, 1);
@@ -90,6 +91,44 @@ void main() {
       expect(versionsResult.versions.single, same(version));
       expect(provider.lastVersionsContent, same(content));
       expect(provider.lastVersionsRequest, same(versionsRequest));
+    });
+
+    test('searchAll queries only ready providers and preserves registration order without deduplication', () async {
+      final firstContent = MtnMinecraftContentMod(key: 'provider-a:same-project', name: 'Same Project');
+      final skippedContent = MtnMinecraftContentMod(key: 'provider-b:same-project', name: 'Same Project');
+      final secondContent = MtnMinecraftContentMod(key: 'provider-c:same-project', name: 'Same Project');
+      final firstProvider = _FakeContentProvider(name: 'provider-a', content: firstContent);
+      final skippedProvider = _FakeContentProvider(name: 'provider-b', content: skippedContent, ready: false);
+      final secondProvider = _FakeContentProvider(name: 'provider-c', content: secondContent);
+      final service = MtnMinecraftContentService(
+        providers: <MtnMinecraftContentProvider>[firstProvider, skippedProvider, secondProvider],
+      );
+      final request = MtnMinecraftContentSearchRequest(
+        query: 'same',
+        types: <MtnMinecraftContentType>[MtnMinecraftContentType.mod],
+        limit: 10,
+      );
+
+      final results = await service.searchAll(request);
+
+      expect(results.map((result) => result.provider), <String>['provider-a', 'provider-c']);
+      expect(results[0].contents.single, same(firstContent));
+      expect(results[1].contents.single, same(secondContent));
+      expect(results[0].contents.single.name, results[1].contents.single.name);
+      expect(firstProvider.lastSearchRequest, same(request));
+      expect(secondProvider.lastSearchRequest, same(request));
+      expect(skippedProvider.searchCount, 0);
+    });
+
+    test('searchAll returns an empty list when no registered provider is ready', () async {
+      final content = MtnMinecraftContentMod(key: 'content-a', name: 'Content A');
+      final provider = _FakeContentProvider(name: 'provider-a', content: content, ready: false);
+      final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]);
+
+      final results = await service.searchAll(MtnMinecraftContentSearchRequest());
+
+      expect(results, isEmpty);
+      expect(provider.searchCount, 0);
     });
 
     test('rejects registered providers that are not ready before dispatch', () {
@@ -191,6 +230,17 @@ void main() {
       expect(() => MtnMinecraftContentSearchRequest(limit: 0), throwsArgumentError);
       expect(() => MtnMinecraftContentSearchRequest(limit: 51), throwsArgumentError);
       expect(() => MtnMinecraftContentVersionListRequest(limit: 51), throwsArgumentError);
+      expect(
+        () => MtnMinecraftContentSearchResult(
+          provider: ' ',
+          contents: <MtnMinecraftContent>[],
+          offset: 0,
+          limit: 10,
+          total: 0,
+          hasMore: false,
+        ),
+        throwsArgumentError,
+      );
     });
   });
 }
@@ -228,6 +278,7 @@ class _FakeContentProvider extends MtnMinecraftContentProvider {
     searchCount++;
     lastSearchRequest = request;
     return MtnMinecraftContentSearchResult(
+      provider: name,
       contents: <MtnMinecraftContent>[content],
       offset: request.offset,
       limit: request.limit,
