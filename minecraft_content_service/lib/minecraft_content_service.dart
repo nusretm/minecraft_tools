@@ -7,4 +7,5 @@ export 'src/provider/minecraft_content_provider_list.dart';
 export 'src/provider/minecraft_content_provider_models.dart';
 export 'src/provider/modrinth/minecraft_content_provider_modrinth.dart';
 export 'src/service/minecraft_content_dependency_graph.dart';
+export 'src/service/minecraft_content_dependency_install_plan.dart';
 export 'src/service/minecraft_content_service.dart';
