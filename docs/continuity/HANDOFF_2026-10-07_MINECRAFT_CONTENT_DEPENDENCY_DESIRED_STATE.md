@@ -9,12 +9,14 @@ Repository: nusretm/minecraft_tools
 Package: minecraft_content_service/
 Branch: feature/minecraft-content-dependency-desired-state
 Implementation: COMPLETE
-Validation: PENDING USER-SUPPLIED LOCAL DART VALIDATION
-Continuity: OPEN UNTIL VALIDATION
+Validation: COMPLETE
+Continuity: CLOSED
 Merge: NOT REQUESTED
 Baseline main:
 28bc28c42feaec81013aebcb738d60fafbaaacfd
-Production/test HEAD after analyzer directive-order fix:
+Validated feature HEAD:
+d97e9bf00a640c812a3a21d0aa3ac450873c057f
+Production/test HEAD:
 035df4bf9db4e4b95709e08e515499c3e3565062
 ```
 
@@ -433,35 +435,43 @@ Existing dependency-install-policy tests continue to protect the shared conflict
 
 ## Validation
 
-Authoritative local validation is pending.
-
-Required validation:
+Authoritative user-supplied local validation on 2026-10-07:
 
 ```text
-cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
-
 dart analyze
-dart test test/content_dependency_desired_state_test.dart
-dart test test/content_dependency_install_policy_test.dart
-dart test test/content_provider_service_test.dart
-dart test
+Analyzing minecraft_content_service...
+No issues found!
 
-cd ..
+dart test test/content_dependency_desired_state_test.dart
+00:00 +10: All tests passed!
+
+dart test test/content_dependency_install_policy_test.dart
+00:00 +11: All tests passed!
+
+dart test test/content_provider_service_test.dart
+00:00 +22: All tests passed!
+
+dart test
+00:00 +69: All tests passed!
+
 git diff --check main...HEAD
+PASS
+
 git status
+On branch feature/minecraft-content-dependency-desired-state
+Your branch is up to date with 'origin/feature/minecraft-content-dependency-desired-state'.
+nothing to commit, working tree clean
+
 git rev-parse HEAD
+d97e9bf00a640c812a3a21d0aa3ac450873c057f
 ```
 
-Per repository rules, user-supplied local Dart output is authoritative.
-
-Do not mark this checkpoint VALIDATED or continuity-closed until those results are supplied.
+No `dart format` was run.
 
 ## Next action
 
-Run authoritative local validation on the feature branch.
+This checkpoint is implementation-complete, validated, and continuity-closed.
 
-If validation fails, fix only this approved desired-state checkpoint.
+Merge is not yet requested and still requires separate explicit user approval.
 
-If validation passes, record the supplied results here and in `docs/continuity/CURRENT_TARGET.md`, close continuity, and wait for separate explicit merge approval.
-
-Installed-state reconciliation becomes the likely next checkpoint only after this desired-state checkpoint is validated and merged. It is not automatically approved.
+Installed-state reconciliation becomes the likely next checkpoint only after this desired-state checkpoint is merged. It is not automatically approved.
