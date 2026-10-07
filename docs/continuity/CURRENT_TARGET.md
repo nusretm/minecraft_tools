@@ -2795,14 +2795,23 @@ In particular:
 
 ## Next action
 
-The active content-service checkpoint is:
+dev.16 merge:
+
+```text
+PR: #44
+merge commit:
+4a5457180f87abd805588fa0f8afa5fe1fe595df
+Add managed installation artifact state foundation
+```
+
+The completed content-service checkpoint is:
 
 ```text
 dev.16 — Managed Installation Artifact State Foundation
 branch: feature/minecraft-content-installation-artifact-state
 baseline main: 17bddddc6449302eb6984ceb9ef665abee5b156e
 production/test HEAD: 135d5a41113c7859d819bf2f598a9cd5a72c115a
-status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
 package: minecraft_content_service 1.0.0-dev.16
 ```
 
@@ -2849,7 +2858,7 @@ Still out of scope:
 - launcher adapter implementation
 - deferred resource rendering
 
-Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `0701ee126b37f3f9c2a30f0fbc52f122650f6b4d`. Production/test HEAD remains `135d5a41113c7859d819bf2f598a9cd5a72c115a`; subsequent pre-merge changes are continuity-only. Merge has been separately approved by the user.
+Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `0701ee126b37f3f9c2a30f0fbc52f122650f6b4d`. Production/test HEAD remains `135d5a41113c7859d819bf2f598a9cd5a72c115a`; subsequent pre-merge changes were continuity-only. PR #44 merged at `4a5457180f87abd805588fa0f8afa5fe1fe595df`.
 
 Validation:
 
