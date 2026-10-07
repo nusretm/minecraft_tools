@@ -120,11 +120,118 @@ implementation HEAD: fd3793b062deccb19490185cff3be3c958272ebe
 merge commit: a6094999cf05c345fe9ffdc0c421e45ccd0e61dc
 ```
 
+Current active checkpoint:
+
+```text
+feature/minecraft-content-dependency-install-policy
+IMPLEMENTED / VALIDATION PENDING
+MERGE NOT REQUESTED
+baseline main: 8c67afc0e4726276fb4ac11b4622591f27208a2a
+implementation HEAD before continuity updates: 84bc3f5b7d2832cf07deb92895efedb9a7bcf6d7
+```
+
 Package version:
 
 ```text
 minecraft_content_service
-1.0.0-dev.10
+1.0.0-dev.11
+```
+
+## Minecraft content dependency install / conflict policy foundation checkpoint
+
+```text
+Branch: feature/minecraft-content-dependency-install-policy
+Status: IMPLEMENTED / VALIDATION PENDING
+Package: minecraft_content_service/
+Baseline main: 8c67afc0e4726276fb4ac11b4622591f27208a2a
+Implementation HEAD before continuity updates: 84bc3f5b7d2832cf07deb92895efedb9a7bcf6d7
+```
+
+Public/service surface:
+
+- `MtnMinecraftContentDependencyInstallRequest`
+- `MtnMinecraftContentDependencyInstallPlan`
+- `MtnMinecraftContentDependencyInstallConflict`
+- `MtnMinecraftContentDependencyInstallConflictMultipleVersions`
+- `MtnMinecraftContentDependencyInstallConflictIncompatible`
+- `MtnMinecraftContentService.planDependencyInstall(graph, request)`
+
+Locked install traversal semantics:
+
+- planner is synchronous, provider-independent, network-free, and filesystem-free
+- exact graph root instance is always the first install version
+- install reachability is recalculated from the root; `graph.versions` is not treated as an install list
+- `required` and `embeddedLibrary` install their resolved target and continue traversal
+- `optional` installs only when its resolved target `version.key` is selected
+- optional selection cannot bypass an inactive parent branch
+- `bundled` is not separately installed and terminates that policy branch
+- `tool` is not installed and terminates that policy branch
+- `incompatible` is not installed through its edge and is evaluated only as an active-source conflict rule
+- classification lists contain only edges emitted by install-reachable source versions
+- install versions are deduplicated by `version.key`
+- graph cycles remain install edges but are not conflicts
+
+Optional request rules:
+
+- `selectedOptionalVersionKeys` is immutable
+- every selected key must identify a resolved optional target somewhere in the supplied graph
+- unknown or non-optional keys throw `ArgumentError`
+- unresolved optional edges have no selectable version key and remain non-blocking
+
+Blocking unresolved rules:
+
+```text
+required unresolved        -> blocking
+embeddedLibrary unresolved -> blocking
+optional unresolved        -> non-blocking
+bundled unresolved         -> non-blocking
+tool unresolved            -> non-blocking
+incompatible unresolved    -> non-blocking
+```
+
+Conflict rules:
+
+- multiple distinct install-reachable versions sharing one `content.key` produce `MtnMinecraftContentDependencyInstallConflictMultipleVersions`
+- no automatic version winner is selected
+- incompatible rules from inactive sources are ignored
+- exact incompatible declarations match only their exact resolved version
+- non-exact/content-level incompatible declarations match install-reachable versions by logical `content.key`
+- a graph-selected version does not narrow a content-level incompatibility declaration
+- unresolved incompatible edges remain non-blocking
+- `installable` is false when unresolved install edges or conflicts are present
+
+Mutation boundary:
+
+- graph/content/version/dependency models are not mutated
+- `MtnMinecraftContentVersion.direct` is not used or changed by the planner
+- plan and request result collections are immutable
+
+Still deliberately out of scope:
+
+- installed/current instance state
+- uninstall/disable actions
+- installed-state reconciliation
+- `versionConstraint` parsing/evaluation
+- automatic conflict winner selection
+- optional UI/prompt implementation
+- artifact/file selection
+- download/materialization
+- filesystem operations
+- cross-provider association
+- deferred item client-definition/model/texture rendering
+
+Validation:
+
+```text
+PENDING USER-SUPPLIED LOCAL DART VALIDATION
+```
+
+No `dart format` was run.
+
+Dedicated handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-07_MINECRAFT_CONTENT_DEPENDENCY_INSTALL_POLICY.md
 ```
 
 ## Minecraft content dependency semantic normalization foundation checkpoint
@@ -2205,11 +2312,35 @@ In particular:
 
 ## Next action
 
-The dependency semantic normalization foundation is implementation-complete, validated, continuity-closed, merged through PR #38, and recorded in continuity.
+The active content-service checkpoint is:
 
-No content-service implementation checkpoint is currently active or automatically approved.
+```text
+feature/minecraft-content-dependency-install-policy
+IMPLEMENTED / VALIDATION PENDING
+MERGE NOT REQUESTED
+```
 
-Dependency install/conflict policy remains the likely next content-service checkpoint and should be scoped separately before implementation.
+Run authoritative local validation:
+
+```text
+cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
+
+dart analyze
+dart test test/content_dependency_install_policy_test.dart
+dart test test/content_provider_service_test.dart
+dart test
+
+cd ..
+git diff --check main...HEAD
+git status
+git rev-parse HEAD
+```
+
+Do not mark this checkpoint VALIDATED or continuity-closed until user-supplied local output is available.
+
+After successful validation, update continuity and wait for separate explicit merge approval.
+
+Installed-state reconciliation and artifact/file selection remain later separate checkpoints and are not automatically approved.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
@@ -2217,4 +2348,4 @@ The item client-definition/model/texture resource foundation remains separately 
 docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
 ```
 
-Do not start install policy, artifact/download work, or the deferred resource work without explicit user approval.
+Do not start installed-state reconciliation, artifact/download work, or deferred resource rendering without explicit user approval.
