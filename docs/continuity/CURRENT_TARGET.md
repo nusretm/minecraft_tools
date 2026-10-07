@@ -16,30 +16,91 @@ Merged baseline:
 
 ```text
 main
-bbed501912ef540ce3e203becd6f889c301e232b
-Merge pull request #32 from nusretm/feature/minecraft-content-provider-curseforge-foundation
+a7fa25c1262b2ddbaa3fc76ac52c8116a544942f
+Merge pull request #33 from nusretm/feature/minecraft-content-provider-readiness-rate-limit
 ```
 
 Current checkpoint branch:
 
 ```text
-feature/minecraft-content-provider-readiness-rate-limit
+feature/minecraft-content-multi-provider-search
 IMPLEMENTED / VALIDATED
 MERGE NOT REQUESTED
 ```
 
-Current branch production HEAD before continuity closeout:
+Validated production HEAD before continuity closeout:
 
 ```text
-bd2f43c028833a9095cd11840f021090da5c776a
-Record provider runtime foundation
+7b36e4b890f71dc1a274a8ebb254972f02ea7c12
+Bump content service for multi-provider search
 ```
 
 Package version:
 
 ```text
 minecraft_content_service
-1.0.0-dev.5
+1.0.0-dev.6
+```
+
+## Minecraft content multi-provider search foundation checkpoint
+
+```text
+Branch: feature/minecraft-content-multi-provider-search
+Status: IMPLEMENTED / VALIDATED
+Package: minecraft_content_service/
+```
+
+Public/service surface:
+
+- `MtnMinecraftContentService.searchAll(request)`
+- `MtnMinecraftContentSearchResult.provider`
+
+Locked semantics:
+
+- one generic `MtnMinecraftContentSearchRequest` is dispatched to every registered provider that is currently `ready == true`
+- registered providers with `ready == false` remain registered and visible but are skipped by `searchAll()`
+- if no provider is ready, `searchAll()` returns an empty result list and performs no provider search calls
+- provider search calls receive the same request object; the service does not rewrite provider-specific copies
+- result groups preserve provider registration order
+- each `MtnMinecraftContentSearchResult` identifies its source provider explicitly through `provider`
+- each provider keeps its own `offset`, `limit`, `total`, and `hasMore`
+- the service does not invent a merged/global pagination model
+- equal names, slugs, or apparent projects from different providers remain separate results
+- no cross-provider deduplication, merge, heuristic association, or winner selection is performed
+- the caller/user remains responsible for choosing a provider result
+
+Provider mapping:
+
+- Modrinth search results are tagged with `modrinth`
+- CurseForge search results are tagged with `curseforge`
+- provider identity remains the existing extensible string contract rather than a closed enum
+
+Validation on 2026-10-07:
+
+```text
+dart analyze
+Analyzing minecraft_content_service...
+No issues found!
+
+dart test
+00:00 +33: All tests passed!
+
+git diff --check main...HEAD
+PASS
+
+git status
+nothing to commit, working tree clean
+
+validated production HEAD
+7b36e4b890f71dc1a274a8ebb254972f02ea7c12
+```
+
+No `dart format` was run.
+
+Dedicated handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-07_MINECRAFT_CONTENT_MULTI_PROVIDER_SEARCH.md
 ```
 
 ## Minecraft content provider readiness / rate-limit foundation checkpoint
@@ -1696,23 +1757,14 @@ In particular:
 
 ## Next action
 
-The content model, provider/service foundation, Modrinth provider, CurseForge provider, Modrinth live CLI smoke, and provider readiness/rate-limit runtime foundation are complete and validated. No next implementation checkpoint is automatically approved.
+The content model, provider/service foundation, Modrinth provider, CurseForge provider, Modrinth live CLI smoke, provider readiness/rate-limit runtime foundation, and multi-provider search foundation are complete and validated.
+
+The current multi-provider-search branch is ready for review and requires separate explicit approval before merge.
 
 CurseForge live smoke remains deliberately deferred because no application API key is currently available. The provider can stay registered with `ready == false` until that prerequisite exists.
 
-Natural next content-service checkpoint:
+No next implementation checkpoint is automatically approved. Dependency solving, download/materialization, provider-error policy for broader orchestration, cross-provider association, and CurseForge live smoke remain separate future work.
 
-```text
-multi-provider search foundation
-→ execute the same generic search request against registered ready providers
-→ automatically skip registered providers with ready == false
-→ preserve every provider result as a separate MtnMinecraftContent
-→ no name/slug deduplication
-→ no automatic cross-provider association
-→ user chooses which provider result to use
-```
-
-Dependency solving, download/materialization, cross-provider association, and CurseForge live smoke remain separate future checkpoints.
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
 ```text
