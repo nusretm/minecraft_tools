@@ -35,14 +35,14 @@ class MtnMinecraftContentMaterializationPlanner {
     final installs = <MtnMinecraftContentMaterializationActionInstall>[];
     for (final desired in reconciliation.installs) {
       final target = targetByDesiredKey[desired.version.key];
-      if (target == null) throw StateError('Missing materialization target for install ' + desired.version.key + '.');
+      if (target == null) throw StateError('Missing materialization target for install ${desired.version.key}.');
       installs.add(MtnMinecraftContentMaterializationActionInstall(target: target));
     }
 
     final retains = <MtnMinecraftContentMaterializationActionRetain>[];
     for (final desired in reconciliation.retains) {
       final artifact = artifactByVersionKey[desired.version.key];
-      if (artifact == null) throw StateError('Missing installed artifact for retain ' + desired.version.key + '.');
+      if (artifact == null) throw StateError('Missing installed artifact for retain ${desired.version.key}.');
       retains.add(
         MtnMinecraftContentMaterializationActionRetain(
           desired: desired,
@@ -54,9 +54,9 @@ class MtnMinecraftContentMaterializationPlanner {
     final replacements = <MtnMinecraftContentMaterializationActionReplace>[];
     for (final replacement in reconciliation.replacements) {
       final current = artifactByVersionKey[replacement.current.key];
-      if (current == null) throw StateError('Missing installed artifact for replacement ' + replacement.current.key + '.');
+      if (current == null) throw StateError('Missing installed artifact for replacement ${replacement.current.key}.');
       final target = targetByDesiredKey[replacement.desired.version.key];
-      if (target == null) throw StateError('Missing materialization target for replacement ' + replacement.desired.version.key + '.');
+      if (target == null) throw StateError('Missing materialization target for replacement ${replacement.desired.version.key}.');
       replacements.add(
         MtnMinecraftContentMaterializationActionReplace(
           replacement: replacement,
@@ -69,7 +69,7 @@ class MtnMinecraftContentMaterializationPlanner {
     final removals = <MtnMinecraftContentMaterializationActionRemove>[];
     for (final version in reconciliation.removals) {
       final artifact = artifactByVersionKey[version.key];
-      if (artifact == null) throw StateError('Missing installed artifact for removal ' + version.key + '.');
+      if (artifact == null) throw StateError('Missing installed artifact for removal ${version.key}.');
       removals.add(MtnMinecraftContentMaterializationActionRemove(artifact: artifact));
     }
 
