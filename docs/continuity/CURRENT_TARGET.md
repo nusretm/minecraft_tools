@@ -71,7 +71,7 @@ merge commit: 0655506983ee2300ede96df67d395bda2141a3b9
 post-merge continuity sync: 510620a5e22f60a1cb2cf5e90c6bd6e1d47d6d12
 ```
 
-Latest completed checkpoint:
+Previous completed checkpoint:
 
 ```text
 feature/minecraft-content-dependency-version-selection
