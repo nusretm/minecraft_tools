@@ -18,7 +18,9 @@ CONTINUITY CLOSED
 FEATURE BRANCH: feature/minecraft-content-download-plan
 PRODUCTION/TEST HEAD: 245315c3dd980adc5f4e6750204e0b018222d01f
 VALIDATED FEATURE HEAD: 4c1113af904999c15e7f23328030a80b575c9958
-MERGE APPROVED
+MERGED
+PR: #43
+MERGE COMMIT: d1c19878442e07982db3ecaedcb827cc3139e001
 
 Implementation baseline main:
 8e227cf7e33ac968e9189ad4babbc1483cfc53f3
@@ -569,7 +571,7 @@ No `dart format` was run.
 
 ## Next action
 
-The checkpoint is implementation-complete, validated, and continuity-closed. Merge has been separately approved by the user.
+The checkpoint is implementation-complete, validated, continuity-closed, and merged through PR #43 at merge commit `d1c19878442e07982db3ecaedcb827cc3139e001`.
 
 Deferred resource rendering remains separate:
 
