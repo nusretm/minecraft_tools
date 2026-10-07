@@ -9,11 +9,13 @@ Repository: nusretm/minecraft_tools
 Package: minecraft_content_service/
 Branch: feature/minecraft-content-file-selection
 Implementation: COMPLETE
-Validation: PENDING USER-SUPPLIED LOCAL DART VALIDATION
-Continuity: OPEN UNTIL VALIDATION
+Validation: COMPLETE
+Continuity: CLOSED
 Merge: NOT REQUESTED
 Baseline main:
 6af90fc33e8d27119efa86d6a746a5ee4b6f49de
+Validated feature HEAD:
+a952582509eb89cd44fe21f5580e26d7d075cdd5
 Production/test HEAD:
 f68e773cbfe24c9427558fafb0c4008bc9facd63
 ```
@@ -386,37 +388,49 @@ Dedicated file-selection tests cover:
 
 ## Validation
 
-Authoritative local validation is pending.
-
-Required validation:
+Authoritative user-supplied local validation on 2026-10-07:
 
 ```text
-cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
-
 dart analyze
-dart test test/content_file_selection_test.dart
-dart test test/content_dependency_reconciliation_test.dart
-dart test test/content_dependency_desired_state_test.dart
-dart test test/content_dependency_install_policy_test.dart
-dart test test/content_provider_service_test.dart
-dart test
+Analyzing minecraft_content_service...
+No issues found!
 
-cd ..
+dart test test/content_file_selection_test.dart
+00:00 +12: All tests passed!
+
+dart test test/content_dependency_reconciliation_test.dart
+00:00 +11: All tests passed!
+
+dart test test/content_dependency_desired_state_test.dart
+00:00 +10: All tests passed!
+
+dart test test/content_dependency_install_policy_test.dart
+00:00 +11: All tests passed!
+
+dart test test/content_provider_service_test.dart
+00:00 +22: All tests passed!
+
+dart test
+00:00 +92: All tests passed!
+
 git diff --check main...HEAD
+PASS
+
 git status
+On branch feature/minecraft-content-file-selection
+Your branch is up to date with 'origin/feature/minecraft-content-file-selection'.
+nothing to commit, working tree clean
+
 git rev-parse HEAD
+a952582509eb89cd44fe21f5580e26d7d075cdd5
 ```
 
-Per repository rules, user-supplied local Dart output is authoritative.
-
-Do not mark this checkpoint VALIDATED or continuity-closed until those results are supplied.
+No `dart format` was run.
 
 ## Next action
 
-Run authoritative local validation on the feature branch.
+This checkpoint is implementation-complete, validated, and continuity-closed.
 
-If validation fails, fix only this approved file-selection checkpoint.
+Merge is not yet requested and still requires separate explicit user approval.
 
-If validation passes, record the supplied results here and in `docs/continuity/CURRENT_TARGET.md`, close continuity, and wait for separate explicit merge approval.
-
-Download-source resolution and managed artifact/materialization remain separate later checkpoints and are not automatically approved.
+Download-source resolution becomes the likely next checkpoint only after this file-selection checkpoint is merged. It is not automatically approved.
