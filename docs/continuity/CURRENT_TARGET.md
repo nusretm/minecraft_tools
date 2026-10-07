@@ -16,14 +16,14 @@ Merged baseline:
 
 ```text
 main
-0ad126e0a568bb3e6414399d87e2df58ddfc26d7
-Merge pull request #28 from nusretm/feature/minecraft-content-model-foundation
+2a6c671cf15740880b581b37f2585ea951ab71a0
+Merge pull request #29 from nusretm/feature/minecraft-content-provider-service-foundation
 ```
 
 Current checkpoint branch:
 
 ```text
-feature/minecraft-content-provider-service-foundation
+feature/minecraft-content-provider-modrinth-foundation
 IMPLEMENTED / VALIDATED
 MERGE NOT REQUESTED
 ```
@@ -31,17 +31,98 @@ MERGE NOT REQUESTED
 Current branch production HEAD before continuity closeout:
 
 ```text
-55534a1b4979dfcbf46c715716add01c9297bd01
-Test version loading with logical content
+f5003897401a6692b0fd67c1c6edace4d3fec254
+Sort Minecraft content service exports
 ```
 
 Package version:
 
 ```text
 minecraft_content_service
-1.0.0-dev.2
+1.0.0-dev.3
 ```
 
+## Minecraft content Modrinth provider foundation checkpoint
+
+```text
+Branch: feature/minecraft-content-provider-modrinth-foundation
+Status: IMPLEMENTED / VALIDATED
+Package: minecraft_content_service/
+```
+
+Public surface:
+
+- `MtnMinecraftContentProviderModrinth`
+- `MtnMinecraftContentProviderModrinthException`
+
+Implemented read-only operations:
+
+- search through Modrinth v2 `/search`
+- project/content read through `/project/{id-or-slug}`
+- project version listing through `/project/{project-id}/version`
+
+Locked architecture/behavior:
+
+- Modrinth code lives under `src/provider/modrinth/` and extends the generic provider contract
+- generic service/provider core contains no Modrinth switch or special-case branch
+- caller supplies an application-specific non-empty `User-Agent`
+- optional injected `http.Client` supports deterministic tests and caller-owned transport
+- provider-created HTTP client can be released through `close()`
+- search uses provider-independent query/type/game-version/loader request fields
+- generic request limit remains capped at 50 even though provider capabilities may differ
+- canonical logical keys are `modrinth:<projectId>` and `modrinth:<versionId>`
+- full raw Modrinth project/search/version/file/dependency maps are preserved as provider metadata where modeled
+- project primary type maps into the generic content subclass; additional Modrinth type information remains available in raw provider metadata
+- Modrinth files do not receive invented provider file IDs
+- file hashes preserve all returned hash algorithms
+- when Modrinth marks no file primary, the first file is normalized as primary
+- dependency declarations preserve project/version/file-name identity without inventing version constraints
+- version `project_id` is validated against the existing logical content's canonical Modrinth project ID
+- returned versions therefore retain the exact caller-supplied logical content object
+- release-type filtering and generic pagination are applied after provider version mapping
+- version results are sorted deterministically by publication date, oldest to newest, so latest remains last
+- HTTP non-2xx responses surface as `MtnMinecraftContentProviderModrinthException`
+
+Mapped generic metadata includes:
+
+- project type/title/slug/summary/body
+- categories and additional categories
+- icon/gallery/license
+- source/issues/wiki/Discord/donation links
+- published/updated/approved timestamps
+- release/beta/alpha version type
+- game versions and loaders
+- environment
+- changelog/featured state
+- files, hashes, size, download URL and primary state
+- required/optional/incompatible/embedded dependencies
+
+Validation on 2026-10-07:
+
+```text
+dart analyze
+No issues found!
+
+dart test
+00:00 +17: All tests passed!
+
+git diff --check main...HEAD
+PASS
+
+git status
+clean
+
+validated production HEAD
+f5003897401a6692b0fd67c1c6edace4d3fec254
+```
+
+Validation is deterministic MockClient coverage; no separate live Modrinth network smoke test was required for this checkpoint.
+
+Dedicated handoff:
+
+```text
+docs/continuity/HANDOFF_2026-10-07_MINECRAFT_CONTENT_PROVIDER_MODRINTH_FOUNDATION.md
+```
 ## Minecraft content provider/service foundation checkpoint
 
 ```text
@@ -1368,26 +1449,27 @@ In particular:
 
 ## Next action
 
-The content model foundation and provider/service foundation are complete and validated. No next implementation checkpoint is automatically approved.
+The content model, generic provider/service foundation and first concrete Modrinth provider foundation are complete and validated. No next implementation checkpoint is automatically approved.
 
 Natural continuation for `minecraft_content_service/`:
 
 ```text
-MtnMinecraftContentProviderModrinth
-→ Modrinth HTTP/read foundation
+MtnMinecraftContentProviderCurseForge
+→ CurseForge authentication / HTTP read foundation
 → search mapping
-→ project/content mapping
-→ version/file/dependency mapping
+→ mod/project mapping
+→ file/version/dependency mapping
 ```
 
-The next provider checkpoint must preserve these rules:
+The CurseForge checkpoint must preserve these rules:
 
-- Modrinth endpoints, wire tokens and mapping logic stay inside the concrete Modrinth provider subtree
-- generic core must not gain Modrinth conditionals
-- registration remains explicit through `MtnMinecraftContentProviderList`
-- canonical provider IDs remain authoritative inside the provider
-- do not cross-provider deduplicate by name or slug heuristics
-- version loading must preserve the existing logical `MtnMinecraftContent` instance
+- CurseForge API key/header, endpoints, numeric wire enums and response mapping stay inside the concrete CurseForge provider subtree
+- generic core must not gain CurseForge conditionals
+- provider registration remains explicit through `MtnMinecraftContentProviderList`
+- CurseForge numeric IDs are normalized to strings in generic provider metadata
+- CurseForge file ID/fingerprint/module metadata remains provider-specific where appropriate
+- no Modrinth/CurseForge association is inferred from name or slug
+- version/file mapping must preserve the existing logical `MtnMinecraftContent` instance
 - dependency solving and artifact materialization remain separate later checkpoints
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
