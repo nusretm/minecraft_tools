@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0-dev.6
+
+- Add `MtnMinecraftContentService.searchAll()` for multi-provider search across registered ready providers.
+- Keep registered-but-not-ready providers out of aggregate search without unregistering them.
+- Preserve provider registration order in multi-provider search results.
+- Add provider identity directly to `MtnMinecraftContentSearchResult`.
+- Keep pagination provider-local instead of inventing a merged total/page.
+- Preserve same-name results from different providers as separate content entries; no name/slug deduplication or automatic association is performed.
+
 ## 1.0.0-dev.5
 
 - Add provider readiness as a first-class contract independent from registration.
