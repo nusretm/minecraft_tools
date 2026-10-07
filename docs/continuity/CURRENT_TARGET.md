@@ -2795,14 +2795,23 @@ In particular:
 
 ## Next action
 
-The active content-service checkpoint is:
+dev.18 merge:
+
+```text
+PR: #46
+merge commit:
+1d1d100e94fa7a1b49758ea333360652e75e8d6d
+Add managed installation manifest persistence
+```
+
+The completed content-service checkpoint is:
 
 ```text
 dev.18 — Managed Installation Manifest Persistence Foundation
 branch: feature/minecraft-content-installation-manifest
 baseline main: fc29bda41c9fe659bb789ad7c9e33402afd4aeff
 production/test HEAD: 7aa0555336ab85c011fe7c34c9f0a6f5bb5a1d52
-status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED
+status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
 package: minecraft_content_service 1.0.0-dev.18
 ```
 
@@ -2856,7 +2865,7 @@ Still out of scope:
 - unmanaged/manual file cleanup
 - deferred resource rendering
 
-Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `c702247bc9cad837fd7ec997695d7c08b53799ea`. Merge has been separately approved by the user.
+Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `c702247bc9cad837fd7ec997695d7c08b53799ea`. PR #46 merged at `1d1d100e94fa7a1b49758ea333360652e75e8d6d`.
 
 Validation:
 
