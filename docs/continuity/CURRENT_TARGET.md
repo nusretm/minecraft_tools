@@ -12,27 +12,37 @@ Last updated: 2026-10-07
 
 ## Repository state
 
-Merged baseline:
+Current merged main:
 
 ```text
 main
-a7fa25c1262b2ddbaa3fc76ac52c8116a544942f
-Merge pull request #33 from nusretm/feature/minecraft-content-provider-readiness-rate-limit
+0655506983ee2300ede96df67d395bda2141a3b9
+Merge pull request #34 from nusretm/feature/minecraft-content-multi-provider-search
+Add multi-provider content search foundation
 ```
 
-Current checkpoint branch:
+Multi-provider search checkpoint:
 
 ```text
 feature/minecraft-content-multi-provider-search
-IMPLEMENTED / VALIDATED
-MERGE NOT REQUESTED
+IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
+merge commit: 0655506983ee2300ede96df67d395bda2141a3b9
 ```
 
-Validated production HEAD before continuity closeout:
+Validated production HEAD before merge:
 
 ```text
 7b36e4b890f71dc1a274a8ebb254972f02ea7c12
 Bump content service for multi-provider search
+```
+
+Post-merge local state supplied by the user:
+
+```text
+Branch: main
+HEAD: 0655506983ee2300ede96df67d395bda2141a3b9
+origin/main: same
+Working tree: clean
 ```
 
 Package version:
@@ -46,7 +56,8 @@ minecraft_content_service
 
 ```text
 Branch: feature/minecraft-content-multi-provider-search
-Status: IMPLEMENTED / VALIDATED
+Status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
+Merge commit: 0655506983ee2300ede96df67d395bda2141a3b9
 Package: minecraft_content_service/
 ```
 
@@ -1759,11 +1770,11 @@ In particular:
 
 The content model, provider/service foundation, Modrinth provider, CurseForge provider, Modrinth live CLI smoke, provider readiness/rate-limit runtime foundation, and multi-provider search foundation are complete and validated.
 
-The current multi-provider-search branch is ready for review and requires separate explicit approval before merge.
+The multi-provider search foundation is merged into `main` at `0655506983ee2300ede96df67d395bda2141a3b9`. The user-supplied post-merge local state confirms `main`, `origin/main`, and the local HEAD are synchronized with a clean working tree.
 
 CurseForge live smoke remains deliberately deferred because no application API key is currently available. The provider can stay registered with `ready == false` until that prerequisite exists.
 
-No next implementation checkpoint is automatically approved. Dependency solving, download/materialization, provider-error policy for broader orchestration, cross-provider association, and CurseForge live smoke remain separate future work.
+No new implementation checkpoint is active or automatically approved. Dependency solving, download/materialization, provider-error policy for broader orchestration, cross-provider association, and CurseForge live smoke remain separate future work.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
