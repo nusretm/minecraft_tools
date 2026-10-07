@@ -83,6 +83,7 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
       final pagination = MtnMinecraftContentModel.mapFromMap(envelope['pagination']);
       final resultCount = MtnMinecraftContentModel.intFromMap(pagination['resultCount'], fallback: page.length);
       final totalCount = MtnMinecraftContentModel.intFromMap(pagination['totalCount'], fallback: files.length);
+      if (totalCount > 10000) throw StateError('CurseForge returned more than 10000 matching files; complete generic version filtering cannot be guaranteed.');
 
       if (resultCount <= 0) break;
 
