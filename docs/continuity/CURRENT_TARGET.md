@@ -175,7 +175,7 @@ feature/minecraft-content-installed-state-reconciliation
 IMPLEMENTED / VALIDATION PENDING
 MERGE NOT REQUESTED
 baseline main: d6d79f3dcdaf2fa92104871fbde554c65682cc98
-production/test HEAD: e266c2a83fc88fd450892ddc1051ed559a219b00
+production/test HEAD: 6df0ce3a1f509a18e7b65d43f97547f0859c63bc
 ```
 
 Package version:
@@ -192,7 +192,7 @@ Branch: feature/minecraft-content-installed-state-reconciliation
 Status: IMPLEMENTED / VALIDATION PENDING
 Package: minecraft_content_service/
 Baseline main: d6d79f3dcdaf2fa92104871fbde554c65682cc98
-Production/test HEAD: e266c2a83fc88fd450892ddc1051ed559a219b00
+Production/test HEAD: 6df0ce3a1f509a18e7b65d43f97547f0859c63bc
 ```
 
 Public/service surface:
