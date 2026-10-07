@@ -531,6 +531,7 @@ void main() {
       );
 
       expect(graph.root, same(root));
+      expect(graph.versions.first, same(root));
       expect(graph.versions.map((version) => version.key), <String>['root:v1', 'provider-a:b-v1', 'provider-a:d-v1', 'provider-a:c-v2']);
       expect(graph.edges.map((edge) => edge.source.key), <String>['root:v1', 'provider-a:b-v1', 'root:v1', 'root:v1']);
       expect(graph.edges.map((edge) => edge.target?.key), <String?>['provider-a:b-v1', 'provider-a:d-v1', 'provider-a:c-v2', null]);
