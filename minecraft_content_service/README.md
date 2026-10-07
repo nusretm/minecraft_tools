@@ -18,5 +18,7 @@ Current foundation includes:
 - `MtnMinecraftContentProviderList` explicit provider registry authority
 - `MtnMinecraftContentService` registered-provider routing
 - provider-independent search and version-list request/result contracts
+- `MtnMinecraftContentProviderModrinth` read-only Modrinth v2 search/project/version integration
+- Modrinth project, version, file and dependency mapping with raw provider metadata preservation
 
-Concrete Modrinth/CurseForge HTTP adapters, multi-provider aggregation, dependency solving and update/materialization reconciliation remain separate later checkpoints.
+CurseForge integration, multi-provider aggregation, dependency solving and update/materialization reconciliation remain separate later checkpoints.
