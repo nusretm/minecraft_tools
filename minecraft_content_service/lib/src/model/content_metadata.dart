@@ -42,8 +42,8 @@ enum MtnMinecraftContentDependencyType {
   required,
   optional,
   incompatible,
-  embedded,
-  included,
+  embeddedLibrary,
+  bundled,
   tool,
 }
 
