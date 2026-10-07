@@ -247,7 +247,7 @@ class MtnMinecraftContentProviderCurseForgeMapper {
 
     return <String, String>{
       if (request.gameVersions.isNotEmpty) 'gameVersion': request.gameVersions.single,
-      if (shouldSendLoader) 'modLoaderType': _loaderWireValue(loader!).toString(),
+      if (shouldSendLoader) 'modLoaderType': _loaderWireValue(loader).toString(),
       'index': index.toString(),
       'pageSize': pageSize.toString(),
     };
