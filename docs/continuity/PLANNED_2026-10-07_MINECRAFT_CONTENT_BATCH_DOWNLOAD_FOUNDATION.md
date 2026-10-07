@@ -7,7 +7,7 @@ Date: 2026-10-07
 ```text
 Repository: nusretm/minecraft_tools
 Package: minecraft_content_service/
-Current main HEAD:
+Planning baseline main HEAD:
 53ff05a8147f3f747ecdff650571ad8d3553fe2c
 
 Planning status:
