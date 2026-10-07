@@ -32,7 +32,7 @@ class MtnMinecraftContentProviderCurseForgeMapper {
   static Map<String, String> searchQuery(MtnMinecraftContentSearchRequest request, int gameId, int classId) {
     if (request.offset + request.limit > 10000) throw ArgumentError.value(request.offset, 'request.offset', 'CurseForge requires offset + limit to be at most 10000.');
     if (request.gameVersions.length > 4) throw ArgumentError.value(request.gameVersions, 'request.gameVersions', 'CurseForge search accepts at most four game versions.');
-    if (request.modLoaders.length > 5) throw ArgumentError.value(request.modLoaders, 'request.modLoaders', 'CurseForge search accepts at most five mod loaders.');
+    if (request.modLoaders.length > 1) throw ArgumentError.value(request.modLoaders, 'request.modLoaders', 'CurseForge search currently supports one mod loader filter at a time.');
     if (request.modLoaders.isNotEmpty && request.gameVersions.isEmpty) throw ArgumentError.value(request.modLoaders, 'request.modLoaders', 'CurseForge loader search requires at least one game version.');
 
     final query = <String, String>{
@@ -53,8 +53,6 @@ class MtnMinecraftContentProviderCurseForgeMapper {
 
     if (request.modLoaders.length == 1) {
       query['modLoaderType'] = _loaderWireValue(request.modLoaders.single).toString();
-    } else if (request.modLoaders.length > 1) {
-      query['modLoaderTypes'] = jsonEncode(request.modLoaders.map(_loaderWireValue).toList(growable: false));
     }
 
     return query;
@@ -213,16 +211,23 @@ class MtnMinecraftContentProviderCurseForgeMapper {
     }
   }
 
-  static void validateVersionRequest(MtnMinecraftContentVersionListRequest request) {
+  static void validateVersionRequest(MtnMinecraftContent content, MtnMinecraftContentVersionListRequest request) {
     if (request.gameVersions.length > 1) throw ArgumentError.value(request.gameVersions, 'request.gameVersions', 'CurseForge file listing accepts at most one game version.');
     if (request.modLoaders.length > 1) throw ArgumentError.value(request.modLoaders, 'request.modLoaders', 'CurseForge file listing accepts at most one mod loader.');
-    if (request.modLoaders.isNotEmpty) _loaderWireValue(request.modLoaders.single);
+    if (request.modLoaders.isEmpty) return;
+
+    final loader = request.modLoaders.single;
+    if (content is! MtnMinecraftContentMod && loader == MtnMinecraftModLoaderType.vanilla) return;
+    _loaderWireValue(loader);
   }
 
-  static Map<String, String> versionQuery(MtnMinecraftContentVersionListRequest request, {required int index, required int pageSize}) {
+  static Map<String, String> versionQuery(MtnMinecraftContent content, MtnMinecraftContentVersionListRequest request, {required int index, required int pageSize}) {
+    final loader = request.modLoaders.isEmpty ? null : request.modLoaders.single;
+    final shouldSendLoader = loader != null && !(content is! MtnMinecraftContentMod && loader == MtnMinecraftModLoaderType.vanilla);
+
     return <String, String>{
       if (request.gameVersions.isNotEmpty) 'gameVersion': request.gameVersions.single,
-      if (request.modLoaders.isNotEmpty) 'modLoaderType': _loaderWireValue(request.modLoaders.single).toString(),
+      if (shouldSendLoader) 'modLoaderType': _loaderWireValue(loader).toString(),
       'index': index.toString(),
       'pageSize': pageSize.toString(),
     };
@@ -285,10 +290,13 @@ class MtnMinecraftContentProviderCurseForgeMapper {
     final versionName = displayName ?? fileName;
 
     final hashes = MtnMinecraftContentModel.mapListFromMap(file['hashes']).map((item) {
-      final algorithm = switch (MtnMinecraftContentModel.intFromMap(item['algo'], fallback: -1)) {
+      final algorithmId = MtnMinecraftContentModel.intFromMap(item['algo'], fallback: -1);
+      if (algorithmId <= 0) throw FormatException('Invalid CurseForge hash algorithm: $algorithmId');
+
+      final algorithm = switch (algorithmId) {
         1 => 'sha1',
         2 => 'md5',
-        final value => 'curseforge:$value',
+        _ => 'curseforge:$algorithmId',
       };
       return MtnMinecraftContentFileHash(
         algorithm: algorithm,
@@ -304,10 +312,13 @@ class MtnMinecraftContentProviderCurseForgeMapper {
     }).toList(growable: false);
 
     final dependencies = MtnMinecraftContentModel.mapListFromMap(file['dependencies']).map((item) {
+      final dependencyModId = MtnMinecraftContentModel.intFromMap(item['modId'], fallback: -1);
+      if (dependencyModId <= 0) throw FormatException('Invalid CurseForge dependency mod id: $dependencyModId');
+
       return MtnMinecraftContentDependency(
         type: _dependencyType(MtnMinecraftContentModel.intFromMap(item['relationType'], fallback: -1)),
         provider: providerName,
-        providerContentId: MtnMinecraftContentModel.intFromMap(item['modId']).toString(),
+        providerContentId: dependencyModId.toString(),
         providerMetadata: item,
       );
     }).toList(growable: false);
