@@ -2762,6 +2762,14 @@ docs/continuity/HANDOFF_2026-10-06_MINECRAFT_INFO_PROVIDER_MOD_LANGUAGE_TRANSLAT
 docs/continuity/HANDOFF_2026-10-06_MINECRAFT_INFO_PROVIDER_ITEM_NAME_RESOLUTION_FOUNDATION.md
 ```
 
+Planned content batch-download architecture:
+
+```text
+docs/continuity/PLANNED_2026-10-07_MINECRAFT_CONTENT_BATCH_DOWNLOAD_FOUNDATION.md
+```
+
+That document records the batch-first download architecture, neutral content download-plan boundary, provider-owned source resolution, one-plan-to-one-launcher-`DownloadList` integration direction, and the rule that generic content code must not submit one independent download-manager operation per mod.
+
 Deferred resource/rendering design:
 
 ```text
@@ -2791,7 +2799,40 @@ The content file-selection foundation is implementation-complete, validated, con
 
 No content-service implementation checkpoint is currently active or automatically approved.
 
-Download-source resolution is now the natural next content-service checkpoint and should be scoped separately before implementation.
+The agreed next architecture direction is batch-oriented download planning and source resolution:
+
+```text
+proposed dev.15
+Batch Download Plan / Source Resolution Foundation
+```
+
+Authoritative planning document:
+
+```text
+docs/continuity/PLANNED_2026-10-07_MINECRAFT_CONTENT_BATCH_DOWNLOAD_FOUNDATION.md
+```
+
+Key locked direction:
+
+```text
+all selected install/replace files
+        ↓
+resolve all download sources
+        ↓
+one complete neutral content DownloadPlan
+        ↓
+launcher adapter
+        ↓
+one launcher DownloadList
+        ↓
+one downloadManager.add(downloadList)
+```
+
+`minecraft_content_service` must not depend directly on launcher `DownloadManager` / `DownloadList` types.
+
+Actual byte transfer, retry/concurrency/progress/cancellation, filesystem materialization, installed artifact tracking and removal execution remain separate later concerns unless explicitly rescoped.
+
+Start the next chat by auditing provider/file identity and source-resolution API boundaries, then lock dev.15 scope before implementation.
 
 The item client-definition/model/texture resource foundation remains separately designed and deferred:
 
@@ -2799,4 +2840,4 @@ The item client-definition/model/texture resource foundation remains separately 
 docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md
 ```
 
-Do not start download-source resolution, downloads, execution/materialization, or deferred resource rendering without explicit user approval.
+Do not start dev.15 implementation, download execution/materialization, or deferred resource rendering without explicit user approval.
