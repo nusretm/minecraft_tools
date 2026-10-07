@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0-dev.10
+
+- Replace ambiguous generic dependency types `embedded` / `included` with semantic `embeddedLibrary` / `bundled`.
+- Normalize Modrinth `embedded` dependencies to generic `bundled`.
+- Normalize CurseForge relation type 1 (`EmbeddedLibrary`) to `embeddedLibrary` and relation type 6 (`Include`) to `bundled`.
+- Preserve `required`, `optional`, `incompatible`, and `tool` semantics unchanged.
+- Keep persisted `MtnMinecraftContentRelationType.included/embedded` unchanged; runtime dependency semantics and persisted relations remain separate concepts.
+- Keep install policy, conflict resolution, version-constraint interpretation, artifact selection, and materialization out of this checkpoint.
+
 ## 1.0.0-dev.9
 
 - Add `MtnMinecraftContentDependencyGraph` and `MtnMinecraftContentDependencyGraphEdge` as immutable runtime resolution results.
