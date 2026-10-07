@@ -218,6 +218,37 @@ void main() {
       expect(version.providers.single.metadata['status'], 'listed');
     });
 
+    test('normalizes Modrinth embedded dependencies as bundled', () async {
+      final client = MockClient((request) async {
+        return http.Response(
+          jsonEncode(<Map<String, dynamic>>[
+            _versionJson(
+              id: 'VEMBED',
+              version: '1.0.0',
+              type: 'release',
+              date: '2026-01-01T00:00:00Z',
+              dependencyType: 'embedded',
+            ),
+          ]),
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      });
+
+      final provider = MtnMinecraftContentProviderModrinth(userAgent: 'nusretm/minecraft_tools/1.0', client: client);
+      final content = MtnMinecraftContentMod(
+        key: 'modrinth:AABBCCDD',
+        name: 'Example Mod',
+        providers: <MtnMinecraftContentProviderMetadata>[
+          MtnMinecraftContentProviderMetadata(provider: MtnMinecraftContentProviderModrinth.providerName, id: 'AABBCCDD'),
+        ],
+      );
+
+      final result = await provider.getVersions(content, MtnMinecraftContentVersionListRequest());
+
+      expect(result.versions.single.dependencies.single.type, MtnMinecraftContentDependencyType.bundled);
+    });
+
     test('retries one 429 response when Modrinth supplies a reset duration', () async {
       var requestCount = 0;
       final client = MockClient((request) async {
@@ -341,6 +372,7 @@ Map<String, dynamic> _versionJson({
   required String version,
   required String type,
   required String date,
+  String dependencyType = 'required',
 }) {
   return <String, dynamic>{
     'name': 'Example $version',
@@ -351,7 +383,7 @@ Map<String, dynamic> _versionJson({
         'version_id': 'DEPVER01',
         'project_id': 'DEPEND01',
         'file_name': null,
-        'dependency_type': 'required',
+        'dependency_type': dependencyType,
       },
     ],
     'game_versions': <String>['1.21.1'],

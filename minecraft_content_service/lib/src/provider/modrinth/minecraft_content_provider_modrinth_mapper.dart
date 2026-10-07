@@ -372,7 +372,7 @@ class MtnMinecraftContentProviderModrinthMapper {
       case 'incompatible':
         return MtnMinecraftContentDependencyType.incompatible;
       case 'embedded':
-        return MtnMinecraftContentDependencyType.embedded;
+        return MtnMinecraftContentDependencyType.bundled;
       default:
         throw FormatException('Unsupported Modrinth dependency type: $value');
     }

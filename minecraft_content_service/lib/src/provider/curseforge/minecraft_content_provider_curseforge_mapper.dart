@@ -464,12 +464,12 @@ class MtnMinecraftContentProviderCurseForgeMapper {
 
   static MtnMinecraftContentDependencyType _dependencyType(int value) {
     return switch (value) {
-      1 => MtnMinecraftContentDependencyType.embedded,
+      1 => MtnMinecraftContentDependencyType.embeddedLibrary,
       2 => MtnMinecraftContentDependencyType.optional,
       3 => MtnMinecraftContentDependencyType.required,
       4 => MtnMinecraftContentDependencyType.tool,
       5 => MtnMinecraftContentDependencyType.incompatible,
-      6 => MtnMinecraftContentDependencyType.included,
+      6 => MtnMinecraftContentDependencyType.bundled,
       _ => throw FormatException('Unsupported CurseForge dependency relation type: $value'),
     };
   }

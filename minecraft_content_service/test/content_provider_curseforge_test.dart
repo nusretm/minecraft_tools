@@ -201,9 +201,52 @@ void main() {
       expect(version.files.single.modules.single.name, 'fabric.mod.json');
       expect(version.dependencies.map((item) => item.type), <MtnMinecraftContentDependencyType>[
         MtnMinecraftContentDependencyType.required,
-        MtnMinecraftContentDependencyType.included,
+        MtnMinecraftContentDependencyType.bundled,
       ]);
       expect(version.dependencies.first.providerContentId, '777');
+    });
+
+    test('normalizes every CurseForge dependency relation into provider-independent semantics', () async {
+      final client = MockClient((request) async {
+        return _jsonResponse(<String, dynamic>{
+          'data': <Map<String, dynamic>>[
+            _fileJson(
+              id: 9100,
+              releaseType: 1,
+              displayName: 'Semantic dependency mapping',
+              date: '2026-09-01T00:00:00Z',
+              relationTypes: <int>[1, 2, 3, 4, 5, 6],
+            ),
+          ],
+          'pagination': <String, dynamic>{'index': 0, 'pageSize': 50, 'resultCount': 1, 'totalCount': 1},
+        });
+      });
+
+      final provider = MtnMinecraftContentProviderCurseForge(apiKey: 'secret-key', client: client);
+      final content = MtnMinecraftContentMod(
+        key: 'curseforge:12345',
+        name: 'Skyblocker',
+        providers: <MtnMinecraftContentProviderMetadata>[
+          MtnMinecraftContentProviderMetadata(provider: MtnMinecraftContentProviderCurseForge.providerName, id: '12345'),
+        ],
+      );
+
+      final result = await provider.getVersions(
+        content,
+        MtnMinecraftContentVersionListRequest(
+          gameVersions: <String>['26.1.2'],
+          modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+        ),
+      );
+
+      expect(result.versions.single.dependencies.map((item) => item.type), <MtnMinecraftContentDependencyType>[
+        MtnMinecraftContentDependencyType.embeddedLibrary,
+        MtnMinecraftContentDependencyType.optional,
+        MtnMinecraftContentDependencyType.required,
+        MtnMinecraftContentDependencyType.tool,
+        MtnMinecraftContentDependencyType.incompatible,
+        MtnMinecraftContentDependencyType.bundled,
+      ]);
     });
 
     test('non-mod versions normalize loader to vanilla without sending a fake loader filter', () async {
@@ -485,7 +528,10 @@ Map<String, dynamic> _fileJson({
   required int releaseType,
   required String displayName,
   required String date,
+  List<int>? relationTypes,
 }) {
+  final dependencyRelationTypes = relationTypes ?? const <int>[3, 6];
+
   return <String, dynamic>{
     'id': id,
     'gameId': 432,
@@ -515,8 +561,8 @@ Map<String, dynamic> _fileJson({
       },
     ],
     'dependencies': <Map<String, dynamic>>[
-      <String, dynamic>{'modId': 777, 'relationType': 3},
-      <String, dynamic>{'modId': 888, 'relationType': 6},
+      for (var index = 0; index < dependencyRelationTypes.length; index++)
+        <String, dynamic>{'modId': 777 + index, 'relationType': dependencyRelationTypes[index]},
     ],
     'fileFingerprint': 987654321,
     'modules': <Map<String, dynamic>>[
