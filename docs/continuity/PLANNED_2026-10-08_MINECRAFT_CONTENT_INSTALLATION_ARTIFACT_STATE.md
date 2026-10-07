@@ -13,8 +13,10 @@ Baseline main: 17bddddc6449302eb6984ceb9ef665abee5b156e
 Production/test HEAD: 135d5a41113c7859d819bf2f598a9cd5a72c115a
 Package version: 1.0.0-dev.16
 Implementation: COMPLETE
-Validation: PENDING
-Merge: NOT REQUESTED
+Validation: COMPLETE
+Continuity: CLOSED
+Validated feature HEAD: 0701ee126b37f3f9c2a30f0fbc52f122650f6b4d
+Merge: APPROVED
 ```
 
 No `dart format` was run.
@@ -169,31 +171,39 @@ That later plan may describe downloads, retained artifacts, replacements, and re
 
 Actual byte execution remains separate.
 
-## Validation required
+## Validation
 
-Run from `minecraft_content_service/`:
+Authoritative user-supplied local validation on 2026-10-08:
 
 ```text
 dart analyze
-dart test test/content_installation_state_test.dart
-dart test test/content_dependency_reconciliation_test.dart
-dart test test/content_file_selection_test.dart
-dart test test/content_download_plan_test.dart
-dart test
-```
+No issues found!
 
-Then from repository root:
+content_installation_state_test.dart
+8/8 passed
 
-```text
+content_dependency_reconciliation_test.dart
+11/11 passed
+
+content_file_selection_test.dart
+12/12 passed
+
+content_download_plan_test.dart
+9/9 passed
+
+full dart test
+109/109 passed
+
 git diff --check main...HEAD
-git status
-git rev-parse HEAD
+PASS
+
+working tree
+clean
+
+validated feature HEAD
+0701ee126b37f3f9c2a30f0fbc52f122650f6b4d
 ```
 
-Expected feature HEAD before continuity-only follow-up commits:
+No `dart format` was run.
 
-```text
-135d5a41113c7859d819bf2f598a9cd5a72c115a
-```
-
-Do not merge without separate explicit user approval.
+The checkpoint is implementation-complete, validated, and continuity-closed. Merge has been separately approved by the user.
