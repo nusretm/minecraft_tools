@@ -35,8 +35,11 @@ Current foundation includes:
 - immutable game-version / loader / release-type selection filters without public pagination policy
 - provider/content/version identity validation without cross-provider guessing
 - newest compatible normalized provider version selection while preserving content-only resolution when no match exists
+- recursive dependency graph resolution through `resolveDependencyGraph()`
+- immutable graph/edge results with deterministic depth-first traversal
+- shared-version node collapse by `version.key`, unresolved edge preservation, and explicit cycle marking without infinite recursion
 
-Recursive dependency graph solving, version-constraint interpretation, install/conflict policy and update/materialization reconciliation remain separate later checkpoints.
+Version-constraint interpretation, install/conflict policy, artifact selection/download, and update/materialization reconciliation remain separate later checkpoints.
 
 
 ## CLI example
