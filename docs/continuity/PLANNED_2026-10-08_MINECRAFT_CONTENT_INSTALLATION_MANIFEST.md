@@ -16,7 +16,9 @@ Implementation: COMPLETE
 Validation: COMPLETE
 Continuity: CLOSED
 Validated feature HEAD: c702247bc9cad837fd7ec997695d7c08b53799ea
-Merge: APPROVED
+Merge: COMPLETE
+PR: #46
+Merge commit: 1d1d100e94fa7a1b49758ea333360652e75e8d6d
 ```
 
 No `dart format` was run.
@@ -245,4 +247,4 @@ c702247bc9cad837fd7ec997695d7c08b53799ea
 
 No `dart format` was run.
 
-The checkpoint is implementation-complete, validated, and continuity-closed. Merge has been separately approved by the user.
+The checkpoint is implementation-complete, validated, continuity-closed, and merged through PR #46 at merge commit `1d1d100e94fa7a1b49758ea333360652e75e8d6d`.
