@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0-dev.3
+
+- Add read-only `MtnMinecraftContentProviderModrinth` foundation.
+- Add Modrinth v2 search, project and project-version requests.
+- Map Modrinth project/version/file/dependency metadata into the generic content model.
+- Preserve full provider response maps alongside normalized fields.
+- Require an application-specific Modrinth User-Agent.
+- Keep pagination and release-type filtering compatible with the generic provider contract.
+
 ## 1.0.0-dev.2
 
 - Add `MtnMinecraftContentProvider` base contract.
