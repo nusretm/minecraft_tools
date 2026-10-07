@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../../model/minecraft_content_models.dart';
 import '../minecraft_content_provider_models.dart';
 
@@ -24,8 +26,8 @@ class MtnMinecraftContentProviderModrinthMapper {
 
   static Map<String, String> versionQuery(MtnMinecraftContentVersionListRequest request) {
     return <String, String>{
-      if (request.modLoaders.isNotEmpty) 'loaders': MtnMinecraftContentModel.jsonEncode(<String, dynamic>{'value': request.modLoaders.map(_loaderWireName).toList(growable: false)}).replaceFirst('{"value":', '').replaceFirst(RegExp(r'}$'), ''),
-      if (request.gameVersions.isNotEmpty) 'game_versions': MtnMinecraftContentModel.jsonEncode(<String, dynamic>{'value': request.gameVersions}).replaceFirst('{"value":', '').replaceFirst(RegExp(r'}$'), ''),
+      if (request.modLoaders.isNotEmpty) 'loaders': jsonEncode(request.modLoaders.map(_loaderWireName).toList(growable: false)),
+      if (request.gameVersions.isNotEmpty) 'game_versions': jsonEncode(request.gameVersions),
       'include_changelog': 'true',
     };
   }
