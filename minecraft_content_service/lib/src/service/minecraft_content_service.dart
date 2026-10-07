@@ -9,6 +9,8 @@ import 'minecraft_content_dependency_install_plan.dart';
 import 'minecraft_content_dependency_install_planner.dart';
 import 'minecraft_content_dependency_reconciler.dart';
 import 'minecraft_content_dependency_reconciliation.dart';
+import 'minecraft_content_download_plan.dart';
+import 'minecraft_content_download_planner.dart';
 import 'minecraft_content_file_selection.dart';
 import 'minecraft_content_file_selector.dart';
 
@@ -239,6 +241,12 @@ class MtnMinecraftContentService {
     MtnMinecraftContentDependencyReconciliationPlan reconciliation,
   ) {
     return const MtnMinecraftContentFileSelector().select(reconciliation);
+  }
+
+  Future<MtnMinecraftContentDownloadPlan> planSelectedFileDownloads(
+    MtnMinecraftContentFileSelectionPlan selection,
+  ) {
+    return MtnMinecraftContentDownloadPlanner(providers).plan(selection);
   }
 
   MtnMinecraftContentDependencyInstallPlan planDependencyInstall(

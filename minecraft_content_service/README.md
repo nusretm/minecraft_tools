@@ -57,8 +57,14 @@ Current foundation includes:
 - deterministic single-file or unique-primary selection without provider-specific switches
 - explicit no-files, ambiguous-file, and unavailable-file selection issues
 - file selection independent from download URL, hash, size, filesystem path, and materialization concerns
+- batch-oriented download-source planning through `planSelectedFileDownloads()`
+- immutable download items that preserve the original file selection and add only the resolved source URI
+- direct normalized URL reuse before any provider lookup
+- provider-owned source resolution for files whose normalized download URL is absent
+- CurseForge download-URL lookup without leaking CurseForge IDs, endpoints, or authentication into generic planning
+- aggregate source-resolution issues with complete-plan blocking semantics through `downloadable`
 
-Version-constraint interpretation, download-source resolution, filesystem execution, and update/materialization remain separate later checkpoints.
+Version-constraint interpretation, byte transfer, launcher download-manager adaptation, filesystem execution, integrity verification, and update/materialization remain separate later checkpoints.
 
 
 ## CLI example

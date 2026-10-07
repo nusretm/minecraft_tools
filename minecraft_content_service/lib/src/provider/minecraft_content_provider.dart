@@ -100,6 +100,12 @@ abstract class MtnMinecraftContentProvider {
     _rateLimitResetAt = null;
   }
 
+  Future<Uri?> resolveDownloadSource(MtnMinecraftContentVersion version, MtnMinecraftContentFile file) async {
+    requireReady();
+    if (!version.files.any((item) => identical(item, file))) throw ArgumentError.value(file, 'file', 'Download-source file must belong to the supplied version.');
+    return null;
+  }
+
   Future<MtnMinecraftContentSearchResult> search(MtnMinecraftContentSearchRequest request);
 
   Future<MtnMinecraftContent> getContent(String id);
