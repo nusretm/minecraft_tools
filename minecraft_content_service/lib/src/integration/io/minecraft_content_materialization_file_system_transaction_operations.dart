@@ -166,13 +166,7 @@ extension MtnMinecraftContentMaterializationFileSystemTransactionOperations on M
     }
 
     try {
-      await _assertInstallationRootStable(transaction.preflight);
-      await _assertTransactionRetainsStable(transaction);
-      for (final step in transaction._ledger) {
-        if (!step.finalized) {
-          await step.validate(this);
-        }
-      }
+      await _validateTransactionRecovery(transaction);
     } catch (error) {
       throw MtnMinecraftContentMaterializationFileSystemTransactionException(
         failure: MtnMinecraftContentMaterializationFileSystemTransactionFailure.commitFailure,
@@ -214,13 +208,7 @@ extension MtnMinecraftContentMaterializationFileSystemTransactionOperations on M
     }
 
     try {
-      await _assertInstallationRootStable(transaction.preflight);
-      await _assertTransactionRetainsStable(transaction);
-      for (final step in transaction._ledger.reversed) {
-        if (!step.finalized) {
-          await step.validate(this);
-        }
-      }
+      await _validateTransactionRecovery(transaction);
     } catch (error) {
       throw MtnMinecraftContentMaterializationFileSystemTransactionException(
         failure: MtnMinecraftContentMaterializationFileSystemTransactionFailure.rollbackFailure,
@@ -256,6 +244,18 @@ extension MtnMinecraftContentMaterializationFileSystemTransactionOperations on M
 
     transaction._state = MtnMinecraftContentMaterializationFileSystemTransactionState.rolledBack;
     transaction._releaseOnce();
+  }
+
+  Future<void> _validateTransactionRecovery(
+    MtnMinecraftContentMaterializationFileSystemTransaction transaction,
+  ) async {
+    await _assertInstallationRootStable(transaction.preflight);
+    await _assertTransactionRetainsStable(transaction);
+    for (final step in transaction._ledger.reversed) {
+      if (!step.finalized) {
+        await step.validate(this);
+      }
+    }
   }
 
   bool _sameTransactionPreflight(
