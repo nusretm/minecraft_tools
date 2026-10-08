@@ -2802,7 +2802,7 @@ checkpoint: dev.27 — RemVibe Batch-to-Coordinated Installation Execution
 branch: feature/minecraft-content-remvibe-installation-execution
 baseline main: 0556ec6a20360a9ab840dc0d4010451d480ee260
 package: minecraft_content_service 1.0.0-dev.27
-status: IMPLEMENTED / WINDOWS DART VALIDATION PENDING / NOT MERGED
+status: INITIAL WINDOWS VALIDATION (18/19, 2 LINT INFOS) / PHASE AND TEST-LINT FIXES COMMITTED / REVALIDATION PENDING / NOT MERGED
 design: docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_REMVIBE_BATCH_INSTALLATION_EXECUTION.md
 ```
 
@@ -2820,8 +2820,15 @@ remote and local branches deleted, pruned, and local main synchronized and clean
 Dev.27 design was subsequently saved to main at 0556ec6; the user explicitly
 approved dev.27 production implementation. The new opt-in RemVibe+IO executor,
 19 integration tests, package version bump and continuity changes are committed
-only to the dev.27 feature branch. Windows analyze/tests and separate merge
-approval are still pending. Do not run `dart format`.
+only to the dev.27 feature branch. The first Windows validation on bac9634
+passed 18/19 integration tests and prior RemVibe/dev.26 focused suites; full
+test run reported 243 passed and the same single failure. Analyzer reported
+two test-loop braces infos. The sole test failure was an incorrect `download`
+classification after completed transfers when final destination preflight
+became unsafe. Phase-transition and braces fixes were committed, and a
+staging-tamper classification assertion was strengthened. Re-run Windows
+analyzer, focused suite and all tests; separate merge approval is required.
+Do not run `dart format`.
 
 ### Latest completed checkpoint: dev.26
 
