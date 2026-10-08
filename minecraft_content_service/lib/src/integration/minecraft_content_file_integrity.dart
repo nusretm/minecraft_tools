@@ -36,6 +36,14 @@ class MtnMinecraftContentFileIntegrity {
   final int? expectedSize;
   final Map<String, String> checksums;
 
+  static Future<String> calculateSha256(File file) async {
+    final actual = await _calculateChecksums(
+      file,
+      const <String>['sha256'],
+    );
+    return actual['sha256']!;
+  }
+
   Future<void> validate(
     File file, {
     String subject = 'File',

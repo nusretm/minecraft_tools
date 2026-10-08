@@ -583,6 +583,22 @@ void main() {
         source: source,
       );
       expect(await publication.target.readAsBytes(), bytes);
+
+      final changed = List<int>.from(bytes);
+      changed[0] = changed[0] == 0 ? 1 : 0;
+      await publication.target.writeAsBytes(changed);
+      await expectLater(
+        fileSystem.commit(publication),
+        throwsA(
+          isA<MtnMinecraftContentMaterializationFileSystemPublicationException>().having(
+            (error) => error.failure,
+            'failure',
+            MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
+          ),
+        ),
+      );
+
+      await publication.target.writeAsBytes(bytes);
       await fileSystem.commit(publication);
     });
   });

@@ -43,6 +43,7 @@ class MtnMinecraftContentMaterializationFileSystemPublication {
     required this.target,
     required this.previousTargetExisted,
     required this.publishedLength,
+    required this.publishedSha256,
     required this.backup,
     required List<Directory> createdDirectories,
     required Object authorityToken,
@@ -57,6 +58,7 @@ class MtnMinecraftContentMaterializationFileSystemPublication {
   final File target;
   final bool previousTargetExisted;
   final int publishedLength;
+  final String? publishedSha256;
   final File? backup;
   final List<Directory> createdDirectories;
   final Object _authorityToken;
@@ -140,6 +142,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
       }
 
       final sourceLengthBefore = await source.length();
+      final sourceSha256 = integrity == null ? await MtnMinecraftContentFileIntegrity.calculateSha256(source) : null;
       siblingStaging = await _reservePublicationSibling(targetFile, 'staging');
       await source.openRead().pipe(siblingStaging.openWrite());
       final sourceTypeAfter = await FileSystemEntity.type(source.path, followLinks: false);
@@ -153,6 +156,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
         );
       }
 
+      String? publishedSha256;
       if (integrity != null) {
         try {
           await integrity.validate(
@@ -164,6 +168,14 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
             failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.integrityFailure,
             message: error.message,
             cause: error,
+          );
+        }
+      } else {
+        publishedSha256 = await MtnMinecraftContentFileIntegrity.calculateSha256(siblingStaging);
+        if (publishedSha256 != sourceSha256) {
+          throw MtnMinecraftContentMaterializationFileSystemPublicationException(
+            failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.sourceChangedDuringCopy,
+            message: 'Metadata-less publication source changed while it was being copied: "${source.path}".',
           );
         }
       }
@@ -226,6 +238,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
         target: targetFile,
         previousTargetExisted: expectedState.entityType == MtnMinecraftContentMaterializationFileSystemEntityType.file,
         publishedLength: stagedLength,
+        publishedSha256: publishedSha256,
         backup: backup,
         createdDirectories: createdDirectories,
         authorityToken: _publicationAuthorityToken(this),
@@ -386,6 +399,15 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
       throw MtnMinecraftContentMaterializationFileSystemPublicationException(
         failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
         message: 'Metadata-less published target changed length before finalization: "${publication.target.path}".',
+        backup: publication.backup,
+      );
+    }
+
+    final publishedSha256 = publication.publishedSha256;
+    if (publishedSha256 == null || await MtnMinecraftContentFileIntegrity.calculateSha256(publication.target) != publishedSha256) {
+      throw MtnMinecraftContentMaterializationFileSystemPublicationException(
+        failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
+        message: 'Metadata-less published target changed before finalization: "${publication.target.path}".',
         backup: publication.backup,
       );
     }
