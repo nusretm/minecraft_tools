@@ -9,7 +9,19 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
     required MtnMinecraftContentMaterializationFileSystemPreflight preflight,
     required MtnMinecraftContentMaterializationTarget target,
     required File source,
-    bool _withinTransaction = false,
+  }) => _publishInternal(preflight: preflight, target: target, source: source, withinTransaction: false);
+
+  Future<MtnMinecraftContentMaterializationFileSystemPublication> _publishWithinTransaction({
+    required MtnMinecraftContentMaterializationFileSystemPreflight preflight,
+    required MtnMinecraftContentMaterializationTarget target,
+    required File source,
+  }) => _publishInternal(preflight: preflight, target: target, source: source, withinTransaction: true);
+
+  Future<MtnMinecraftContentMaterializationFileSystemPublication> _publishInternal({
+    required MtnMinecraftContentMaterializationFileSystemPreflight preflight,
+    required MtnMinecraftContentMaterializationTarget target,
+    required File source,
+    required bool withinTransaction,
   }) async {
     if (!preflight.safe) {
       throw StateError('Publication requires a safe filesystem preflight.');
@@ -40,7 +52,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
       );
     }
 
-    final releaseRoot = _withinTransaction ? null : await _acquireMaterializationRoot(preflight, exclusive: false);
+    final releaseRoot = withinTransaction ? null : await _acquireMaterializationRoot(preflight, exclusive: false);
     late final void Function() releaseTarget;
     try {
       releaseTarget = await _acquirePublicationTarget(_publicationLockKey(preflight, target.relativePath));
