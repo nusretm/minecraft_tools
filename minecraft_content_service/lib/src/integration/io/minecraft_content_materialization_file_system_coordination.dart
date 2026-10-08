@@ -37,8 +37,8 @@ class MtnMinecraftContentMaterializationFileSystemCoordinationException implemen
 class MtnMinecraftContentMaterializationFileSystemCoordinatedTransaction {
   MtnMinecraftContentMaterializationFileSystemCoordinatedTransaction._({
     required this.preflight,
-    required this.materialization,
-    required this.manifestPublication,
+    required this._materialization,
+    required this._manifestPublication,
     required MtnMinecraftContentMaterializationFileSystemCoordinator authority,
     required _MaterializationCoordinatedRootLease lease,
     List<File> recoveryCandidates = const <File>[],
@@ -47,8 +47,8 @@ class MtnMinecraftContentMaterializationFileSystemCoordinatedTransaction {
        _recoveryCandidates = List<File>.unmodifiable(recoveryCandidates);
 
   final MtnMinecraftContentMaterializationFileSystemPreflight preflight;
-  final MtnMinecraftContentMaterializationFileSystemTransaction materialization;
-  final MtnMinecraftContentInstallationManifestFileSystemPublication? manifestPublication;
+  final MtnMinecraftContentMaterializationFileSystemTransaction _materialization;
+  final MtnMinecraftContentInstallationManifestFileSystemPublication? _manifestPublication;
 
   final MtnMinecraftContentMaterializationFileSystemCoordinator _authority;
   final _MaterializationCoordinatedRootLease _lease;
@@ -63,7 +63,7 @@ class MtnMinecraftContentMaterializationFileSystemCoordinatedTransaction {
 
   List<File> get recoveryCandidates => List<File>.unmodifiable(<File>[
     ..._recoveryCandidates,
-    ...materialization.recoveryCandidates,
+    ..._materialization.recoveryCandidates,
   ]);
 }
 
@@ -137,8 +137,8 @@ class MtnMinecraftContentMaterializationFileSystemCoordinator {
 
       return MtnMinecraftContentMaterializationFileSystemCoordinatedTransaction._(
         preflight: preflight,
-        materialization: materialization,
-        manifestPublication: manifestPublication,
+        _materialization: materialization,
+        _manifestPublication: manifestPublication,
         authority: this,
         lease: lease,
       );
@@ -176,8 +176,8 @@ class MtnMinecraftContentMaterializationFileSystemCoordinator {
 
       final incomplete = materialization == null ? null : MtnMinecraftContentMaterializationFileSystemCoordinatedTransaction._(
         preflight: preflight,
-        materialization: materialization,
-        manifestPublication: manifestPublication,
+        _materialization: materialization,
+        _manifestPublication: manifestPublication,
         authority: this,
         lease: lease,
         recoveryCandidates: manualRecovery,
@@ -208,16 +208,16 @@ class MtnMinecraftContentMaterializationFileSystemCoordinator {
         throw StateError('Coordinated commit is unavailable after rollback or interrupted rollback.');
       }
       transaction._lease.assertOwns(transaction.preflight.resolvedInstallationRoot, policy);
-      if (transaction.manifestPublication == null || transaction.recoveryCandidates.isNotEmpty) {
+      if (transaction._manifestPublication == null || transaction.recoveryCandidates.isNotEmpty) {
         throw StateError('Coordinated transaction has unresolved recovery candidates.');
       }
 
       // The first cleanup is irreversible: validate BOTH sets before crossing that boundary.
       if (transaction.state == MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.pending) {
         try {
-          await _materialization._validateTransactionRecovery(transaction.materialization);
-          await _manifest._validatePublished(transaction.manifestPublication!);
-          await _manifest._validateBackup(transaction.manifestPublication!);
+          await _materialization._validateTransactionRecovery(transaction._materialization);
+          await _manifest._validatePublished(transaction._manifestPublication!);
+          await _manifest._validateBackup(transaction._manifestPublication!);
         } catch (error) {
           throw MtnMinecraftContentMaterializationFileSystemCoordinationException(
             failure: MtnMinecraftContentMaterializationFileSystemCoordinationFailure.commitFailure,
@@ -230,8 +230,8 @@ class MtnMinecraftContentMaterializationFileSystemCoordinator {
 
       transaction._state = MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.commitIncomplete;
       try {
-        await _materialization.commitTransaction(transaction.materialization);
-        await _manifest.commit(transaction.manifestPublication!);
+        await _materialization.commitTransaction(transaction._materialization);
+        await _manifest.commit(transaction._manifestPublication!);
       } catch (error) {
         throw MtnMinecraftContentMaterializationFileSystemCoordinationException(
           failure: MtnMinecraftContentMaterializationFileSystemCoordinationFailure.commitFailure,
@@ -272,7 +272,7 @@ class MtnMinecraftContentMaterializationFileSystemCoordinator {
 
       transaction._state = MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.rollbackIncomplete;
       Object? firstFailure;
-      final publication = transaction.manifestPublication;
+      final publication = transaction._manifestPublication;
       if (publication != null) {
         try {
           await _manifest.rollback(publication);
@@ -281,7 +281,7 @@ class MtnMinecraftContentMaterializationFileSystemCoordinator {
         }
       }
       try {
-        await _materialization.rollbackTransaction(transaction.materialization);
+        await _materialization.rollbackTransaction(transaction._materialization);
       } catch (error) {
         firstFailure ??= error;
       }
