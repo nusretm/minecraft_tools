@@ -2,10 +2,6 @@ part of 'minecraft_content_materialization_file_system.dart';
 
 final Map<String, _MaterializationRootGate> _materializationRootGates = <String, _MaterializationRootGate>{};
 
-String _materializationRootKey(
-  MtnMinecraftContentMaterializationFileSystemPreflight preflight,
-) => _materializationRootKeyFor(preflight.resolvedInstallationRoot, preflight.policy);
-
 String _materializationRootKeyFor(
   Directory resolvedInstallationRoot,
   MtnMinecraftContentMaterializationFileSystemPolicy policy,
