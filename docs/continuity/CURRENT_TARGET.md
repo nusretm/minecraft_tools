@@ -2795,6 +2795,32 @@ In particular:
 
 ## Next action
 
+### Proposed checkpoint: dev.28 — Installation Recovery and Cancellation Boundary Hardening
+
+```text
+package: minecraft_content_service
+latest completed: 1.0.0-dev.27 (PR #55, full Windows tests 244/244)
+candidate: dev.28 — In-Process Recovery + Cancellation Validation
+baseline main: 89f93a1b4727465c6c95ee0854418a73ddef607a
+status: DESIGN RECORDED / NOT IMPLEMENTED / NO DEV.28 FEATURE BRANCH
+design: docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_RECOVERY_HARDENING.md
+```
+
+After the successful dev.27 installation executor merge, the next proposed
+scope is **deterministic in-process fault/recovery and cancellation verification**
+before starting launcher integration. Specifically: exercise interrupted
+forward-only commit, incomplete rollback retries, pre-handle begin failures
+that might retain a lease, and cancellation at the boundary between a
+reversible publication and irreversible cleanup. Use existing dev.26/dev.27
+authorities; no new download manager, generic transaction subsystem, or
+persistent crash-recovery journal.
+
+Dev.27 remote/local feature branch deletion commands have been supplied
+to the user, but completion is not yet confirmed. User-supplied local `main`
+was synchronized and clean at 89f93a1. No dev.28 production implementation
+or merge is approved yet; `docs/WORKING_RULES.md` applies and pure Dart
+must not be passed through `dart format`.
+
 ### Latest completed checkpoint: dev.27 — RemVibe Batch-to-Coordinated Installation Execution
 
 ```text
