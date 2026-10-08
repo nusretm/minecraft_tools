@@ -2816,29 +2816,9 @@ tests have been added, but have not yet been run with Windows Dart SDK.
 
 Do not merge without separate explicit approval. No pure Dart `dart format`.
 
-### Prior design record: dev.26
-
-```text
-dev.26 — Materialization + Manifest Coordination
-package: minecraft_content_service (planned 1.0.0-dev.26)
-status: DESIGN RECORDED / NOT IMPLEMENTED / NO FEATURE BRANCH / PRODUCTION APPROVAL PENDING
-starting reference: main after dev.25 closure
-design: docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_MATERIALIZATION_MANIFEST_COORDINATION.md
-```
-
-The blocking issue is **exclusive-root-lease reentrancy**: standalone dev.24
-`beginTransaction()` and dev.25 manifest `publish()` both acquire the same exclusive
-in-process lock. A dev.26 coordinator must own a single lease and use narrowly
-scoped owner-checked internal entrypoints, never a public lock bypass.
-
-Before either backup set is destroyed, both recovery states require prevalidation.
-After irreversible cleanup begins, any interrupted commit is **forward-only**;
-neither cross-process atomicity nor process-crash recovery is promised.
-
-Dev.25 PR #53 and Windows validation are complete (209/209 tests). Its feature
-branch deletion was requested; PowerShell cleanup commands supplied, completion
-not yet confirmed. No new production code until dev.26 design approval.
-No `dart format`; future merges need separate explicit approval.
+The design record documents the original non-reentrant root-lock problem and
+the one-lease, forward-only cleanup decision. It remains authoritative for
+failure boundaries and deferred crash-durable recovery.
 
 The latest completed content-service checkpoint is:
 
