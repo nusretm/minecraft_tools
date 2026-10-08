@@ -1,4 +1,4 @@
-import 'dart:io';
+part of 'minecraft_content_materialization_file_system.dart';
 
 enum MtnMinecraftContentMaterializationFileSystemPlatform {
   windows,

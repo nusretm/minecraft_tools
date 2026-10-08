@@ -1,8 +1,4 @@
-import 'dart:io';
-
-import '../../service/minecraft_content_installation_state.dart';
-import '../../service/minecraft_content_materialization_plan.dart';
-import 'minecraft_content_materialization_file_system_policy.dart';
+part of 'minecraft_content_materialization_file_system.dart';
 
 enum MtnMinecraftContentMaterializationFileSystemEntityType {
   missing,
@@ -127,7 +123,7 @@ class MtnMinecraftContentMaterializationFileSystemPreflightIssueSymbolicLink ext
 }
 
 class MtnMinecraftContentMaterializationFileSystemPreflight {
-  MtnMinecraftContentMaterializationFileSystemPreflight.internal({
+  MtnMinecraftContentMaterializationFileSystemPreflight._({
     required this.plan,
     required this.installationRoot,
     required this.resolvedInstallationRoot,
