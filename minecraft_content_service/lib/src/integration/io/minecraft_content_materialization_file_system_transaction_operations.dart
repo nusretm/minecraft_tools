@@ -123,6 +123,16 @@ extension MtnMinecraftContentMaterializationFileSystemTransactionOperations on M
       if (error is MtnMinecraftContentMaterializationFileSystemTransactionException) {
         transaction._recoveryCandidates.addAll(error.recoveryCandidates);
       }
+      if (transaction._ledger.isEmpty && transaction._recoveryCandidates.isEmpty) {
+        transaction._state = MtnMinecraftContentMaterializationFileSystemTransactionState.rolledBack;
+        transaction._releaseOnce();
+        throw MtnMinecraftContentMaterializationFileSystemTransactionException(
+          failure: MtnMinecraftContentMaterializationFileSystemTransactionFailure.applicationFailure,
+          message: 'Transaction failed before any filesystem mutation.',
+          cause: error,
+          transaction: transaction,
+        );
+      }
       try {
         await rollbackTransaction(transaction);
       } catch (rollbackError) {
