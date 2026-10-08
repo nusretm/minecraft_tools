@@ -2795,14 +2795,17 @@ In particular:
 
 ## Next action
 
-The active feature checkpoint is:
+The latest completed content-service checkpoint is:
 
 ```text
 dev.25 — Installation Manifest Filesystem Persistence Foundation
 branch: feature/minecraft-content-installation-manifest-persistence
 baseline main: 39d8dc148489cb4f6b8003869486abcf7dc42820
+validated feature HEAD: 1488c7e2dbd9d221d80c04a940df36226987f0ae
+PR: #53
+main squash merge commit: 76b01cc4a4f465fdd27d4960fe12683e6ee874ec
 package: minecraft_content_service 1.0.0-dev.25
-status: IMPLEMENTED IN FEATURE BRANCH / WINDOWS VALIDATION PENDING / NOT MERGED
+status: IMPLEMENTED / REVIEWED / VALIDATED (209 TESTS) / MERGED / CLOSED
 ```
 
 This checkpoint introduces reversible manifest IO, root-lease coordination with dev.24
@@ -2816,9 +2819,10 @@ Design and validation contract:
 docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_MANIFEST_FILESYSTEM_PERSISTENCE.md
 ```
 
-No merge without separate explicit approval. Do not run dart format.
+Dev.25 merge was separately approved and completed. No next implementation checkpoint
+has been approved. Future merges require separate explicit approval. Do not run dart format.
 
-The latest completed content-service checkpoint is:
+Historical completed checkpoint:
 
 ```text
 dev.24 — Whole-plan Materialization Transaction Foundation
