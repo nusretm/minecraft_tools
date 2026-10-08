@@ -153,10 +153,11 @@ class MtnMinecraftContentMaterializationFileSystem {
       throw ArgumentError.value(target, 'target', 'Publication target must be the exact canonical install or replacement target from the preflight plan.');
     }
 
-    final expectedState = preflight.resultingArtifacts.where((item) => identical(item.artifact, target.artifact)).singleOrNull;
-    if (expectedState == null) {
-      throw StateError('Preflight does not expose the canonical resulting artifact state for the publication target.');
+    final expectedStates = preflight.resultingArtifacts.where((item) => identical(item.artifact, target.artifact)).toList(growable: false);
+    if (expectedStates.length != 1) {
+      throw StateError('Preflight must expose exactly one canonical resulting artifact state for the publication target.');
     }
+    final expectedState = expectedStates.single;
     if (expectedState.entityType != MtnMinecraftContentMaterializationFileSystemEntityType.missing &&
         expectedState.entityType != MtnMinecraftContentMaterializationFileSystemEntityType.file) {
       throw StateError('Safe publication requires an expected missing or regular-file target state.');
@@ -304,8 +305,17 @@ class MtnMinecraftContentMaterializationFileSystem {
     }
 
     final backup = publication.backup;
-    if (backup != null && await FileSystemEntity.type(backup.path, followLinks: false) != FileSystemEntityType.notFound) {
-      await backup.delete();
+    if (backup != null) {
+      final backupType = await FileSystemEntity.type(backup.path, followLinks: false);
+      if (backupType != FileSystemEntityType.notFound && backupType != FileSystemEntityType.file) {
+        throw MtnMinecraftContentMaterializationFileSystemPublicationException(
+          failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
+          message: 'Publication backup is no longer a regular file and will not be deleted: "${backup.path}".',
+        );
+      }
+      if (backupType == FileSystemEntityType.file) {
+        await backup.delete();
+      }
     }
 
     publication._state = MtnMinecraftContentMaterializationFileSystemPublicationState.committed;
@@ -454,20 +464,24 @@ class MtnMinecraftContentMaterializationFileSystem {
 
       if (resolution.matches.isEmpty) {
         final requested = Directory(p.join(currentPath, segment));
+        bool createdByPublication = false;
+        Object? createError;
         try {
           await requested.create();
-        } on FileSystemException {
-          resolution = await _resolveChild(currentPath, segment);
-          if (resolution.matches.length != 1 || resolution.matches.single.type != FileSystemEntityType.directory) {
-            rethrow;
-          }
+          createdByPublication = true;
+        } on FileSystemException catch (error) {
+          createError = error;
         }
-        if (resolution.matches.isEmpty) {
-          resolution = await _resolveChild(currentPath, segment);
-          if (resolution.matches.length == 1 && resolution.matches.single.type == FileSystemEntityType.directory) {
-            createdDirectories.add(Directory(resolution.matches.single.path));
-          }
-        } else if (resolution.matches.length == 1 && resolution.matches.single.type == FileSystemEntityType.directory) {
+
+        resolution = await _resolveChild(currentPath, segment);
+        if (resolution.matches.length != 1 || resolution.matches.single.type != FileSystemEntityType.directory) {
+          throw MtnMinecraftContentMaterializationFileSystemPublicationException(
+            failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.stalePreflight,
+            message: 'Target parent could not be created or resolved safely below "$currentPath".',
+            cause: createError,
+          );
+        }
+        if (createdByPublication) {
           createdDirectories.add(Directory(resolution.matches.single.path));
         }
       }
