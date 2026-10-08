@@ -62,6 +62,36 @@ void main() {
       expect(after, isEmpty);
     });
 
+    test('detects case-insensitive collisions already present in the current managed state', () async {
+      final root = await Directory.systemTemp.createTemp();
+      addTearDown(() => root.delete(recursive: true));
+
+      final aFile = _file('A.jar');
+      final bFile = _file('a.jar');
+      final a = _version('a:v1', _content('a'), aFile);
+      final b = _version('b:v1', _content('b'), bFile);
+      final installation = _installation(
+        <MtnMinecraftContentInstallationArtifact>[
+          _artifact(a, aFile, 'mods/A.jar'),
+          _artifact(b, bFile, 'mods/a.jar'),
+        ],
+      );
+      final plan = await _plan(
+        installation: installation,
+        desiredVersions: const <MtnMinecraftContentVersion>[],
+        targets: const <String, String>{},
+      );
+
+      final preflight = await _windows().preflight(
+        plan: plan,
+        installationRoot: root.absolute,
+      );
+
+      final collisions = preflight.issues.whereType<MtnMinecraftContentMaterializationFileSystemPreflightIssuePathCollision>().toList();
+      expect(collisions, hasLength(1));
+      expect(collisions.single.scope, MtnMinecraftContentMaterializationFileSystemStateScope.current);
+    });
+
     test('allows case-distinct final targets under a case-sensitive POSIX policy', () async {
       final root = await Directory.systemTemp.createTemp();
       addTearDown(() => root.delete(recursive: true));
@@ -144,6 +174,32 @@ void main() {
         preflight.issues.whereType<MtnMinecraftContentMaterializationFileSystemPreflightIssueUnmanagedOccupancy>(),
         hasLength(1),
       );
+      expect(await unmanaged.readAsString(), 'manual');
+    });
+
+    test('detects differently-cased unmanaged occupancy under a case-insensitive policy', () async {
+      final root = await Directory.systemTemp.createTemp();
+      addTearDown(() => root.delete(recursive: true));
+      final mods = Directory('${root.path}${Platform.pathSeparator}mods');
+      await mods.create();
+      final unmanaged = File('${mods.path}${Platform.pathSeparator}Manual.JAR');
+      await unmanaged.writeAsString('manual');
+
+      final version = _version('manual:v1', _content('manual'), _file('manual.jar'));
+      final plan = await _plan(
+        installation: _installation(),
+        desiredVersions: <MtnMinecraftContentVersion>[version],
+        targets: <String, String>{'manual:v1': 'mods/manual.jar'},
+      );
+
+      final preflight = await _windows().preflight(
+        plan: plan,
+        installationRoot: root.absolute,
+      );
+
+      final issues = preflight.issues.whereType<MtnMinecraftContentMaterializationFileSystemPreflightIssueUnmanagedOccupancy>().toList();
+      expect(issues, hasLength(1));
+      expect(issues.single.physicalPath, unmanaged.path);
       expect(await unmanaged.readAsString(), 'manual');
     });
 
