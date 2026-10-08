@@ -229,6 +229,9 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
         _checkCancellation();
         await execution.execute();
         _checkCancellation();
+        // Transfer is complete; subsequent staging, integrity, and destination
+        // checks belong to validation rather than the download lifecycle.
+        _state = MtnMinecraftContentInstallationExecutionRemVibeState.validating;
 
         if (batch.job.status != RemVibeDownloadStatus.completed) {
           throw StateError('RemVibe download batch did not reach completed status.');
