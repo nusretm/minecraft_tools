@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.0-dev.26
+
+- Add a single-authority coordinator for dev.24 managed-file and dev.25 manifest publication under one exclusive installation-root lease.
+- Refactor internal publication entrypoints to accept only an active private root-lease capability; existing standalone public APIs keep their lock semantics.
+- Compare persisted current manifest schema-v1 snapshot to the canonical plan installation state before any content mutation.
+- Reject missing, corrupt, stale and externally modified current manifests; publish only the canonical resulting installation state.
+- Return one combined pending handle; keep individual recoverable publication handles inaccessible to callers.
+- On application failure, restore the managed-file transaction; preserve the root lease and recovery candidates if restoration is incomplete.
+- Prevalidate both managed-file and manifest recovery before irreversible cleanup; enforce forward-only commit retry once cleanup starts.
+- Roll back manifest first and then managed files, preserving incomplete rollback state for same-direction retries.
+- Add focused coordinated install, replace, remove, empty plan, rollback, tamper, stale manifest and exclusive-lease regression tests.
+- Deliberately exclude crash-durable journals, cross-process locks, RemVibe/TaskService orchestration and ACID multi-file guarantees.
+
 ## 1.0.0-dev.25
 
 - Add explicit IO filesystem persistence for schema-v1 installation manifests while leaving the generic manifest serialization unchanged.

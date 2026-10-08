@@ -97,3 +97,37 @@ class _MaterializationRootWaiter {
   final void Function() onEmpty;
   final Completer<void Function()> ready = Completer<void Function()>();
 }
+
+class _MaterializationCoordinatedRootLease {
+  _MaterializationCoordinatedRootLease._(this._key, this._release);
+
+  final String _key;
+  final void Function() _release;
+  bool _active = true;
+
+  void assertOwns(
+    Directory resolvedInstallationRoot,
+    MtnMinecraftContentMaterializationFileSystemPolicy policy,
+  ) {
+    if (!_active || _key != _materializationRootKeyFor(resolvedInstallationRoot, policy)) {
+      throw StateError('Coordinated installation-root lease is inactive or belongs to a different installation root.');
+    }
+  }
+
+  void release() {
+    if (!_active) return;
+    _active = false;
+    _release();
+  }
+}
+
+Future<_MaterializationCoordinatedRootLease> _acquireMaterializationCoordinatedRootLease(
+  Directory resolvedInstallationRoot,
+  MtnMinecraftContentMaterializationFileSystemPolicy policy,
+) async {
+  final release = await _acquireMaterializationRootFor(resolvedInstallationRoot, policy, exclusive: true);
+  return _MaterializationCoordinatedRootLease._(
+    _materializationRootKeyFor(resolvedInstallationRoot, policy),
+    release,
+  );
+}

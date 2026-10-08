@@ -2795,29 +2795,35 @@ In particular:
 
 ## Next action
 
-### Proposed next checkpoint: dev.26
+### Active checkpoint: dev.26
 
 ```text
 dev.26 — Materialization + Manifest Coordination
-package: minecraft_content_service (planned 1.0.0-dev.26)
-status: DESIGN RECORDED / NOT IMPLEMENTED / NO FEATURE BRANCH / PRODUCTION APPROVAL PENDING
-starting reference: main after dev.25 closure
+branch: feature/minecraft-content-materialization-manifest-coordination
+baseline main: 096b328e4cfa8ea0ba4a2b62f1d3f994034803a8
+package: minecraft_content_service 1.0.0-dev.26
+status: WINDOWS VALIDATED (225 TESTS) / ACTUAL-DIFF REVIEWED / NOT MERGED
 design: docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_MATERIALIZATION_MANIFEST_COORDINATION.md
 ```
 
-The blocking issue is **exclusive-root-lease reentrancy**: standalone dev.24
-`beginTransaction()` and dev.25 manifest `publish()` both acquire the same exclusive
-in-process lock. A dev.26 coordinator must own a single lease and use narrowly
-scoped owner-checked internal entrypoints, never a public lock bypass.
+User approved the dev.26 design and implementation. The dev.25 feature branch
+was deleted locally and remotely; main was clean and synchronized at baseline.
+The dev.26 coordinator owns one exclusive in-process root lease and privately
+uses dev.24 materialization + dev.25 manifest reversible operations. Both
+recovery states are checked before forward-only commit cleanup. Manifest-first
+rollback and retained recovery candidates are supported. New integration
+tests have now passed final Windows validation: 16/16 coordination tests,
+225/225 package tests and a clean Dart analyzer. The queue-order test fix and
+the three redundant non-null assertion fixes were revalidated at
+c9253473e9b31a6d1e8264db1478ebdd1193eac4.
+The actual-diff and recovery audit found no critical production blocker.
+Commit-interruption fault injection remains outside the proven test coverage.
 
-Before either backup set is destroyed, both recovery states require prevalidation.
-After irreversible cleanup begins, any interrupted commit is **forward-only**;
-neither cross-process atomicity nor process-crash recovery is promised.
+Do not merge without separate explicit approval. No pure Dart `dart format`.
 
-Dev.25 PR #53 and Windows validation are complete (209/209 tests). Its feature
-branch deletion was requested; PowerShell cleanup commands supplied, completion
-not yet confirmed. No new production code until dev.26 design approval.
-No `dart format`; future merges need separate explicit approval.
+The design record documents the original non-reentrant root-lock problem and
+the one-lease, forward-only cleanup decision. It remains authoritative for
+failure boundaries and deferred crash-durable recovery.
 
 The latest completed content-service checkpoint is:
 

@@ -81,28 +81,70 @@ class MtnMinecraftContentInstallationManifestFileSystem {
 
   Future<MtnMinecraftContentInstallationManifest?> read({
     required Directory installationRoot,
+  }) async => (await _readSnapshotCore(installationRoot: installationRoot)).manifest;
+
+  Future<_ManifestReadSnapshot> _readSnapshotWithinCoordinator({
+    required Directory installationRoot,
+    required _MaterializationCoordinatedRootLease lease,
+  }) => _readSnapshotCore(installationRoot: installationRoot, lease: lease);
+
+  Future<_ManifestReadSnapshot> _readSnapshotCore({
+    required Directory installationRoot,
+    _MaterializationCoordinatedRootLease? lease,
   }) async {
     final root = await _resolveRoot(installationRoot);
-    final release = await _acquireMaterializationRootFor(root, policy, exclusive: false);
+    if (lease != null) lease.assertOwns(root, policy);
+    final release = lease == null ? await _acquireMaterializationRootFor(root, policy, exclusive: false) : () {};
     try {
       await _assertRootStable(installationRoot, root);
       final location = await _inspectLocation(root);
-      if (!location.exists) return null;
-      return MtnMinecraftContentInstallationManifest.decode(await location.target.readAsBytes());
+      if (!location.exists) return const _ManifestReadSnapshot(manifest: null, length: null, sha256: null);
+      final bytes = await location.target.readAsBytes();
+      return _ManifestReadSnapshot(
+        manifest: MtnMinecraftContentInstallationManifest.decode(bytes),
+        length: bytes.length,
+        sha256: sha256.convert(bytes).toString(),
+      );
     } finally {
       release();
+    }
+  }
+
+  Future<void> _assertSnapshotWithinCoordinator({
+    required Directory installationRoot,
+    required _MaterializationCoordinatedRootLease lease,
+    required _ManifestReadSnapshot expected,
+  }) async {
+    final actual = await _readSnapshotWithinCoordinator(installationRoot: installationRoot, lease: lease);
+    if (actual.length != expected.length || actual.sha256 != expected.sha256) {
+      throw StateError('Persisted installation manifest changed after coordinated validation.');
     }
   }
 
   Future<MtnMinecraftContentInstallationManifestFileSystemPublication> publish({
     required Directory installationRoot,
     required MtnMinecraftContentInstallationManifest manifest,
+  }) => _publishCore(installationRoot: installationRoot, manifest: manifest);
+
+  Future<MtnMinecraftContentInstallationManifestFileSystemPublication> _publishWithinCoordinator({
+    required Directory installationRoot,
+    required MtnMinecraftContentInstallationManifest manifest,
+    required _MaterializationCoordinatedRootLease lease,
+    required _ManifestReadSnapshot expected,
+  }) => _publishCore(installationRoot: installationRoot, manifest: manifest, lease: lease, expected: expected);
+
+  Future<MtnMinecraftContentInstallationManifestFileSystemPublication> _publishCore({
+    required Directory installationRoot,
+    required MtnMinecraftContentInstallationManifest manifest,
+    _MaterializationCoordinatedRootLease? lease,
+    _ManifestReadSnapshot? expected,
   }) async {
     final root = await _resolveRoot(installationRoot);
     final bytes = manifest.encode();
     MtnMinecraftContentInstallationManifest.decode(bytes);
 
-    final release = await _acquireMaterializationRootFor(root, policy, exclusive: true);
+    if (lease != null) lease.assertOwns(root, policy);
+    final release = lease == null ? await _acquireMaterializationRootFor(root, policy, exclusive: true) : () {};
     File? staging;
     File? backup;
     String? previousTargetPath;
@@ -121,6 +163,9 @@ class MtnMinecraftContentInstallationManifestFileSystem {
         previousTargetPath = location.target.path;
         previousLength = oldBytes.length;
         previousSha256 = sha256.convert(oldBytes).toString();
+      }
+      if (expected != null && (expected.length != previousLength || expected.sha256 != previousSha256)) {
+        throw StateError('Persisted installation manifest changed before coordinated publication.');
       }
 
       if (location.directory == null) {
@@ -445,4 +490,16 @@ class _ManifestFileLocation {
   final Directory? directory;
   final File target;
   final bool exists;
+}
+
+class _ManifestReadSnapshot {
+  const _ManifestReadSnapshot({
+    required this.manifest,
+    required this.length,
+    required this.sha256,
+  });
+
+  final MtnMinecraftContentInstallationManifest? manifest;
+  final int? length;
+  final String? sha256;
 }
