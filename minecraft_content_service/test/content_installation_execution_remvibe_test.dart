@@ -288,6 +288,18 @@ void main() {
       expect(await File(p.join(fixture.root.path, 'mods', 'a.jar')).exists(), isFalse);
     });
 
+    test('recovery entrypoints cannot operate without a recoverable coordinated handle', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final plan = await _plan(_empty(), const <MtnMinecraftContentVersion>[], const <String, String>{});
+      final executor = fixture.execution(plan, withoutStage: true);
+      await expectLater(executor.retryCommit(), throwsStateError);
+      await expectLater(executor.retryRollback(), throwsStateError);
+      final result = await executor.execute();
+      expect(await executor.retryCommit(), same(result));
+      await expectLater(executor.retryRollback(), throwsStateError);
+    });
+
     test('managed target occupied while batch downloads causes post-transfer preflight rejection', () async {
       final fixture = await _fixture();
       addTearDown(fixture.dispose);
