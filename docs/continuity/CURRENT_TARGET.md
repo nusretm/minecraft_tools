@@ -2802,7 +2802,7 @@ dev.26 — Materialization + Manifest Coordination
 branch: feature/minecraft-content-materialization-manifest-coordination
 baseline main: 096b328e4cfa8ea0ba4a2b62f1d3f994034803a8
 package: minecraft_content_service 1.0.0-dev.26
-status: IMPLEMENTED ON FEATURE BRANCH / WINDOWS DART VALIDATION PENDING / NOT MERGED
+status: INITIAL WINDOWS RUN (3 ANALYZER WARNINGS, 1 LEASE TEST FAILURE) / TARGETED FIXES ON BRANCH / REVALIDATION PENDING / NOT MERGED
 design: docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_MATERIALIZATION_MANIFEST_COORDINATION.md
 ```
 
@@ -2812,7 +2812,11 @@ The dev.26 coordinator owns one exclusive in-process root lease and privately
 uses dev.24 materialization + dev.25 manifest reversible operations. Both
 recovery states are checked before forward-only commit cleanup. Manifest-first
 rollback and retained recovery candidates are supported. New integration
-tests have been added, but have not yet been run with Windows Dart SDK.
+tests have been run on Windows: 15 of 16 new cases succeeded; the remaining case
+timed out due to a queue-order assumption in the test. Existing focused tests
+passed, while the full suite reported the same single failure. Three redundant
+null assertions were also reported by the analyzer. Targeted fixes are now
+committed to the feature branch; revalidation is required.
 
 Do not merge without separate explicit approval. No pure Dart `dart format`.
 
