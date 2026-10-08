@@ -207,6 +207,7 @@ class MtnMinecraftContentMaterializationFileSystemCoordinator {
           transaction.state != MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.commitIncomplete) {
         throw StateError('Coordinated commit is unavailable after rollback or interrupted rollback.');
       }
+      transaction._lease.assertOwns(transaction.preflight.resolvedInstallationRoot, policy);
       if (transaction.manifestPublication == null || transaction.recoveryCandidates.isNotEmpty) {
         throw StateError('Coordinated transaction has unresolved recovery candidates.');
       }
@@ -259,6 +260,7 @@ class MtnMinecraftContentMaterializationFileSystemCoordinator {
           transaction.state != MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.rollbackIncomplete) {
         throw StateError('Coordinated rollback is unavailable after commit or commit cleanup.');
       }
+      transaction._lease.assertOwns(transaction.preflight.resolvedInstallationRoot, policy);
       if (transaction._recoveryCandidates.isNotEmpty) {
         throw MtnMinecraftContentMaterializationFileSystemCoordinationException(
           failure: MtnMinecraftContentMaterializationFileSystemCoordinationFailure.recoveryFailure,
@@ -305,6 +307,5 @@ class MtnMinecraftContentMaterializationFileSystemCoordinator {
     if (!identical(transaction._authority, this)) {
       throw ArgumentError.value(transaction, 'transaction', 'Coordinated transaction belongs to another coordinator.');
     }
-    transaction._lease.assertOwns(transaction.preflight.resolvedInstallationRoot, policy);
   }
 }
