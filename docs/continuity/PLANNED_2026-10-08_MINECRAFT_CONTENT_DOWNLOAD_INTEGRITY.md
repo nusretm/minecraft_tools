@@ -14,7 +14,9 @@ Production/test HEAD: c66cbe6716aa6f6a5fffb39c274e6e94e304d5cf
 Package version: 1.0.0-dev.20
 Implementation: COMPLETE
 Actual-diff review: COMPLETE
-Validation: PENDING
+Validation: COMPLETE
+Continuity: CLOSED
+Validated feature HEAD: 50d906fbe4f8469ff7caa760e3a76821c03ee326
 Merge: NOT REQUESTED
 ```
 
@@ -234,32 +236,43 @@ for MD5/SHA digest implementations and chunked conversion.
 - unmanaged/manual file cleanup
 - resource/item rendering
 
-## Validation required
+## Validation
 
-Run from `minecraft_content_service/`:
+Authoritative user-supplied local validation completed successfully on 2026-10-08 at feature HEAD `50d906fbe4f8469ff7caa760e3a76821c03ee326`:
 
 ```text
 dart pub get
+PASS
+crypto 3.0.7 resolved as direct dependency
+
 dart analyze
-dart test test/content_download_integrity_remvibe_test.dart
-dart test test/content_download_adapter_remvibe_test.dart
-dart test test/content_materialization_plan_test.dart
-dart test test/content_installation_manifest_test.dart
-dart test
-```
+No issues found!
 
-Then from repository root:
+content_download_integrity_remvibe_test.dart
+9/9 passed
 
-```text
+content_download_adapter_remvibe_test.dart
+7/7 passed
+
+content_materialization_plan_test.dart
+9/9 passed
+
+content_installation_manifest_test.dart
+9/9 passed
+
+full dart test
+143/143 passed
+
 git diff --check main...HEAD
+PASS
+
 git status
+working tree clean
+
 git rev-parse HEAD
+50d906fbe4f8469ff7caa760e3a76821c03ee326
 ```
 
-Expected feature HEAD before continuity-only follow-up commits:
+No `dart format` was run.
 
-```text
-c66cbe6716aa6f6a5fffb39c274e6e94e304d5cf
-```
-
-Do not merge without separate explicit user approval.
+The checkpoint is implementation-complete, actual-diff reviewed, validated, and continuity-closed. Merge still requires separate explicit user approval.
