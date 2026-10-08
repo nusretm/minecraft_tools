@@ -2795,14 +2795,17 @@ In particular:
 
 ## Next action
 
-The active feature checkpoint is:
+The latest completed content-service checkpoint is:
 
 ```text
 dev.24 — Whole-plan Materialization Transaction Foundation
 branch: feature/minecraft-content-materialization-transaction
 baseline main: 6955f67833875b17aeab43bf7579268d3a44834a
+validated feature HEAD: b0d6e50d645abec7fa034322fdb20dfbccdb0b2b
+PR: #52
+main squash merge commit: 596f794801ff1e4f3b20db479fa6be736c6d7db4
 package: minecraft_content_service 1.0.0-dev.24
-status: USER WINDOWS VALIDATION PASSED AT f8ea483 / DIFF-REVIEW HARDENING VALIDATION PENDING / NOT MERGED
+status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATED (192 TESTS) / MERGED / CLOSED
 ```
 
 Dev.24 implementation includes whole-plan reversible publication/removal execution,
@@ -2816,7 +2819,8 @@ Authoritative design and validation checklist:
 docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_WHOLE_PLAN_TRANSACTION.md
 ```
 
-No merge without separate explicit approval. No dart format for Pure Dart.
+Dev.24 merge was explicitly approved and completed. Next implementation checkpoint is not yet selected.
+Future merges require separate explicit approval. No dart format for Pure Dart.
 
 Historical completed checkpoint:
 
