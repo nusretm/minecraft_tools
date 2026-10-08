@@ -304,7 +304,7 @@ void main() {
       final root = await Directory.systemTemp.createTemp();
       addTearDown(() => root.delete(recursive: true));
 
-      final values = <String>['CON.jar', 'trailing.', 'bad<name.jar'];
+      final values = <String>['CON.jar', r'CONIN$.jar', r'CONOUT$.jar', 'trailing.', 'bad<name.jar'];
       for (var index = 0; index < values.length; index++) {
         final version = _version('v$index', _content('c$index'), _file('f$index.jar'));
         final plan = await _plan(
