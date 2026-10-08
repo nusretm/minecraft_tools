@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.0-dev.23
+
+- Add a single-target safe publication primitive to the explicit IO integration.
+- Copy caller-owned staging sources into target-parent sibling staging so publication does not depend on source and installation roots sharing a volume.
+- Extract provider-neutral file integrity verification and keep the existing RemVibe integrity API as a delegating adapter.
+- Revalidate canonical size/checksum metadata after the publication copy and before final promotion.
+- Recheck installation-root and target snapshot state after preflight to detect stale or externally changed filesystem state.
+- Create missing target-parent directories one segment at a time while rejecting changed, ambiguous, linked or non-directory ancestors.
+- Serialize operations for the same policy-normalized target across filesystem authority instances.
+- Publish through same-parent rename, preserving a managed previous target as a sibling backup.
+- Return a reversible publication handle whose lock and recovery state remain owned until explicit commit or rollback.
+- Add commit cleanup and rollback restoration without deleting the caller-owned source staging file.
+- Keep whole-plan install/replace/remove orchestration, multi-artifact rollback, manifest persistence and TaskService integration out of this checkpoint.
+
 ## 1.0.0-dev.22
 
 - Add explicit `minecraft_content_service_io.dart` filesystem integration without introducing `dart:io` into the generic package entrypoint.

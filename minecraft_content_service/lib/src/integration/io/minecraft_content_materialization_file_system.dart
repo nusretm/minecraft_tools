@@ -1,14 +1,18 @@
 library;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
 import '../../service/minecraft_content_installation_state.dart';
 import '../../service/minecraft_content_materialization_plan.dart';
+import '../minecraft_content_file_integrity.dart';
 
 part 'minecraft_content_materialization_file_system_policy.dart';
 part 'minecraft_content_materialization_file_system_preflight.dart';
+part 'minecraft_content_materialization_file_system_publication.dart';
+part 'minecraft_content_materialization_file_system_publication_operations.dart';
 
 class MtnMinecraftContentMaterializationFileSystem {
   MtnMinecraftContentMaterializationFileSystem({

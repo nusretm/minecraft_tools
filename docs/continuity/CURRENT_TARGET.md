@@ -2795,79 +2795,130 @@ In particular:
 
 ## Next action
 
-The completed content-service checkpoint is:
+The active content-service checkpoint is:
 
 ```text
-dev.22 — Materialization Filesystem Preflight Foundation
-branch: feature/minecraft-content-materialization-filesystem-preflight
-baseline main: eb4e4ba70c681ea1ba32ea5caef675229132d128
-initial production/test HEAD: 0bd3ff1f08aed852d2b9475778b6169cd952db26
-corrected production/test HEAD: 244b1150a3e9d633a0bf38a661c6160ddcd07ac9
-validated feature HEAD: 13a6986ec6ea5ba1c646b6e4b0210b68938fe089
-status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATED / CONTINUITY CLOSED / MERGED
-package: minecraft_content_service 1.0.0-dev.22
+dev.23 — Single-target Safe Publication Foundation
+branch: feature/minecraft-content-single-target-publication
+baseline main: 58f598e2d43ecd1c75a49c83c88de4f8091e3feb
+production/test HEAD: eba5888e36847ca504cac59ea26a28ab49e0bed0
+status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATED / CONTINUITY CLOSED
+package: minecraft_content_service 1.0.0-dev.23
 ```
 
 Implemented boundary:
 
 ```text
-MtnMinecraftContentMaterializationPlan
+safe dev.22 filesystem preflight
         ↓
-existing absolute installationRoot
+one canonical install/replacement target
         ↓
-MtnMinecraftContentMaterializationFileSystem.preflight()
-        ├─ target-platform path identity
-        ├─ current/resulting collision checks
-        ├─ Windows path legality
-        ├─ managed physical-state inspection
-        ├─ unmanaged target occupancy checks
-        ├─ ancestor entity-type checks
-        └─ symbolic-link indirection checks
+caller-owned source File
         ↓
-immutable safe/issues result
+target-parent sibling staging copy
+        ↓
+integrity revalidation
+        ↓
+managed backup if required
+        ↓
+same-parent promotion
+        ↓
+reversible publication handle
+        ├─ commit()
+        └─ rollback()
 ```
 
 Locked design:
 
-- generic `minecraft_content_service.dart` remains free of `dart:io`
-- RemVibe integration remains separate from filesystem integration
-- preflight requires an absolute existing installation-root directory
-- caller-selected root symlinks are resolved as the installation root authority
-- symbolic links below the resolved root are blocking
-- host default policy is Windows case-insensitive, macOS conservative case-insensitive POSIX, other hosts case-sensitive POSIX
-- explicit policy override is supported
-- current and resulting managed states are checked for path-identity and hierarchy collisions
-- Windows policy rejects illegal/reserved path segments before publication
-- retained managed artifacts must exist as regular files
-- missing replacement/remove source files remain allowed
-- unmanaged occupancy at a resulting target is blocking
-- a resulting target already owned by the current managed installation is allowed, including replace/remove path reuse
-- non-directory ancestors and ambiguous case-policy physical identities are blocking
-- preflight is read-only and performs no create/delete/rename/write/copy operation
-- future mutation code must repeat critical checks because preflight cannot eliminate TOCTOU races
+- generic content planning remains independent from filesystem and RemVibe details
+- publication remains on the explicit IO surface
+- RemVibe batch/execution types are not required by the publication primitive
+- caller-owned source must be a regular file and is never deleted, renamed or written by publication
+- source may live on another volume because publication copies into target-parent sibling staging before promotion
+- canonical content size/checksum metadata is revalidated after the copy and before promotion
+- provider-neutral file integrity logic is shared internally; the existing RemVibe integrity class remains a delegating public adapter
+- metadata-less sources use a transient SHA-256 only for source-copy and publication-finalization safety; the digest is not persisted into domain models or manifests
+- installation-root resolution and target snapshot are rechecked after dev.22 preflight
+- target snapshot is checked again after source copy and immediately before target mutation
+- missing parents are created one segment at a time; linked, ambiguous or non-directory parents are blocking
+- directories created by a failed publication are removed best-effort in reverse order and never recursively
+- policy-normalized same-target operations serialize across filesystem authority instances
+- the target lock remains owned by a successful publication handle until explicit commit or rollback
+- a missing target is published by same-parent staging rename
+- an existing managed target is first moved to a same-parent backup, then sibling staging is promoted
+- publication failure before successful promotion preserves the old public target where portable Dart filesystem primitives allow recovery
+- promotion failure after backup attempts immediate backup restore
+- if promotion and restore both fail, recovery candidates are preserved and surfaced through a typed recovery exception
+- commit revalidates the published target before discarding backup state
+- rollback revalidates the published target and backup entity before changing the public target
+- rollback of a replacement restores the previous managed target
+- rollback of a newly created target removes the published target and publication-created empty directories
+- repeated commit of a committed handle and repeated rollback of a rolled-back handle are idempotent
+- opposite finalization after commit/rollback is rejected
+- publication handles can only be finalized by the filesystem authority instance that created them
 
-Authoritative local validation:
+Existing behavior intentionally preserved:
+
+- dev.22 filesystem/preflight implementation body is unchanged; only publication wiring imports/parts were added
+- RemVibe public integrity types and expectedSize/checksums/validate surface remain present
+- RemVibe missing-file, size, checksum, alias, malformed-hash and immutable-checksum semantics remain backed by the shared integrity authority
+
+Focused publication coverage contains 14 tests.
+
+Portable Dart limitation:
+
+- preflight and publication perform the narrowest possible repeated state checks, but Dart File.rename does not expose a portable no-replace rename primitive
+- a non-cooperating external process can theoretically race in the tiny interval between the final target check and rename on platforms whose rename semantics replace an existing destination
+- same-target serialization eliminates this race between cooperating content-service publication operations
+- a future native filesystem backend may tighten this external-process boundary if required
+
+Still out of scope:
+
+- iterating every install/replacement in a materialization plan
+- executing remove actions
+- whole-plan ordering
+- multi-artifact transaction commit/rollback
+- installation-manifest filesystem persistence
+- RemVibe batch-to-publication orchestration
+- staging-root cleanup policy
+- TaskService orchestration
+- unmanaged/manual cleanup
+- deferred resource rendering
+
+Independent actual-diff review completed before local validation.
+
+Authoritative local validation completed successfully on feature HEAD:
 
 ```text
-first validation attempt:
-dart analyze -> 2 compile errors
-cause: CONIN$ / CONOUT$ string interpolation in Windows reserved-device checks
+494fc3769267d5a0366eefc7d249aec2ab853174
+```
 
-corrected implementation:
-CONIN$  -> r'CONIN$'
-CONOUT$ -> r'CONOUT$'
+Validation:
 
-final validation at feature HEAD:
-13a6986ec6ea5ba1c646b6e4b0210b68938fe089
-
+```text
 dart analyze
 No issues found!
+
+content_materialization_file_system_publication_test.dart
+14/14 passed
 
 content_materialization_file_system_preflight_test.dart
 12/12 passed
 
+content_download_integrity_remvibe_test.dart
+9/9 passed
+
+content_download_execution_remvibe_test.dart
+7/7 passed
+
+content_materialization_plan_test.dart
+9/9 passed
+
+content_installation_manifest_test.dart
+9/9 passed
+
 dart test
-162/162 passed
+176/176 passed
 
 git diff --check main...HEAD
 PASS
@@ -2876,48 +2927,19 @@ git status
 working tree clean
 ```
 
-The apparent large `CURRENT_TARGET.md` delta in the first corrected validation pull was a continuity-only accidental triple duplication caused by replacement expansion while recording the $-suffixed device names. It has been rebuilt from the clean pre-duplication continuity source; production/test code was not affected.
-
-Still out of scope:
-
-- directory creation
-- staging-to-target copy/rename
-- final managed-target publication
-- backup/restore
-- replace/remove execution
-- transaction sequencing and rollback
-- staging cleanup policy
-- installation-manifest filesystem persistence
-- RemVibeTaskService orchestration
-- unmanaged/manual cleanup
-- deferred resource rendering
+Dev.23 is validated and continuity-closed. Merge still requires separate explicit user approval.
 
 Active continuity document:
 
 ```text
-docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_MATERIALIZATION_FILESYSTEM_PREFLIGHT.md
-```
-
-Completion handoff:
-
-```text
-docs/continuity/HANDOFF_2026-10-08_MINECRAFT_CONTENT_MATERIALIZATION_FILESYSTEM_PREFLIGHT.md
-```
-
-Merge completed through PR #50.
-
-```text
-PR: #50
-merge commit:
-1b0a350578de4e2ef09b16a560ba1babfd21ae49
-Add content materialization filesystem preflight
+docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_SINGLE_TARGET_PUBLICATION.md
 ```
 
 Previous completed checkpoint:
 
 ```text
-dev.21 — RemVibe Batch Execution Foundation
-PR: #49
-merge commit: 313e21b268157ad6049b5b4e9f578b5e7f17c44a
-post-merge main: eb4e4ba70c681ea1ba32ea5caef675229132d128
+dev.22 — Materialization Filesystem Preflight Foundation
+PR: #50
+merge commit: 1b0a350578de4e2ef09b16a560ba1babfd21ae49
+post-merge main: 58f598e2d43ecd1c75a49c83c88de4f8091e3feb
 ```

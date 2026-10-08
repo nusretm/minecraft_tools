@@ -82,8 +82,9 @@ Current foundation includes:
 - exact-batch RemVibe execution with service-start, duplicate-key protection, terminal wait and idempotent cancellation
 - explicit read-only filesystem preflight through `minecraft_content_service_io.dart`
 - target-platform path identity, Windows path legality, managed/unmanaged occupancy, ancestor-type and symbolic-link checks before publication
+- single-target IO publication through target-parent sibling staging, integrity revalidation, managed backup and explicit commit/rollback
 
-Version-constraint interpretation, manifest file-location/storage policy, staging publication, replacement/removal execution, rollback and TaskService orchestration remain separate later checkpoints.
+Version-constraint interpretation, manifest file-location/storage policy, whole-plan publication/removal transactions and TaskService orchestration remain separate later checkpoints.
 
 
 ## CLI example
