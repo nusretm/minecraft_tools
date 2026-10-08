@@ -5,11 +5,15 @@ Date: 2026-10-08
 ## Status and authority
 
 - Repository: `nusretm/minecraft_tools`
-- Package: `minecraft_content_service 1.0.0-dev.28` on feature branch; latest merged release `1.0.0-dev.27`
-- Active checkpoint: **dev.28 — Installation Recovery and Cancellation Boundary Hardening**
+- Package: `minecraft_content_service 1.0.0-dev.28` (merged to `main`)
+- Completed checkpoint: **dev.28 — Installation Recovery and Cancellation Boundary Hardening**
 - Main baseline at design creation: `89f93a1b4727465c6c95ee0854418a73ddef607a`
 - PR #55 was squash merged at `d6adb12233dd9fc9395345f7d7bf56a6bf9cf44d`; dev.27 full Windows suite 244/244, `dart analyze` clean
-- Status: **IMPLEMENTED / WINDOWS VALIDATED (257/257 TESTS) / ACTUAL-DIFF + RECOVERY AUDIT COMPLETED / NOT MERGED**
+- Status: **IMPLEMENTED / WINDOWS VALIDATED (257/257 TESTS) / ACTUAL-DIFF + RECOVERY AUDIT COMPLETED / SQUASH MERGED / CLOSED**
+- PR: #56 — https://github.com/nusretm/minecraft_tools/pull/56
+- Squash merge commit: `a0ff4ca33859c4f157b13bc0efaf9109940d643a`
+- Validated production/test HEAD: `1ff74dfd78c0482f9c3559765c5a0bc7046af371`
+- Final feature HEAD: `25f6021173f27e47fdfb270ae3c40a91cd430b73` (post-validation changes limited to two continuity documents)
 - Branch: `feature/minecraft-content-installation-recovery-hardening`
 - Implementation explicitly approved by user after verified clean `main` at the baseline
 - Dev.27 merged feature branch cleanup: deletion commands supplied; user confirmation pending
@@ -79,7 +83,7 @@ Test count alone cannot establish those guarantees. Resolve the observable in-pr
 
 ## Implementation gate
 
-The user explicitly approved dev.28 implementation. A dedicated feature branch was created from verified main; no PR or merge has occurred. Run Windows Dart validation, inspect actual diff, and obtain separate merge approval before merging. Do not run `dart format`.
+The user separately approved dev.28 implementation and the squash merge. PR #56 is merged; Windows validation and actual-diff/recovery review are complete. Further production checkpoints require new explicit approval. Do not run `dart format`.
 
 ## Implementation progress and exact demonstrated scenarios
 
@@ -123,4 +127,4 @@ Existing tests are preserved and shared test support avoids copying fault-inject
 - Existing wrong-authority, already-finalizing and precommit guardrails remain covered by the established coordinator suite; mismatched injected policies are directly rejected.
 - Incomplete or manual recovery from a publication failure that leaves **unowned filesystem candidates without a combined handle** is not injected in this checkpoint. A process crash, power failure, cross-process isolation and successful recovery after non-atomic disk faults are **not** guaranteed.
 - The reviewed production paths reveal **no new critical merge blocker**. The remaining limitations above are explicit and should not be described as verified crash durability. Any observed handleless retained lease in a future real-world fault remains a blocker for that scenario.
-- No PR/merge created. Separate explicit merge approval is required. Pure Dart `dart format` is prohibited by working rules.
+- **PR #56 squash merged and closed** at `a0ff4ca33859c4f157b13bc0efaf9109940d643a` after separate explicit user approval. Pure Dart `dart format` was not used.
