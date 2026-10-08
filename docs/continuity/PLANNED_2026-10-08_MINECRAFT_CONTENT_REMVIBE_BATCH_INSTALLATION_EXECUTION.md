@@ -1,4 +1,4 @@
-# Minecraft Tools — Proposed dev.27 RemVibe Batch-to-Installation Execution
+# Minecraft Tools — dev.27 RemVibe Batch-to-Installation Execution
 
 Date: 2026-10-08
 
@@ -6,9 +6,13 @@ Date: 2026-10-08
 
 - Repository: `nusretm/minecraft_tools`
 - Package: `minecraft_content_service 1.0.0-dev.27`
-- Proposed checkpoint: **dev.27 — RemVibe Batch-to-Coordinated Installation Execution**
+- Completed checkpoint: **dev.27 — RemVibe Batch-to-Coordinated Installation Execution**
 - Baseline main at design creation: `ec509b544dc37e155811d257b5a268a981d92273`
-- Status: **WINDOWS VALIDATED (244/244 TESTS) / ACTUAL-DIFF AND RECOVERY AUDIT RECORDED / NOT MERGED**
+- Status: **IMPLEMENTED / WINDOWS VALIDATED (244/244 TESTS) / REVIEWED / SQUASH MERGED / CLOSED**
+- PR: #55 — https://github.com/nusretm/minecraft_tools/pull/55
+- Squash merge commit: `d6adb12233dd9fc9395345f7d7bf56a6bf9cf44d`
+- Validated production/test HEAD: `0f32eab1e630412fbc4f1367bf63a1ba5e774235`
+- Final feature HEAD: `4695564356548732027d7627bce4547457aca3c6` (documentation-only changes after validation)
 - Branch: `feature/minecraft-content-remvibe-installation-execution`
 - Implementation explicitly approved by user after clean dev.26 branch cleanup
 - Focused regression tests added: 19
@@ -113,7 +117,7 @@ If the transaction is still pending, or if commit is incomplete, the overall ope
 
 ## Next action
 
-The design and dev.27 production implementation were explicitly approved. Next: run `dart analyze`, `dart test test/content_installation_execution_remvibe_test.dart`, previous RemVibe/IO focused tests and full `dart test` on Windows; inspect actual diff; obtain separate merge approval. No `dart format`.
+Dev.27 production implementation and its separate squash merge were explicitly approved, Windows-validated and merged through PR #55. Follow-up work needs independent explicit approval. No `dart format`.
 
 ## Implementation checkpoint (feature branch)
 
@@ -128,6 +132,6 @@ The design and dev.27 production implementation were explicitly approved. Next: 
 - **First Windows validation on feature HEAD `bac9634990fa27dad892dfe36e82505daf22b997` (user-provided logs):** `dart analyze` reported 2 `curly_braces_in_flow_control_structures` infos. The new installation execution suite passed 18/19, with only the post-transfer destination-preflight test failing because an unsafe refreshed preflight was classified as `download` rather than `validation`. The prior RemVibe adapter (7/7), download execution (7/7), integrity (9/9), and dev.26 coordination (16/16) focused tests all passed. The full suite reported 243 passes and that same single failure. `git diff --check` and working tree were clean.
 - **Targeted corrections now committed:** transition from `downloading` to `validating` immediately after successful RemVibe execution, before any post-download staging/integrity/destination checks; add missing braces to 2 test loops; assert `validation` failure for post-download staging tamper too. No change to RemVibe service, download retries, coordinator or rollback semantics.
 - **Successful Windows revalidation (user-supplied), production/test HEAD `0f32eab1e630412fbc4f1367bf63a1ba5e774235`:** `dart analyze` no issues, new executor 19/19, previous RemVibe execution 7/7, dev.26 coordinator 16/16, full package 244/244, `git diff --check main...HEAD` clean, working tree clean and tracking origin feature branch.
-- **Final actual-diff audit:** the feature branch is 21 commits ahead and 0 behind `main`; changed files are limited to the package, its new opt-in integration surface, package tests, and continuity. Verified design boundaries: one RemVibe job for nonempty downloads; no download job for empty/removal/retain; caller-owned staging; refreshed destination preflight; dev.26 coordinated transaction and forward-only cleanup; retained coordinator authority for retry methods. No additional static blocker identified for the reviewed paths.
+- **Final pre-merge actual-diff audit:** the feature branch changes were limited to the package, its new opt-in integration surface, package tests, and continuity. Verified design boundaries: one RemVibe job for nonempty downloads; no download job for empty/removal/retain; caller-owned staging; refreshed destination preflight; dev.26 coordinated transaction and forward-only cleanup; retained coordinator authority for retry methods. No additional static blocker identified for the reviewed paths.
 - **Recovery coverage limits:** the 244 passing tests do not directly inject an interrupted `commitIncomplete` or `rollbackIncomplete` cleanup, nor cancellation precisely during the pending coordinated-publication boundary. `retryCommit` and `retryRollback` are checked for rejection in unsupported states, but their successful fault-recovery paths were not empirically exercised here. Crash-durable and cross-process recovery remain explicitly out of scope.
-- No PR or merge yet; separate user merge approval required. No `dart format`.
+- **PR #55 merged** using squash at `d6adb12233dd9fc9395345f7d7bf56a6bf9cf44d`; separate owner approval was received. No `dart format`.
