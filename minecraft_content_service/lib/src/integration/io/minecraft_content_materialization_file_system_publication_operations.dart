@@ -55,6 +55,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
     final createdDirectories = <Directory>[];
     File? siblingStaging;
     File? backup;
+    String? previousPhysicalPath;
     int? previousLength;
     String? previousSha256;
     bool preserveRecovery = false;
@@ -125,6 +126,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
           <MtnMinecraftContentMaterializationFileSystemPreflightIssue>[],
         );
         final existingTarget = File(observed.physicalPath);
+        previousPhysicalPath = existingTarget.path;
         backup = await _reservePublicationSibling(existingTarget, 'backup');
         try {
           await backup.delete();
@@ -167,7 +169,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
       } catch (promotionError) {
         if (backup != null) {
           try {
-            await backup.rename(targetFile.path);
+            await backup.rename(previousPhysicalPath ?? targetFile.path);
             backup = null;
           } catch (restoreError) {
             preserveRecovery = true;
@@ -193,6 +195,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
         source: source,
         target: targetFile,
         previousTargetExisted: expectedState.entityType == MtnMinecraftContentMaterializationFileSystemEntityType.file,
+        previousPhysicalPath: previousPhysicalPath,
         previousLength: previousLength,
         previousSha256: previousSha256,
         publishedLength: stagedLength,
@@ -305,7 +308,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
 
     if (backup != null) {
       try {
-        await backup.rename(publication.target.path);
+        await backup.rename(publication.previousPhysicalPath ?? publication.target.path);
       } catch (restoreError) {
         try {
           await displaced.rename(publication.target.path);
