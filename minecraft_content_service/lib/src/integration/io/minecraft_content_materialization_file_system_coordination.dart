@@ -37,12 +37,14 @@ class MtnMinecraftContentMaterializationFileSystemCoordinationException implemen
 class MtnMinecraftContentMaterializationFileSystemCoordinatedTransaction {
   MtnMinecraftContentMaterializationFileSystemCoordinatedTransaction._({
     required this.preflight,
-    required this._materialization,
-    required this._manifestPublication,
+    required MtnMinecraftContentMaterializationFileSystemTransaction materialization,
+    required MtnMinecraftContentInstallationManifestFileSystemPublication? manifestPublication,
     required MtnMinecraftContentMaterializationFileSystemCoordinator authority,
     required _MaterializationCoordinatedRootLease lease,
     List<File> recoveryCandidates = const <File>[],
-  }) : _authority = authority,
+  }) : _materialization = materialization,
+       _manifestPublication = manifestPublication,
+       _authority = authority,
        _lease = lease,
        _recoveryCandidates = List<File>.unmodifiable(recoveryCandidates);
 
@@ -137,8 +139,8 @@ class MtnMinecraftContentMaterializationFileSystemCoordinator {
 
       return MtnMinecraftContentMaterializationFileSystemCoordinatedTransaction._(
         preflight: preflight,
-        _materialization: materialization,
-        _manifestPublication: manifestPublication,
+        materialization: materialization,
+        manifestPublication: manifestPublication,
         authority: this,
         lease: lease,
       );
@@ -176,8 +178,8 @@ class MtnMinecraftContentMaterializationFileSystemCoordinator {
 
       final incomplete = materialization == null ? null : MtnMinecraftContentMaterializationFileSystemCoordinatedTransaction._(
         preflight: preflight,
-        _materialization: materialization,
-        _manifestPublication: manifestPublication,
+        materialization: materialization,
+        manifestPublication: manifestPublication,
         authority: this,
         lease: lease,
         recoveryCandidates: manualRecovery,
