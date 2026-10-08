@@ -2804,7 +2804,7 @@ checkpoint: dev.28 — In-Process Recovery + Cancellation Validation
 branch: feature/minecraft-content-installation-recovery-hardening
 baseline main: 92598cffa96dca105afde41d2d8b24de35b3be90
 package: minecraft_content_service 1.0.0-dev.28
-status: INITIAL WINDOWS RUN (1 TEST COMPILE ERROR) / FIX COMMITTED / REVALIDATION PENDING / NOT MERGED
+status: WINDOWS VALIDATED (257/257 TESTS) / ACTUAL-DIFF + RECOVERY AUDIT COMPLETED / NOT MERGED
 design: docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_RECOVERY_HARDENING.md
 ```
 
@@ -2828,8 +2828,17 @@ has been merged. Initial Windows validation found one Dart test compile
 error: `Future<void>.doWhile` in the executor test. Coordination tests
 passed 23/23, materialization transaction 15/15 and manifest IO 17/17;
 the executor and full suite were blocked by this compile error. The static
-call was corrected to `Future.doWhile` on the feature branch; Windows
-revalidation and actual-diff audit remain pending.
+call was corrected to `Future.doWhile` on the feature branch. Subsequent
+Windows validation at `1ff74dfd78c0482f9c3559765c5a0bc7046af371`
+returned `dart analyze` no issues, executor tests 25/25, coordinator tests
+23/23, full package tests 257/257, a clean `git diff --check` and a clean
+synchronized working tree. GitHub actual-diff review shows only scoped
+package/continuity changes (20 ahead, 0 behind main) and no new critical
+static blocker. Deterministic method-boundary injections verify forward-only
+commit retry and reversible rollback retry; they do NOT prove an interrupted
+OS `File.delete()`, persistent crash recovery, cross-process locking, or
+recovery of unowned manual candidates without a combined handle. The dev.28
+feature is **not merged** and requires separate merge approval.
 `docs/WORKING_RULES.md` applies and pure Dart must not be passed through
 `dart format`.
 
