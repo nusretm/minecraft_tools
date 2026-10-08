@@ -2795,130 +2795,104 @@ In particular:
 
 ## Next action
 
-dev.21 merge:
+The active content-service checkpoint is:
 
 ```text
-PR: #49
-merge commit:
-313e21b268157ad6049b5b4e9f578b5e7f17c44a
-Add RemVibe content download execution
-```
-
-The completed content-service checkpoint is:
-
-```text
-dev.21 — RemVibe Batch Execution Foundation
-branch: feature/minecraft-content-remvibe-download-execution
-baseline main: 026693122556626934c5d1ee35795bebb0b3fddd
-implementation HEAD: 338841ec2b6445dc45022d33ec53160fcf331a0e
-production/test HEAD: 866b910b5ad4fc32f1d804333f148af21c1ebf96
-status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATED / CONTINUITY CLOSED / MERGED
-package: minecraft_content_service 1.0.0-dev.21
+dev.22 — Materialization Filesystem Preflight Foundation
+branch: feature/minecraft-content-materialization-filesystem-preflight
+baseline main: eb4e4ba70c681ea1ba32ea5caef675229132d128
+production/test HEAD: 0bd3ff1f08aed852d2b9475778b6169cd952db26
+status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATION PENDING
+package: minecraft_content_service 1.0.0-dev.22
 ```
 
 Implemented boundary:
 
 ```text
-integrity-aware MtnMinecraftContentDownloadAdapterRemVibeBatch
+MtnMinecraftContentMaterializationPlan
         ↓
-MtnMinecraftContentDownloadExecutionRemVibe
-        ├─ validate fresh batch
-        ├─ fail on duplicate job key
-        ├─ ensure global RemVibe service is running
-        ├─ submit exact batch.job once
-        ├─ await exact job terminal state
-        └─ cancel exact job safely
+existing absolute installationRoot
         ↓
-completed staging files
+MtnMinecraftContentMaterializationFileSystem.preflight()
+        ├─ target-platform path identity
+        ├─ current/resulting collision checks
+        ├─ Windows path legality
+        ├─ managed physical-state inspection
+        ├─ unmanaged target occupancy checks
+        ├─ ancestor entity-type checks
+        └─ symbolic-link indirection checks
+        ↓
+immutable safe/issues result
+```
+
+Public IO surface:
+
+```text
+package:minecraft_content_service/minecraft_content_service_io.dart
+
+MtnMinecraftContentMaterializationFileSystem
+MtnMinecraftContentMaterializationFileSystemPolicy
+MtnMinecraftContentMaterializationFileSystemPlatform
+MtnMinecraftContentMaterializationFileSystemPreflight
+MtnMinecraftContentMaterializationFileSystemArtifactState
+MtnMinecraftContentMaterializationFileSystemPreflightIssue...
 ```
 
 Locked design:
 
-- execution remains in the explicit `minecraft_content_service_remvibe.dart` integration surface
-- the generic content core/planners remain unchanged
-- repeated `execute()` calls share one operation future and never submit the batch twice
-- execution requires an idle job with no active items and fresh idle item state
-- any already-registered RemVibe job with the same key is rejected before service start/submission
-- duplicate-key rejection prevents RemVibe `addJob()` merge semantics from mutating another operation
-- duplicate-key preflight runs again after a possible asynchronous service start and immediately before synchronous submission
-- the exact return from `addJob()` must be identical to `batch.job`
-- inactive RemVibe service is started; an already-active service is reused
-- execution never calls global `stop()`, never changes `clearPolicy`, and never clears unrelated jobs
-- completion is observed through `RemVibeDownloadHandler` by exact job identity
-- the existing dev.19 `job.onStatus` callback is preserved and not wrapped/replaced
-- success requires exact job status `completed`
-- exhausted transfer/integrity retries become `MtnMinecraftContentDownloadExecutionRemVibeException(status: error)`
-- item-level `errorMessage` and `errorCount` remain available on the exact batch for diagnostics
-- cancellation is idempotent
-- cancel-before-execute or cancel-before-submit prevents job submission
-- a submitted cancellation does not settle on the first `cancelled` update; execution waits for RemVibe's remove event after active transfer cleanup
-- external global service `stop()` leaves execution pending while the job returns to idle
-- execution resumes only when an external owner starts the RemVibe service again
-- handler lifetime is internal to one execution and is disposed when execution settles
+- generic `minecraft_content_service.dart` remains free of `dart:io`
+- RemVibe integration remains separate from filesystem integration
+- preflight requires an absolute existing installation-root directory
+- a caller-selected root symlink is resolved and treated as the installation root authority
+- path traversal below the resolved root is inspected without following symbolic links
+- host default policy is Windows case-insensitive, macOS conservative case-insensitive POSIX, other hosts case-sensitive POSIX
+- explicit policy override supports deterministic cross-platform tests and callers with known filesystem semantics
+- logical materialization planning remains OS-neutral and case-sensitive; dev.22 adds physical target policy instead of rewriting dev.16/dev.17 invariants
+- current and resulting managed states are checked independently for policy-level same-path and file/descendant hierarchy collisions
+- Windows policy rejects invalid characters, control characters, trailing spaces/dots and reserved device basenames before publication
+- physical lookup compares directory child names through the selected case policy instead of relying only on host filesystem lookup behavior
+- ambiguous physical identities under a case-insensitive policy are blocking
+- retained managed artifacts must exist as regular files
+- missing replacement/remove source files remain allowed
+- symbolic links below the installation root are blocking; Dart filesystem link identity is used as the portable authority
+- non-directory ancestors are blocking
+- unmanaged occupancy at a resulting target is blocking; existing files are never silently adopted
+- a resulting target already occupied by a current managed artifact is ownership-safe, including replace/remove path reuse
+- managed wrong-type diagnostics remain current-state authority and are not duplicated as resulting occupancy errors
+- preflight exposes canonical requested target and observed physical path/entity state
+- all preflight result collections are immutable
+- production IO code performs no create/delete/rename/write/copy operations
+- critical checks must be repeated by a future mutation layer because filesystem preflight cannot eliminate TOCTOU races
 
 Still out of scope:
 
+- directory creation
+- staging-to-target copy/rename
 - final managed-target publication
-- replacement/removal execution
-- target-OS case/canonical collision preflight
-- staging tree cleanup policy after completed/error operations
-- backup/rollback/transaction sequencing
-- installation-manifest filesystem read/write
+- single-target backup/restore
+- replace/remove execution
+- transaction sequencing and rollback
+- staging cleanup policy
+- installation-manifest filesystem persistence
 - RemVibeTaskService orchestration
-- unmanaged/manual content cleanup
+- unmanaged/manual cleanup
 - deferred resource rendering
 
-Independent actual-diff review completed before local validation. Existing generic service/planner implementations were not modified.
+Independent actual-diff review completed before local validation. Existing generic service/planner/state implementations were not modified.
 
-Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `f15750d666d3b22f7ad7302e74fd025db01d14b3`. PR #49 merged at `313e21b268157ad6049b5b4e9f578b5e7f17c44a`.
-
-Validation:
-
-```text
-behavioral validation before lint-only export-order fix:
-execution 7/7
-integrity 9/9
-adapter 7/7
-materialization 9/9
-installation manifest 9/9
-full dart test 150/150
-git diff --check PASS
-working tree clean
-
-final HEAD validation:
-dart analyze
-No issues found!
-
-dart test
-150/150 passed
-
-git diff --check main...HEAD
-PASS
-
-working tree
-clean
-
-validated feature HEAD:
-f15750d666d3b22f7ad7302e74fd025db01d14b3
-```
+Next required action is authoritative local validation on the feature branch. Do not merge until validation is complete and the user separately approves merge.
 
 Active continuity document:
 
 ```text
-docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_REMVIBE_DOWNLOAD_EXECUTION.md
-```
-
-Completion handoff:
-
-```text
-docs/continuity/HANDOFF_2026-10-08_MINECRAFT_CONTENT_REMVIBE_DOWNLOAD_EXECUTION.md
+docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_MATERIALIZATION_FILESYSTEM_PREFLIGHT.md
 ```
 
 Previous completed checkpoint:
 
 ```text
-dev.20 — Content Download Integrity Validator Foundation
-PR: #48
-merge commit: a5c7c2adfc8fd2b38c82034733c34176aba91bca
-post-merge main: 026693122556626934c5d1ee35795bebb0b3fddd
+dev.21 — RemVibe Batch Execution Foundation
+PR: #49
+merge commit: 313e21b268157ad6049b5b4e9f578b5e7f17c44a
+post-merge main: eb4e4ba70c681ea1ba32ea5caef675229132d128
 ```
