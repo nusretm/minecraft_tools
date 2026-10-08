@@ -182,7 +182,7 @@ void main() {
       expect(await fixture.readFile('.mtn-content/installation.json'), 'corrupt');
     });
 
-    test('manifest publication failure rolls back applied managed files', () async {
+    test('changed manifest after initial snapshot rolls back applied managed files', () async {
       final fixture = await _fixture();
       addTearDown(fixture.dispose);
       await fixture.writeFile('.mtn-content/notes.txt', 'caller');
@@ -190,16 +190,12 @@ void main() {
       final source = await fixture.source('a.jar', 'hello');
       final plan = await _plan(_emptyState(), <MtnMinecraftContentVersion>[version], <String, String>{'a:v1': 'mods/a.jar'});
       final preflight = await fixture.fileSystem.preflight(plan: plan, installationRoot: fixture.root.absolute);
-      // The actual manifest destination becomes an unmanaged directory after initial read
-      // only through an external race; a pre-existing directory must already fail at read.
-      await Directory(p.join(fixture.root.path, '.mtn-content', 'installation.json')).create();
+      final sources = _MutationOnIteration(
+        MtnMinecraftContentMaterializationFileSystemTransactionSource(target: plan.installs.single.target, source: source),
+        () => Directory(p.join(fixture.root.path, '.mtn-content', 'installation.json')).createSync(),
+      );
       await expectLater(
-        fixture.coordinator.begin(
-          preflight: preflight,
-          sources: <MtnMinecraftContentMaterializationFileSystemTransactionSource>[
-            MtnMinecraftContentMaterializationFileSystemTransactionSource(target: plan.installs.single.target, source: source),
-          ],
-        ),
+        fixture.coordinator.begin(preflight: preflight, sources: sources),
         throwsA(isA<MtnMinecraftContentMaterializationFileSystemCoordinationException>()),
       );
       expect(await fixture.fileExists('mods/a.jar'), isFalse);
@@ -476,4 +472,17 @@ Future<MtnMinecraftContentMaterializationPlan> _plan(
     ),
   );
   return service.planContentMaterialization(downloads, installation, targets);
+}
+
+class _MutationOnIteration extends Iterable<MtnMinecraftContentMaterializationFileSystemTransactionSource> {
+  _MutationOnIteration(this._source, this._mutation);
+
+  final MtnMinecraftContentMaterializationFileSystemTransactionSource _source;
+  final void Function() _mutation;
+
+  @override
+  Iterator<MtnMinecraftContentMaterializationFileSystemTransactionSource> get iterator {
+    _mutation();
+    return <MtnMinecraftContentMaterializationFileSystemTransactionSource>[_source].iterator;
+  }
 }
