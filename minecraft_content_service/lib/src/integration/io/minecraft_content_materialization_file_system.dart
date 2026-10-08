@@ -5,9 +5,9 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import '../minecraft_content_file_integrity.dart';
 import '../../service/minecraft_content_installation_state.dart';
 import '../../service/minecraft_content_materialization_plan.dart';
+import '../minecraft_content_file_integrity.dart';
 
 part 'minecraft_content_materialization_file_system_policy.dart';
 part 'minecraft_content_materialization_file_system_preflight.dart';
@@ -189,6 +189,12 @@ class MtnMinecraftContentMaterializationFileSystem {
         createdDirectories: createdDirectories,
       );
       final targetFile = File(p.join(parent.path, target.relativePath.split('/').last));
+      if (_absolutePathIdentity(source.path) == _absolutePathIdentity(targetFile.path)) {
+        throw MtnMinecraftContentMaterializationFileSystemPublicationException(
+          failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.sourceAliasesTarget,
+          message: 'Publication source must not be the managed target itself: "${source.path}".',
+        );
+      }
 
       final sourceLengthBefore = await source.length();
       siblingStaging = await _reservePublicationSibling(targetFile, 'staging');

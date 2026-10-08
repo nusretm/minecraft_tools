@@ -346,6 +346,42 @@ void main() {
       expect(await File(p.join(root.path, 'mods', 'a.jar')).exists(), isFalse);
     });
 
+    test('rejects a publication source that aliases the managed target', () async {
+      final root = await Directory.systemTemp.createTemp();
+      addTearDown(() => root.delete(recursive: true));
+
+      final oldBytes = utf8.encode('old');
+      final newBytes = utf8.encode('new');
+      final fixture = await _replacementFixture(
+        root: root,
+        relativePath: 'mods/a.jar',
+        oldBytes: oldBytes,
+        newBytes: newBytes,
+      );
+      final fileSystem = _posix();
+      final preflight = await fileSystem.preflight(
+        plan: fixture.plan,
+        installationRoot: root.absolute,
+      );
+      final target = File(p.join(root.path, 'mods', 'a.jar'));
+
+      await expectLater(
+        fileSystem.publish(
+          preflight: preflight,
+          target: fixture.target,
+          source: target,
+        ),
+        throwsA(
+          isA<MtnMinecraftContentMaterializationFileSystemPublicationException>().having(
+            (error) => error.failure,
+            'failure',
+            MtnMinecraftContentMaterializationFileSystemPublicationFailure.sourceAliasesTarget,
+          ),
+        ),
+      );
+      expect(await target.readAsBytes(), oldBytes);
+    });
+
     test('requires the exact canonical target represented by the preflight plan', () async {
       final root = await Directory.systemTemp.createTemp();
       final sourceRoot = await Directory.systemTemp.createTemp();

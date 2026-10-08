@@ -8,6 +8,7 @@ enum MtnMinecraftContentMaterializationFileSystemPublicationState {
 
 enum MtnMinecraftContentMaterializationFileSystemPublicationFailure {
   sourceNotRegularFile,
+  sourceAliasesTarget,
   sourceChangedDuringCopy,
   stalePreflight,
   integrityFailure,

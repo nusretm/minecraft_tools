@@ -40,9 +40,15 @@ class MtnMinecraftContentFileIntegrity {
     File file, {
     String subject = 'File',
   }) async {
-    if (await FileSystemEntity.type(file.path, followLinks: false) != FileSystemEntityType.file) {
+    final entityType = await FileSystemEntity.type(file.path, followLinks: false);
+    if (entityType == FileSystemEntityType.notFound) {
       throw MtnMinecraftContentFileIntegrityException(
-        '$subject is missing or is not a regular file: "${file.path}".',
+        '$subject is missing: "${file.path}".',
+      );
+    }
+    if (entityType != FileSystemEntityType.file) {
+      throw MtnMinecraftContentFileIntegrityException(
+        '$subject is not a regular file: "${file.path}".',
       );
     }
 
