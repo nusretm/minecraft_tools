@@ -9,8 +9,6 @@ enum MtnMinecraftContentMaterializationFileSystemTransactionState {
 }
 
 enum MtnMinecraftContentMaterializationFileSystemTransactionFailure {
-  invalidInput,
-  stalePreflight,
   applicationFailure,
   commitFailure,
   rollbackFailure,
