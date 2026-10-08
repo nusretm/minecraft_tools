@@ -87,11 +87,10 @@ extension MtnMinecraftContentMaterializationFileSystemTransactionOperations on M
       }
 
       for (final entry in sortedSources) {
-        final publication = await publish(
+        final publication = await _publishWithinTransaction(
           preflight: preflight,
           target: entry.target,
           source: entry.source,
-          _withinTransaction: true,
         );
         transaction._ledger.add(_MaterializationTransactionPublication(publication));
       }
@@ -297,12 +296,12 @@ extension MtnMinecraftContentMaterializationFileSystemTransactionOperations on M
       if (issues.isNotEmpty ||
           current.entityType != MtnMinecraftContentMaterializationFileSystemEntityType.file ||
           _absolutePathIdentity(current.physicalPath) != _absolutePathIdentity(snapshot.physicalPath)) {
-        throw StateError('Retained artifact path changed: ' + snapshot.artifact.relativePath);
+        throw StateError('Retained artifact path changed: ${snapshot.artifact.relativePath}');
       }
       final file = File(current.physicalPath);
       if (await file.length() != snapshot.length ||
           await MtnMinecraftContentFileIntegrity.calculateSha256(file) != snapshot.sha256) {
-        throw StateError('Retained artifact contents changed: ' + snapshot.artifact.relativePath);
+        throw StateError('Retained artifact contents changed: ${snapshot.artifact.relativePath}');
       }
     }
   }
@@ -322,7 +321,7 @@ extension MtnMinecraftContentMaterializationFileSystemTransactionOperations on M
     if (issues.isNotEmpty ||
         observed.entityType != expected.entityType ||
         _absolutePathIdentity(observed.physicalPath) != _absolutePathIdentity(expected.physicalPath)) {
-      throw StateError('Managed removal state changed after preflight: ' + expected.artifact.relativePath);
+      throw StateError('Managed removal state changed after preflight: ${expected.artifact.relativePath}');
     }
     if (observed.entityType == MtnMinecraftContentMaterializationFileSystemEntityType.missing) {
       return _MaterializationTransactionRemoval(
