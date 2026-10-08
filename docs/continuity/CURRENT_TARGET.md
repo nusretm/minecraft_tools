@@ -2795,129 +2795,85 @@ In particular:
 
 ## Next action
 
-dev.20 merge:
+The active content-service checkpoint is:
 
 ```text
-PR: #48
-merge commit:
-a5c7c2adfc8fd2b38c82034733c34176aba91bca
-Add content download integrity validation
-```
-
-The completed content-service checkpoint is:
-
-```text
-dev.20 — Content Download Integrity Validator Foundation
-branch: feature/minecraft-content-download-integrity
-baseline main: cf1205d38502fa7cb56c851dd7804a70bc1b9085
-production/test HEAD: c66cbe6716aa6f6a5fffb39c274e6e94e304d5cf
-status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATED / CONTINUITY CLOSED / MERGED
-package: minecraft_content_service 1.0.0-dev.20
+dev.21 — RemVibe Batch Execution Foundation
+branch: feature/minecraft-content-remvibe-download-execution
+baseline main: 026693122556626934c5d1ee35795bebb0b3fddd
+implementation HEAD: 338841ec2b6445dc45022d33ec53160fcf331a0e
+production/test HEAD: 866b910b5ad4fc32f1d804333f148af21c1ebf96
+status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATION PENDING
+package: minecraft_content_service 1.0.0-dev.21
 ```
 
 Implemented boundary:
 
 ```text
-canonical MtnMinecraftContentFile
-        ├─ expected size
-        └─ normalized hashes
-                 ↓
-MtnMinecraftContentDownloadIntegrityRemVibe
-                 ↓
-RemVibeDownloadItem.validator
-                 ↓
-RemVibe temporary .download file
+integrity-aware MtnMinecraftContentDownloadAdapterRemVibeBatch
+        ↓
+MtnMinecraftContentDownloadExecutionRemVibe
+        ├─ validate fresh batch
+        ├─ fail on duplicate job key
+        ├─ ensure global RemVibe service is running
+        ├─ submit exact batch.job once
+        ├─ await exact job terminal state
+        └─ cancel exact job safely
+        ↓
+completed staging files
 ```
 
 Locked design:
 
-- integrity metadata authority remains the exact canonical materialization target file
-- expected size is captured independently from mutable `RemVibeDownloadItem.size`
-- RemVibe updates its item size from the actual response/transfer before validator execution; integrity therefore never treats that mutable value as the expected size authority
-- supported canonical algorithms are `md5`, `sha1`, `sha256`, and `sha512`
-- SHA aliases `sha-1`, `sha-256`, and `sha-512` normalize to canonical algorithm names
-- supported digest values must have exact hexadecimal length and normalize to lowercase
-- duplicate aliases with the same digest collapse to one expectation
-- conflicting aliases for one canonical algorithm fail fast with `FormatException`
-- unknown/provider-specific algorithms remain preserved in the content model but are ignored by this verifier
-- when expected size exists but no supported checksum exists, size-only validation is used
-- when supported checksums exist but expected size is unknown, checksum-only validation is used
-- when both exist, both must pass
-- when neither expected size nor a supported checksum exists, no validator is attached
-- all supported checksums are calculated during one streamed file read
-- integrity failure throws `MtnMinecraftContentDownloadIntegrityException`
-- dev.19 batch association now exposes the exact integrity policy attached to each RemVibe item
-- validator executes on the RemVibe temporary download before RemVibe promotes it to the staging destination
-- validator failure remains inside RemVibe retry/error lifecycle
-- generic `minecraft_content_service.dart` remains free of RemVibe/filesystem execution types
-- integrity public surface remains under `minecraft_content_service_remvibe.dart`
+- execution remains in the explicit `minecraft_content_service_remvibe.dart` integration surface
+- the generic content core/planners remain unchanged
+- repeated `execute()` calls share one operation future and never submit the batch twice
+- execution requires an idle job with no active items and fresh idle item state
+- any already-registered RemVibe job with the same key is rejected before service start/submission
+- duplicate-key rejection prevents RemVibe `addJob()` merge semantics from mutating another operation
+- duplicate-key preflight runs again after a possible asynchronous service start and immediately before synchronous submission
+- the exact return from `addJob()` must be identical to `batch.job`
+- inactive RemVibe service is started; an already-active service is reused
+- execution never calls global `stop()`, never changes `clearPolicy`, and never clears unrelated jobs
+- completion is observed through `RemVibeDownloadHandler` by exact job identity
+- the existing dev.19 `job.onStatus` callback is preserved and not wrapped/replaced
+- success requires exact job status `completed`
+- exhausted transfer/integrity retries become `MtnMinecraftContentDownloadExecutionRemVibeException(status: error)`
+- item-level `errorMessage` and `errorCount` remain available on the exact batch for diagnostics
+- cancellation is idempotent
+- cancel-before-execute or cancel-before-submit prevents job submission
+- a submitted cancellation does not settle on the first `cancelled` update; execution waits for RemVibe's remove event after active transfer cleanup
+- external global service `stop()` leaves execution pending while the job returns to idle
+- execution resumes only when an external owner starts the RemVibe service again
+- handler lifetime is internal to one execution and is disposed when execution settles
 
 Still out of scope:
 
-- starting/submitting RemVibe download jobs
-- job completion/cancellation orchestration
-- final target publication
-- replace/remove execution
-- target-OS case/canonical collision policy
-- staging cleanup policy
-- rollback/transaction sequencing
-- installation-manifest filesystem persistence
+- final managed-target publication
+- replacement/removal execution
+- target-OS case/canonical collision preflight
+- staging tree cleanup policy after completed/error operations
+- backup/rollback/transaction sequencing
+- installation-manifest filesystem read/write
 - RemVibeTaskService orchestration
-- unmanaged/manual file cleanup
+- unmanaged/manual content cleanup
 - deferred resource rendering
 
-Independent actual-diff review completed before local validation. Existing core service/planner implementations were not modified.
+Independent actual-diff review completed before local validation. Existing generic service/planner implementations were not modified.
 
-Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `50d906fbe4f8469ff7caa760e3a76821c03ee326`. PR #48 merged at `a5c7c2adfc8fd2b38c82034733c34176aba91bca`.
-
-Validation:
-
-```text
-dart analyze
-No issues found!
-
-content_download_integrity_remvibe_test.dart
-9/9 passed
-
-content_download_adapter_remvibe_test.dart
-7/7 passed
-
-content_materialization_plan_test.dart
-9/9 passed
-
-content_installation_manifest_test.dart
-9/9 passed
-
-full dart test
-143/143 passed
-
-git diff --check main...HEAD
-PASS
-
-working tree
-clean
-
-validated feature HEAD:
-50d906fbe4f8469ff7caa760e3a76821c03ee326
-```
+Next required action is authoritative local validation on the feature branch. Do not merge until validation is complete and the user separately approves merge.
 
 Active continuity document:
 
 ```text
-docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_DOWNLOAD_INTEGRITY.md
-```
-
-Completion handoff:
-
-```text
-docs/continuity/HANDOFF_2026-10-08_MINECRAFT_CONTENT_DOWNLOAD_INTEGRITY.md
+docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_REMVIBE_DOWNLOAD_EXECUTION.md
 ```
 
 Previous completed checkpoint:
 
 ```text
-dev.19 — RemVibe Batch Download Adapter Foundation
-PR: #47
-merge commit: ceab133f18546ce0215da04c36339957bf2dfb31
-post-merge main: cf1205d38502fa7cb56c851dd7804a70bc1b9085
+dev.20 — Content Download Integrity Validator Foundation
+PR: #48
+merge commit: a5c7c2adfc8fd2b38c82034733c34176aba91bca
+post-merge main: 026693122556626934c5d1ee35795bebb0b3fddd
 ```
