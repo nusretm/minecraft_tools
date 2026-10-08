@@ -7,7 +7,7 @@ Date: 2026-10-08
 - Repository: `nusretm/minecraft_tools`
 - Baseline: `main` at `096b328e4cfa8ea0ba4a2b62f1d3f994034803a8`
 - Package: `minecraft_content_service 1.0.0-dev.26`
-- Scope: **IMPLEMENTED IN FEATURE BRANCH / LOCAL DART VALIDATION PENDING / NOT MERGED**
+- Scope: **IMPLEMENTED / WINDOWS VALIDATED (225 TESTS) / ACTUAL-DIFF REVIEWED / NOT MERGED**
 - Feature branch: `feature/minecraft-content-materialization-manifest-coordination` (implementation explicitly approved)
 - New coordinated regression test count: 16
 - Last completed checkpoint: dev.25, PR #53, squash commit `76b01cc4a4f465fdd27d4960fe12683e6ee874ec`, Windows `dart analyze` clean and 209/209 tests
@@ -100,7 +100,7 @@ Alternative ordering (manifest first) must be evaluated against interruption sem
 
 ## Next action
 
-The combined authority, one-lease ownership and forward-only commit ordering were explicitly approved and implemented on the dev.26 feature branch. Next verify Windows Dart analysis and regression results, review actual diff, and obtain separate merge approval. Respect `docs/WORKING_RULES.md`; pure Dart code must not be run through `dart format`.
+The combined authority, one-lease ownership and forward-only commit ordering were explicitly approved and implemented on the dev.26 feature branch. Windows validation and actual-diff review are complete; separate merge approval is still required. Respect `docs/WORKING_RULES.md`; pure Dart code must not be run through `dart format`.
 
 ## Implementation checkpoint (feature branch)
 
@@ -111,6 +111,6 @@ The combined authority, one-lease ownership and forward-only commit ordering wer
 - Automatic application rollback and typed incomplete-recovery handling keep the root lease held if unsafe recovery remains.
 - Focused tests target initial install, replacement, removal, empty state, stale/missing/corrupt manifests, externally changed snapshots, integrity tampering and pending root leases.
 - **First Windows validation on implementation HEAD `09cf65b4` (user logs)**: `dart analyze` reported three redundant non-null assertions; coordination focused tests reached 15/16, with the lease-queue-order test timing out; full suite reached 224 successes and the same single failure. Existing dev.24 transaction (15/15), dev.25 manifest filesystem (17/17), manifest codec (9/9), and preflight (12/12) passed.
-- **Corrections pending Windows revalidation**: fixed the test's assumption that an async manifest reader must enqueue before a competing writer (commit/rollback the writer before awaiting the reader), and replaced three unnecessary non-null assertions with a promoted local manifest publication value. No production locking semantics were changed.
-- Re-run `dart analyze`, focused coordination tests and full `dart test` on updated feature HEAD; also check `git diff --check` and clean working tree before considering merge.
+- **Corrections validated by the final Windows run**: fixed the test's assumption that an async manifest reader must enqueue before a competing writer (commit/rollback the writer before awaiting the reader), and replaced three unnecessary non-null assertions with a promoted local manifest publication value. No production locking semantics were changed.
+- Final Windows validation at `c9253473e9b31a6d1e8264db1478ebdd1193eac4`: `dart analyze` no issues; coordination 16/16; full suite 225/225; `git diff --check` clean; working tree clean. Final actual-diff and recovery audit found no critical blocker. An injected IO interruption between both backup-cleanup phases was not included in these tests.
 - Separate merge approval is still required. No `dart format` for pure Dart.
