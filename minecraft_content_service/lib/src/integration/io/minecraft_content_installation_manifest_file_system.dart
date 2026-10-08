@@ -166,7 +166,7 @@ class MtnMinecraftContentInstallationManifestFileSystem {
           throw MtnMinecraftContentInstallationManifestFileSystemException(
             'Original manifest backup could not be verified; manual recovery is required.',
             cause: error,
-            recoveryCandidates: <File>[backup, staging],
+            recoveryCandidates: <File>[if (backup != null) backup, if (staging != null) staging],
           );
         }
       }
@@ -185,7 +185,7 @@ class MtnMinecraftContentInstallationManifestFileSystem {
             throw MtnMinecraftContentInstallationManifestFileSystemException(
               'Manifest promotion and restoration failed; manual recovery is required.',
               cause: restoreError,
-              recoveryCandidates: <File>[backup, staging],
+              recoveryCandidates: <File>[if (backup != null) backup, if (staging != null) staging],
             );
           }
         }
