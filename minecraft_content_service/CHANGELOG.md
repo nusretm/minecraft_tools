@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0-dev.21
+
+- Add `MtnMinecraftContentDownloadExecutionRemVibe` for submitting and awaiting one integrity-aware RemVibe content batch.
+- Start the application-wide RemVibe service only when it is inactive, without stopping it or changing its global clear policy.
+- Fail fast on duplicate RemVibe job keys instead of allowing `addJob()` to merge an execution into an existing job.
+- Require a fresh idle batch before execution and make repeated `execute()` calls share one operation future.
+- Observe the exact submitted job through `RemVibeDownloadHandler` without replacing the existing job status callback.
+- Complete successfully only when the exact batch job reaches `completed`.
+- Convert exhausted RemVibe error state into `MtnMinecraftContentDownloadExecutionRemVibeException` while preserving item-level diagnostics on the batch.
+- Add idempotent cancellation, including cancel-before-submit handling and cancellation settlement only after RemVibe removes the cancelled job.
+- Keep final managed-target publication, replacement/removal execution, path-collision policy, staging cleanup policy, rollback, installation-manifest filesystem persistence and TaskService orchestration out of this checkpoint.
+
 ## 1.0.0-dev.20
 
 - Add `MtnMinecraftContentDownloadIntegrityRemVibe` as the explicit staged-file integrity policy for RemVibe content downloads.

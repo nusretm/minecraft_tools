@@ -79,8 +79,9 @@ Current foundation includes:
 - canonical download/target association with staging-directory and caller-owned target-filename mapping
 - RemVibe staged-file integrity validation for expected size plus supported MD5/SHA-1/SHA-256/SHA-512 metadata
 - single-pass multi-checksum calculation before RemVibe promotes its temporary download to the staging destination
+- exact-batch RemVibe execution with service-start, duplicate-key protection, terminal wait and idempotent cancellation
 
-Version-constraint interpretation, manifest file-location/storage policy, download-service submission/lifecycle, staging publication, target-OS path policy, replacement/removal execution, rollback and TaskService orchestration remain separate later checkpoints.
+Version-constraint interpretation, manifest file-location/storage policy, staging publication, target-OS path policy, replacement/removal execution, rollback and TaskService orchestration remain separate later checkpoints.
 
 
 ## CLI example
