@@ -50,7 +50,8 @@ class MtnMinecraftContentInstallationExecutionRemVibeException implements Except
   bool get recoveryRequired => failure == MtnMinecraftContentInstallationExecutionRemVibeFailure.recoveryRequired;
   List<File> get recoveryCandidates {
     final files = <File>[];
-    if (transaction != null) files.addAll(transaction!.recoveryCandidates);
+    final current = transaction;
+    if (current != null) files.addAll(current.recoveryCandidates);
     final reason = cause;
     if (reason is MtnMinecraftContentMaterializationFileSystemCoordinationException) {
       files.addAll(reason.recoveryCandidates);
@@ -106,6 +107,8 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
   bool _cancelRequested = false;
   bool _finished = false;
   String? _resolvedStagingRoot;
+  MtnMinecraftContentMaterializationFileSystemCoordinatedTransaction? _pendingTransaction;
+  bool _retrying = false;
 
   MtnMinecraftContentInstallationExecutionRemVibeState get state => _state;
   MtnMinecraftContentDownloadAdapterRemVibeBatch? get batch => _batch;
@@ -122,6 +125,74 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
     final execution = _downloadExecution;
     if (execution != null) await execution.cancel();
   }
+
+  /// Complete a forward-only dev.26 cleanup after commitIncomplete. This
+  /// operation reuses the retained coordinator authority and never redownloads.
+  Future<MtnMinecraftContentInstallationState> retryCommit() async {
+    if (!_finished || _retrying) throw StateError('Installation execution or recovery is still running.');
+    if (_state == MtnMinecraftContentInstallationExecutionRemVibeState.completed) return plan.resultingInstallationState;
+    final transaction = _pendingTransaction;
+    if (_state != MtnMinecraftContentInstallationExecutionRemVibeState.recoveryRequired ||
+        transaction == null ||
+        transaction.state != MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.commitIncomplete) {
+      throw StateError('Only an interrupted forward-only coordinated commit can be retried.');
+    }
+    _retrying = true;
+    try {
+      await _coordinator.commit(transaction);
+      _pendingTransaction = null;
+      _state = MtnMinecraftContentInstallationExecutionRemVibeState.completed;
+      return plan.resultingInstallationState;
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(
+        MtnMinecraftContentInstallationExecutionRemVibeException(
+          failure: MtnMinecraftContentInstallationExecutionRemVibeFailure.recoveryRequired,
+          message: 'Coordinated commit retry was unsuccessful; forward-only recovery is still required.',
+          cause: error,
+          batch: _batch,
+          transaction: transaction,
+        ),
+        stackTrace,
+      );
+    } finally {
+      _retrying = false;
+    }
+  }
+
+  /// Retry a reversible rollback after incomplete recovery. A successful
+  /// rollback restores the prior installation; it is NOT install success.
+  Future<void> retryRollback() async {
+    if (!_finished || _retrying) throw StateError('Installation execution or recovery is still running.');
+    final transaction = _pendingTransaction;
+    if (_state != MtnMinecraftContentInstallationExecutionRemVibeState.recoveryRequired ||
+        transaction == null ||
+        (transaction.state != MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.rollbackIncomplete &&
+         transaction.state != MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.pending)) {
+      throw StateError('No reversible coordinated rollback is available for retry.');
+    }
+    _retrying = true;
+    try {
+      await _coordinator.rollback(transaction);
+      _pendingTransaction = null;
+      _state = _cancelRequested
+          ? MtnMinecraftContentInstallationExecutionRemVibeState.cancelled
+          : MtnMinecraftContentInstallationExecutionRemVibeState.failed;
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(
+        MtnMinecraftContentInstallationExecutionRemVibeException(
+          failure: MtnMinecraftContentInstallationExecutionRemVibeFailure.recoveryRequired,
+          message: 'Coordinated rollback retry could not confirm full restoration.',
+          cause: error,
+          batch: _batch,
+          transaction: transaction,
+        ),
+        stackTrace,
+      );
+    } finally {
+      _retrying = false;
+    }
+  }
+
 
   Future<MtnMinecraftContentInstallationState> _execute() async {
     try {
@@ -180,6 +251,7 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
 
       _state = MtnMinecraftContentInstallationExecutionRemVibeState.publishing;
       final transaction = await _coordinator.begin(preflight: refreshed, sources: sources);
+      _pendingTransaction = transaction;
       if (_cancelRequested) {
         await _rollback(transaction, reason: 'Cancellation before coordinated commit');
         throw _cancelled();
@@ -202,6 +274,7 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
         }
         rethrow;
       }
+      _pendingTransaction = null;
       _state = MtnMinecraftContentInstallationExecutionRemVibeState.completed;
       return plan.resultingInstallationState;
     } catch (error, stackTrace) {
@@ -215,6 +288,7 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
       }
 
       final coordinatedError = error is MtnMinecraftContentMaterializationFileSystemCoordinationException ? error : null;
+      if (coordinatedError?.transaction != null) _pendingTransaction = coordinatedError!.transaction;
       final downloadedError = error is MtnMinecraftContentDownloadExecutionRemVibeException ? error : null;
       final failure = coordinatedError?.failure == MtnMinecraftContentMaterializationFileSystemCoordinationFailure.recoveryFailure
           ? MtnMinecraftContentInstallationExecutionRemVibeFailure.recoveryRequired
@@ -252,6 +326,7 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
   }) async {
     try {
       await _coordinator.rollback(transaction);
+      _pendingTransaction = null;
     } catch (error, stackTrace) {
       _state = MtnMinecraftContentInstallationExecutionRemVibeState.recoveryRequired;
       Error.throwWithStackTrace(
