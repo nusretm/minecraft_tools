@@ -207,6 +207,77 @@ void main() {
       expect(await File('${batch.job.items.single.file!.path}.download').exists(), isFalse);
     });
 
+    test('waits through an external service stop and resumes only after the service is started again', () async {
+      final firstRequestStarted = Completer<void>();
+      final releaseFirstRequest = Completer<void>();
+      var requests = 0;
+      final bytes = <int>[7, 8, 9];
+
+      final server = await _server((request) async {
+        requests++;
+        if (requests == 1) {
+          request.response.add(<int>[0]);
+          await request.response.flush();
+          if (!firstRequestStarted.isCompleted) {
+            firstRequestStarted.complete();
+          }
+          await releaseFirstRequest.future;
+          try {
+            await request.response.close();
+          } catch (_) {}
+          return;
+        }
+
+        request.response.add(bytes);
+        await request.response.close();
+      });
+      addTearDown(() async {
+        if (!releaseFirstRequest.isCompleted) {
+          releaseFirstRequest.complete();
+        }
+        await server.close(force: true);
+      });
+
+      final stagingRoot = await Directory.systemTemp.createTemp();
+      addTearDown(() => stagingRoot.delete(recursive: true));
+      final batch = await _batch(
+        url: Uri.parse('http://127.0.0.1:${server.port}/pause-resume.jar'),
+        stagingRoot: stagingRoot,
+        key: 'execution-pause-resume',
+        size: bytes.length,
+      );
+      final execution = MtnMinecraftContentDownloadExecutionRemVibe(batch: batch);
+
+      var settled = false;
+      final executeFuture = execution.execute();
+      unawaited(
+        executeFuture.then<void>(
+          (_) {
+            settled = true;
+          },
+          onError: (_) {
+            settled = true;
+          },
+        ),
+      );
+
+      await firstRequestStarted.future.timeout(const Duration(seconds: 5));
+      await service.stop().timeout(const Duration(seconds: 5));
+
+      expect(service.active, isFalse);
+      expect(batch.job.status, RemVibeDownloadStatus.idle);
+      await Future<void>.delayed(const Duration(milliseconds: 25));
+      expect(settled, isFalse);
+
+      await service.start();
+      final result = await executeFuture.timeout(const Duration(seconds: 5));
+
+      expect(result, same(batch));
+      expect(requests, 2);
+      expect(batch.job.status, RemVibeDownloadStatus.completed);
+      expect(await batch.job.items.single.file!.readAsBytes(), bytes);
+    });
+
     test('cancel before execute prevents service start and job submission', () async {
       final stagingRoot = await Directory.systemTemp.createTemp();
       addTearDown(() => stagingRoot.delete(recursive: true));
