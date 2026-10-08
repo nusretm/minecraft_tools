@@ -8,10 +8,12 @@ Date: 2026-10-08
 - Branch: feature/minecraft-content-materialization-transaction
 - Baseline main: 6955f67833875b17aeab43bf7579268d3a44834a
 - Package: minecraft_content_service 1.0.0-dev.24
-- Implementation: in feature branch
-- Local Windows Dart validation on HEAD f8ea4834e82e10c65a7ef14445c05dc8243aa81b: dart analyze clean; focused 13/15/12; full dart test 190/190; diff check and working tree clean (user-provided logs).
-- Actual-diff hardening after validated HEAD: reject simultaneous finalizations and revalidate published target ancestor paths before destructive cleanup; two new regression tests. New HEAD validation pending.
-- Merge: NOT APPROVED / NOT PERFORMED
+- Feature implementation HEAD: b0d6e50d645abec7fa034322fdb20dfbccdb0b2b
+- Windows validation (user-provided logs, feature HEAD): `dart analyze` clean; transaction 15/15; publication 15/15; full `dart test` 192/192; `git diff --check` clean; working tree clean.
+- Actual-diff hardening: reject simultaneous finalizations and revalidate published target ancestor paths before destructive cleanup; regression tests included in the validated feature HEAD.
+- PR: #52 — https://github.com/nusretm/minecraft_tools/pull/52
+- Squash merge commit: 596f794801ff1e4f3b20db479fa6be736c6d7db4
+- Merge: COMPLETE on 2026-10-08 (user-approved)
 
 ## Boundary
 
