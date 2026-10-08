@@ -184,6 +184,52 @@ void main() {
       expect(await File(p.join(fixture.root.path, 'mods', 'a.jar')).exists(), isFalse);
     });
 
+    test('cancellation while coordinator begin waits on root lease rolls back without false success', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final plan = await _plan(_empty(), const <MtnMinecraftContentVersion>[], const <String, String>{});
+      final fileSystem = MtnMinecraftContentMaterializationFileSystem();
+      final coordinator = MtnMinecraftContentMaterializationFileSystemCoordinator();
+      final preflight = await fileSystem.preflight(plan: plan, installationRoot: fixture.root);
+      final held = await coordinator.begin(
+        preflight: preflight,
+        sources: const <MtnMinecraftContentMaterializationFileSystemTransactionSource>[],
+      );
+
+      final executor = fixture.execution(plan, withoutStage: true);
+      final running = executor.execute();
+      await Future<void>.doWhile(() async {
+        if (executor.state == MtnMinecraftContentInstallationExecutionRemVibeState.publishing) return false;
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        return true;
+      }).timeout(const Duration(seconds: 5));
+
+      var settled = false;
+      final observed = running.then<void>((_) { settled = true; }, onError: (_) { settled = true; });
+      await executor.cancel();
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(settled, isFalse);
+      expect(executor.state, MtnMinecraftContentInstallationExecutionRemVibeState.publishing);
+      await coordinator.rollback(held);
+
+      await expectLater(
+        running.timeout(const Duration(seconds: 5)),
+        throwsA(isA<MtnMinecraftContentInstallationExecutionRemVibeException>()
+            .having((error) => error.cancelled, 'cancelled', isTrue)),
+      );
+      await observed;
+      expect(executor.state, MtnMinecraftContentInstallationExecutionRemVibeState.cancelled);
+      expect(await fixture.manifests.read(installationRoot: fixture.root), isNull);
+      expect(service.jobs, isEmpty);
+
+      final fresh = await fileSystem.preflight(plan: plan, installationRoot: fixture.root);
+      final next = await coordinator.begin(
+        preflight: fresh,
+        sources: const <MtnMinecraftContentMaterializationFileSystemTransactionSource>[],
+      ).timeout(const Duration(seconds: 5));
+      await coordinator.rollback(next);
+    });
+
     test('staging root within the installation is rejected before RemVibe submission', () async {
       final fixture = await _fixture();
       addTearDown(fixture.dispose);
