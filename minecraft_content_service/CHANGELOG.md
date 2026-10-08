@@ -12,6 +12,7 @@
 - Reject caller-owned sources aliasing any current/resulting managed artifact path; sources remain read-only and are never consumed.
 - Preserve recovery candidates and report unresolved failures instead of claiming a full rollback.
 - Keep manifest filesystem persistence, TaskService, RemVibe batch orchestration/cleanup, native crash recovery, and MtnLauncher integration out of scope.
+- Reject simultaneous finalizations for one transaction and guard against changed or linked target-parent paths during publication finalization.
 - Add focused transaction execution, rollback, tamper, and serialization regression tests.
 
 ## 1.0.0-dev.23
