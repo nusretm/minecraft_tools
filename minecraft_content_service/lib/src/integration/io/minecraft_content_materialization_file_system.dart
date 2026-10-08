@@ -4,185 +4,8 @@ import 'package:path/path.dart' as p;
 
 import '../../service/minecraft_content_installation_state.dart';
 import '../../service/minecraft_content_materialization_plan.dart';
-
-enum MtnMinecraftContentMaterializationFileSystemPlatform {
-  windows,
-  posix,
-}
-
-class MtnMinecraftContentMaterializationFileSystemPolicy {
-  const MtnMinecraftContentMaterializationFileSystemPolicy({
-    required this.platform,
-    required this.caseSensitive,
-  });
-
-  factory MtnMinecraftContentMaterializationFileSystemPolicy.host() {
-    if (Platform.isWindows) {
-      return const MtnMinecraftContentMaterializationFileSystemPolicy(
-        platform: MtnMinecraftContentMaterializationFileSystemPlatform.windows,
-        caseSensitive: false,
-      );
-    }
-    if (Platform.isMacOS) {
-      return const MtnMinecraftContentMaterializationFileSystemPolicy(
-        platform: MtnMinecraftContentMaterializationFileSystemPlatform.posix,
-        caseSensitive: false,
-      );
-    }
-    return const MtnMinecraftContentMaterializationFileSystemPolicy(
-      platform: MtnMinecraftContentMaterializationFileSystemPlatform.posix,
-      caseSensitive: true,
-    );
-  }
-
-  final MtnMinecraftContentMaterializationFileSystemPlatform platform;
-  final bool caseSensitive;
-}
-
-enum MtnMinecraftContentMaterializationFileSystemEntityType {
-  missing,
-  file,
-  directory,
-  link,
-  other,
-}
-
-enum MtnMinecraftContentMaterializationFileSystemStateScope {
-  current,
-  resulting,
-}
-
-enum MtnMinecraftContentMaterializationFileSystemInvalidTargetPathReason {
-  windowsInvalidSegment,
-  ancestorNotDirectory,
-  ambiguousPhysicalIdentity,
-  inaccessible,
-}
-
-enum MtnMinecraftContentMaterializationFileSystemManagedArtifactReason {
-  retainedArtifactMissing,
-  expectedRegularFile,
-}
-
-class MtnMinecraftContentMaterializationFileSystemArtifactState {
-  const MtnMinecraftContentMaterializationFileSystemArtifactState({
-    required this.artifact,
-    required this.target,
-    required this.physicalPath,
-    required this.entityType,
-  });
-
-  final MtnMinecraftContentInstallationArtifact artifact;
-  final File target;
-  final String physicalPath;
-  final MtnMinecraftContentMaterializationFileSystemEntityType entityType;
-}
-
-abstract class MtnMinecraftContentMaterializationFileSystemPreflightIssue {
-  const MtnMinecraftContentMaterializationFileSystemPreflightIssue();
-}
-
-class MtnMinecraftContentMaterializationFileSystemPreflightIssuePathCollision extends MtnMinecraftContentMaterializationFileSystemPreflightIssue {
-  const MtnMinecraftContentMaterializationFileSystemPreflightIssuePathCollision({
-    required this.scope,
-    required this.first,
-    required this.second,
-  });
-
-  final MtnMinecraftContentMaterializationFileSystemStateScope scope;
-  final MtnMinecraftContentInstallationArtifact first;
-  final MtnMinecraftContentInstallationArtifact second;
-}
-
-class MtnMinecraftContentMaterializationFileSystemPreflightIssuePathHierarchyCollision extends MtnMinecraftContentMaterializationFileSystemPreflightIssue {
-  const MtnMinecraftContentMaterializationFileSystemPreflightIssuePathHierarchyCollision({
-    required this.scope,
-    required this.ancestor,
-    required this.descendant,
-  });
-
-  final MtnMinecraftContentMaterializationFileSystemStateScope scope;
-  final MtnMinecraftContentInstallationArtifact ancestor;
-  final MtnMinecraftContentInstallationArtifact descendant;
-}
-
-class MtnMinecraftContentMaterializationFileSystemPreflightIssueInvalidTargetPath extends MtnMinecraftContentMaterializationFileSystemPreflightIssue {
-  const MtnMinecraftContentMaterializationFileSystemPreflightIssueInvalidTargetPath({
-    required this.scope,
-    required this.artifact,
-    required this.physicalPath,
-    required this.reason,
-    this.segment,
-  });
-
-  final MtnMinecraftContentMaterializationFileSystemStateScope scope;
-  final MtnMinecraftContentInstallationArtifact artifact;
-  final String physicalPath;
-  final MtnMinecraftContentMaterializationFileSystemInvalidTargetPathReason reason;
-  final String? segment;
-}
-
-class MtnMinecraftContentMaterializationFileSystemPreflightIssueManagedArtifact extends MtnMinecraftContentMaterializationFileSystemPreflightIssue {
-  const MtnMinecraftContentMaterializationFileSystemPreflightIssueManagedArtifact({
-    required this.artifact,
-    required this.physicalPath,
-    required this.entityType,
-    required this.reason,
-  });
-
-  final MtnMinecraftContentInstallationArtifact artifact;
-  final String physicalPath;
-  final MtnMinecraftContentMaterializationFileSystemEntityType entityType;
-  final MtnMinecraftContentMaterializationFileSystemManagedArtifactReason reason;
-}
-
-class MtnMinecraftContentMaterializationFileSystemPreflightIssueUnmanagedOccupancy extends MtnMinecraftContentMaterializationFileSystemPreflightIssue {
-  const MtnMinecraftContentMaterializationFileSystemPreflightIssueUnmanagedOccupancy({
-    required this.artifact,
-    required this.physicalPath,
-    required this.entityType,
-  });
-
-  final MtnMinecraftContentInstallationArtifact artifact;
-  final String physicalPath;
-  final MtnMinecraftContentMaterializationFileSystemEntityType entityType;
-}
-
-class MtnMinecraftContentMaterializationFileSystemPreflightIssueSymbolicLink extends MtnMinecraftContentMaterializationFileSystemPreflightIssue {
-  const MtnMinecraftContentMaterializationFileSystemPreflightIssueSymbolicLink({
-    required this.scope,
-    required this.artifact,
-    required this.physicalPath,
-  });
-
-  final MtnMinecraftContentMaterializationFileSystemStateScope scope;
-  final MtnMinecraftContentInstallationArtifact artifact;
-  final String physicalPath;
-}
-
-class MtnMinecraftContentMaterializationFileSystemPreflight {
-  MtnMinecraftContentMaterializationFileSystemPreflight._({
-    required this.plan,
-    required this.installationRoot,
-    required this.resolvedInstallationRoot,
-    required this.policy,
-    required List<MtnMinecraftContentMaterializationFileSystemArtifactState> currentArtifacts,
-    required List<MtnMinecraftContentMaterializationFileSystemArtifactState> resultingArtifacts,
-    required List<MtnMinecraftContentMaterializationFileSystemPreflightIssue> issues,
-  }) : currentArtifacts = List<MtnMinecraftContentMaterializationFileSystemArtifactState>.unmodifiable(currentArtifacts),
-       resultingArtifacts = List<MtnMinecraftContentMaterializationFileSystemArtifactState>.unmodifiable(resultingArtifacts),
-       issues = List<MtnMinecraftContentMaterializationFileSystemPreflightIssue>.unmodifiable(issues);
-
-  final MtnMinecraftContentMaterializationPlan plan;
-  final Directory installationRoot;
-  final Directory resolvedInstallationRoot;
-  final MtnMinecraftContentMaterializationFileSystemPolicy policy;
-  final List<MtnMinecraftContentMaterializationFileSystemArtifactState> currentArtifacts;
-  final List<MtnMinecraftContentMaterializationFileSystemArtifactState> resultingArtifacts;
-  final List<MtnMinecraftContentMaterializationFileSystemPreflightIssue> issues;
-
-  bool get safe => issues.isEmpty;
-}
+import 'minecraft_content_materialization_file_system_policy.dart';
+import 'minecraft_content_materialization_file_system_preflight.dart';
 
 class MtnMinecraftContentMaterializationFileSystem {
   MtnMinecraftContentMaterializationFileSystem({
@@ -222,36 +45,37 @@ class MtnMinecraftContentMaterializationFileSystem {
 
     final currentArtifacts = <MtnMinecraftContentMaterializationFileSystemArtifactState>[];
     for (final artifact in plan.installation.artifacts) {
-      final inspection = await _inspectArtifact(
+      final state = await _inspectArtifact(
         resolvedInstallationRoot,
         artifact,
         MtnMinecraftContentMaterializationFileSystemStateScope.current,
         issues,
       );
-      currentArtifacts.add(inspection.state);
+      currentArtifacts.add(state);
 
-      if (inspection.state.entityType == MtnMinecraftContentMaterializationFileSystemEntityType.link) {
+      if (state.entityType == MtnMinecraftContentMaterializationFileSystemEntityType.link ||
+          state.entityType == MtnMinecraftContentMaterializationFileSystemEntityType.blocked) {
         continue;
       }
-      if (inspection.state.entityType == MtnMinecraftContentMaterializationFileSystemEntityType.missing) {
+      if (state.entityType == MtnMinecraftContentMaterializationFileSystemEntityType.missing) {
         if (retainedArtifacts.contains(artifact)) {
           issues.add(
             MtnMinecraftContentMaterializationFileSystemPreflightIssueManagedArtifact(
               artifact: artifact,
-              physicalPath: inspection.state.physicalPath,
-              entityType: inspection.state.entityType,
+              physicalPath: state.physicalPath,
+              entityType: state.entityType,
               reason: MtnMinecraftContentMaterializationFileSystemManagedArtifactReason.retainedArtifactMissing,
             ),
           );
         }
         continue;
       }
-      if (inspection.state.entityType != MtnMinecraftContentMaterializationFileSystemEntityType.file) {
+      if (state.entityType != MtnMinecraftContentMaterializationFileSystemEntityType.file) {
         issues.add(
           MtnMinecraftContentMaterializationFileSystemPreflightIssueManagedArtifact(
             artifact: artifact,
-            physicalPath: inspection.state.physicalPath,
-            entityType: inspection.state.entityType,
+            physicalPath: state.physicalPath,
+            entityType: state.entityType,
             reason: MtnMinecraftContentMaterializationFileSystemManagedArtifactReason.expectedRegularFile,
           ),
         );
@@ -265,17 +89,17 @@ class MtnMinecraftContentMaterializationFileSystem {
 
     final resultingArtifacts = <MtnMinecraftContentMaterializationFileSystemArtifactState>[];
     for (final artifact in plan.resultingInstallationState.artifacts) {
-      final inspection = await _inspectArtifact(
+      final state = await _inspectArtifact(
         resolvedInstallationRoot,
         artifact,
         MtnMinecraftContentMaterializationFileSystemStateScope.resulting,
         issues,
       );
-      resultingArtifacts.add(inspection.state);
+      resultingArtifacts.add(state);
 
-      final entityType = inspection.state.entityType;
-      if (entityType == MtnMinecraftContentMaterializationFileSystemEntityType.missing ||
-          entityType == MtnMinecraftContentMaterializationFileSystemEntityType.link) {
+      if (state.entityType == MtnMinecraftContentMaterializationFileSystemEntityType.missing ||
+          state.entityType == MtnMinecraftContentMaterializationFileSystemEntityType.link ||
+          state.entityType == MtnMinecraftContentMaterializationFileSystemEntityType.blocked) {
         continue;
       }
 
@@ -284,23 +108,23 @@ class MtnMinecraftContentMaterializationFileSystem {
         issues.add(
           MtnMinecraftContentMaterializationFileSystemPreflightIssueUnmanagedOccupancy(
             artifact: artifact,
-            physicalPath: inspection.state.physicalPath,
-            entityType: entityType,
+            physicalPath: state.physicalPath,
+            entityType: state.entityType,
           ),
         );
-      } else if (entityType != MtnMinecraftContentMaterializationFileSystemEntityType.file) {
+      } else if (state.entityType != MtnMinecraftContentMaterializationFileSystemEntityType.file) {
         issues.add(
           MtnMinecraftContentMaterializationFileSystemPreflightIssueManagedArtifact(
             artifact: owners.first,
-            physicalPath: inspection.state.physicalPath,
-            entityType: entityType,
+            physicalPath: state.physicalPath,
+            entityType: state.entityType,
             reason: MtnMinecraftContentMaterializationFileSystemManagedArtifactReason.expectedRegularFile,
           ),
         );
       }
     }
 
-    return MtnMinecraftContentMaterializationFileSystemPreflight._(
+    return MtnMinecraftContentMaterializationFileSystemPreflight.internal(
       plan: plan,
       installationRoot: installationRoot,
       resolvedInstallationRoot: resolvedInstallationRoot,
@@ -374,13 +198,14 @@ class MtnMinecraftContentMaterializationFileSystem {
     }
   }
 
-  Future<_ArtifactInspection> _inspectArtifact(
+  Future<MtnMinecraftContentMaterializationFileSystemArtifactState> _inspectArtifact(
     Directory root,
     MtnMinecraftContentInstallationArtifact artifact,
     MtnMinecraftContentMaterializationFileSystemStateScope scope,
     List<MtnMinecraftContentMaterializationFileSystemPreflightIssue> issues,
   ) async {
     final segments = artifact.relativePath.split('/');
+    final target = File(p.joinAll(<String>[root.path, ...segments]));
     var currentPath = root.path;
 
     for (var index = 0; index < segments.length; index++) {
@@ -399,13 +224,11 @@ class MtnMinecraftContentMaterializationFileSystem {
             segment: segment,
           ),
         );
-        return _ArtifactInspection(
-          state: MtnMinecraftContentMaterializationFileSystemArtifactState(
-            artifact: artifact,
-            target: File(p.joinAll(<String>[root.path, ...segments])),
-            physicalPath: physicalPath,
-            entityType: MtnMinecraftContentMaterializationFileSystemEntityType.other,
-          ),
+        return MtnMinecraftContentMaterializationFileSystemArtifactState(
+          artifact: artifact,
+          target: target,
+          physicalPath: physicalPath,
+          entityType: MtnMinecraftContentMaterializationFileSystemEntityType.blocked,
         );
       }
 
@@ -420,31 +243,24 @@ class MtnMinecraftContentMaterializationFileSystem {
             segment: segment,
           ),
         );
-        return _ArtifactInspection(
-          state: MtnMinecraftContentMaterializationFileSystemArtifactState(
-            artifact: artifact,
-            target: File(p.joinAll(<String>[root.path, ...segments])),
-            physicalPath: physicalPath,
-            entityType: MtnMinecraftContentMaterializationFileSystemEntityType.other,
-          ),
+        return MtnMinecraftContentMaterializationFileSystemArtifactState(
+          artifact: artifact,
+          target: target,
+          physicalPath: physicalPath,
+          entityType: MtnMinecraftContentMaterializationFileSystemEntityType.blocked,
         );
       }
 
       if (resolution.matches.isEmpty) {
-        final targetPath = p.joinAll(<String>[currentPath, ...segments.sublist(index)]);
-        return _ArtifactInspection(
-          state: MtnMinecraftContentMaterializationFileSystemArtifactState(
-            artifact: artifact,
-            target: File(p.joinAll(<String>[root.path, ...segments])),
-            physicalPath: targetPath,
-            entityType: MtnMinecraftContentMaterializationFileSystemEntityType.missing,
-          ),
+        return MtnMinecraftContentMaterializationFileSystemArtifactState(
+          artifact: artifact,
+          target: target,
+          physicalPath: p.joinAll(<String>[currentPath, ...segments.sublist(index)]),
+          entityType: MtnMinecraftContentMaterializationFileSystemEntityType.missing,
         );
       }
 
       final match = resolution.matches.single;
-      final entityType = _entityType(match.type);
-
       if (match.type == FileSystemEntityType.link) {
         issues.add(
           MtnMinecraftContentMaterializationFileSystemPreflightIssueSymbolicLink(
@@ -453,13 +269,13 @@ class MtnMinecraftContentMaterializationFileSystem {
             physicalPath: match.path,
           ),
         );
-        return _ArtifactInspection(
-          state: MtnMinecraftContentMaterializationFileSystemArtifactState(
-            artifact: artifact,
-            target: File(p.joinAll(<String>[root.path, ...segments])),
-            physicalPath: match.path,
-            entityType: entityType,
-          ),
+        return MtnMinecraftContentMaterializationFileSystemArtifactState(
+          artifact: artifact,
+          target: target,
+          physicalPath: match.path,
+          entityType: isFinal
+              ? MtnMinecraftContentMaterializationFileSystemEntityType.link
+              : MtnMinecraftContentMaterializationFileSystemEntityType.blocked,
         );
       }
 
@@ -473,24 +289,20 @@ class MtnMinecraftContentMaterializationFileSystem {
             segment: segment,
           ),
         );
-        return _ArtifactInspection(
-          state: MtnMinecraftContentMaterializationFileSystemArtifactState(
-            artifact: artifact,
-            target: File(p.joinAll(<String>[root.path, ...segments])),
-            physicalPath: match.path,
-            entityType: entityType,
-          ),
+        return MtnMinecraftContentMaterializationFileSystemArtifactState(
+          artifact: artifact,
+          target: target,
+          physicalPath: match.path,
+          entityType: MtnMinecraftContentMaterializationFileSystemEntityType.blocked,
         );
       }
 
       if (isFinal) {
-        return _ArtifactInspection(
-          state: MtnMinecraftContentMaterializationFileSystemArtifactState(
-            artifact: artifact,
-            target: File(p.joinAll(<String>[root.path, ...segments])),
-            physicalPath: match.path,
-            entityType: entityType,
-          ),
+        return MtnMinecraftContentMaterializationFileSystemArtifactState(
+          artifact: artifact,
+          target: target,
+          physicalPath: match.path,
+          entityType: _entityType(match.type),
         );
       }
 
@@ -552,6 +364,8 @@ class MtnMinecraftContentMaterializationFileSystem {
         base == 'PRN' ||
         base == 'AUX' ||
         base == 'NUL' ||
+        base == 'CONIN$' ||
+        base == 'CONOUT$' ||
         RegExp(r'^COM[1-9]$').hasMatch(base) ||
         RegExp(r'^LPT[1-9]$').hasMatch(base)) {
       return false;
@@ -575,14 +389,6 @@ class MtnMinecraftContentMaterializationFileSystem {
     }
     return MtnMinecraftContentMaterializationFileSystemEntityType.other;
   }
-}
-
-class _ArtifactInspection {
-  const _ArtifactInspection({
-    required this.state,
-  });
-
-  final MtnMinecraftContentMaterializationFileSystemArtifactState state;
 }
 
 class _ChildResolution {
