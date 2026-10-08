@@ -201,7 +201,9 @@ void main() {
       final executor = fixture.execution(plan, withoutStage: true);
       final running = executor.execute();
       await Future<void>.doWhile(() async {
-        if (executor.state == MtnMinecraftContentInstallationExecutionRemVibeState.publishing) return false;
+        if (executor.state == MtnMinecraftContentInstallationExecutionRemVibeState.publishing) {
+          return false;
+        }
         await Future<void>.delayed(const Duration(milliseconds: 10));
         return true;
       }).timeout(const Duration(seconds: 5));
