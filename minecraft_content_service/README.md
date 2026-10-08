@@ -80,8 +80,10 @@ Current foundation includes:
 - RemVibe staged-file integrity validation for expected size plus supported MD5/SHA-1/SHA-256/SHA-512 metadata
 - single-pass multi-checksum calculation before RemVibe promotes its temporary download to the staging destination
 - exact-batch RemVibe execution with service-start, duplicate-key protection, terminal wait and idempotent cancellation
+- explicit read-only filesystem preflight through `minecraft_content_service_io.dart`
+- target-platform path identity, Windows path legality, managed/unmanaged occupancy, ancestor-type and symbolic-link checks before publication
 
-Version-constraint interpretation, manifest file-location/storage policy, staging publication, target-OS path policy, replacement/removal execution, rollback and TaskService orchestration remain separate later checkpoints.
+Version-constraint interpretation, manifest file-location/storage policy, staging publication, replacement/removal execution, rollback and TaskService orchestration remain separate later checkpoints.
 
 
 ## CLI example
