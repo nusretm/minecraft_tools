@@ -16,7 +16,9 @@ Implementation: COMPLETE
 Actual-diff review: COMPLETE
 Validation: COMPLETE
 Continuity: CLOSED
-Merge: NOT REQUESTED
+Merge: COMPLETE
+PR: #51
+Merge commit: d5fce84bef749d8f78e7916cb594b5ea582ebdc7
 Package version: 1.0.0-dev.23
 ```
 
@@ -125,4 +127,4 @@ dev.24 whole-plan materialization transaction
 
 Dev.24 should orchestrate install/replacement publications, removal backup/restore, reverse-order rollback and final commit boundaries without changing the proven single-target primitive.
 
-Merge requires separate explicit user approval.
+Merge completed through PR #51 at `d5fce84bef749d8f78e7916cb594b5ea582ebdc7`.
