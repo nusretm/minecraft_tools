@@ -209,6 +209,7 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
       if (plan.download.items.isNotEmpty) {
         final root = stagingRoot!;
         await _validateStagingRoot(first.resolvedInstallationRoot, root);
+        _checkCancellation();
         final batch = const MtnMinecraftContentDownloadAdapterRemVibe().createBatch(
           plan: plan,
           stagingRoot: root,
@@ -300,7 +301,7 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
           ? MtnMinecraftContentInstallationExecutionRemVibeFailure.recoveryRequired
           : downloadedError?.cancelled == true || _cancelRequested && _state != MtnMinecraftContentInstallationExecutionRemVibeState.committing
               ? MtnMinecraftContentInstallationExecutionRemVibeFailure.cancelled
-              : downloadedError != null
+              : downloadedError != null || _state == MtnMinecraftContentInstallationExecutionRemVibeState.downloading
                   ? MtnMinecraftContentInstallationExecutionRemVibeFailure.download
                   : _state == MtnMinecraftContentInstallationExecutionRemVibeState.publishing ||
                     _state == MtnMinecraftContentInstallationExecutionRemVibeState.committing
