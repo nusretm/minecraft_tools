@@ -2834,9 +2834,25 @@ Authoritative dev.28 record:
 docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_RECOVERY_HARDENING.md
 ```
 
-Dev.27 and dev.28 merged feature branch cleanup is not yet confirmed.
-No next implementation checkpoint is approved. Future implementation and
-merges require separate explicit approval. No `dart format` for pure Dart.
+Dev.27 and dev.28 merged feature branch cleanup is COMPLETE:
+- `feature/minecraft-content-remvibe-installation-execution` was confirmed
+  absent remotely; the local branch was also absent at final cleanup.
+- `feature/minecraft-content-installation-recovery-hardening` was deleted
+  on origin and locally by the user; `git fetch --prune origin` completed.
+- User verified `main` synchronized with `origin/main`, working tree clean,
+  at `9bdf9dcebe64cb9d0c8826569f10ea06c7c22fa8`.
+- GitHub subsequent remote verification found neither feature branch present.
+
+The next proposed handoff is **launcher-owned**, not another Content Service
+production checkpoint. `nusretm/mtn_launcher` records an opt-in design-only
+Content Integration A: `docs/continuity/CONTENT_INSTALLATION_HANDOFF_PLAN.md`.
+It proposes passing an existing canonical materialization plan to dev.28's
+RemVibe+IO executor using the launcher package UUID root and caller-owned,
+physically separate staging; preserving TaskService cancellation/recovery
+authority; and leaving the existing `MtnLauncherPackage.run()` and Forge
+Step 11 untouched. No dependency or production implementation is approved.
+Future code and merges require separate explicit approvals; no `dart format`
+for pure Dart.
 
 ### Previously completed checkpoint: dev.27 — RemVibe Batch-to-Coordinated Installation Execution
 
