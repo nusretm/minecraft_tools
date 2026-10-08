@@ -9,7 +9,8 @@ Date: 2026-10-08
 - Baseline main: 6955f67833875b17aeab43bf7579268d3a44834a
 - Package: minecraft_content_service 1.0.0-dev.24
 - Implementation: in feature branch
-- Local Dart validation: pending; no Dart SDK in authoring runtime
+- Local Windows Dart validation on HEAD f8ea4834e82e10c65a7ef14445c05dc8243aa81b: dart analyze clean; focused 13/15/12; full dart test 190/190; diff check and working tree clean (user-provided logs).
+- Actual-diff hardening after validated HEAD: reject simultaneous finalizations and revalidate published target ancestor paths before destructive cleanup; two new regression tests. New HEAD validation pending.
 - Merge: NOT APPROVED / NOT PERFORMED
 
 ## Boundary
@@ -37,6 +38,7 @@ Caller supplies exact canonical install/replacement target + read-only File sour
 - rollbackTransaction: validate all pending recovery entries + retains before restoration; restore in reverse recovery-ledger order. Partial restoration remains rollbackIncomplete and may only retry rollback.
 - Committed and rolledBack final states are idempotent for their own finalization method. Opposite finalizations are rejected.
 - Transaction finalization belongs only to the creating filesystem authority.
+- Concurrent commit/rollback entry on the same transaction handle is rejected until the current finalization completes.
 - On application failure, recover already-applied entries. If recovery cannot be confirmed, surface typed transaction failure and preserved candidate paths.
 - Transaction public resultingInstallationState is the original plan's candidate state; it is authoritative as applied only after committed.
 
@@ -46,6 +48,7 @@ Caller supplies exact canonical install/replacement target + read-only File sour
 - Retained managed files are never intentionally mutated.
 - Existing target backup content is captured through transient SHA-256 and size before rename and rechecked before commit/rollback.
 - Managed removal backup content is likewise checked before finalization; removed target must remain absent.
+- Publication finalization rechecks installation-root resolution and the target's symlink-free parent path chain, not merely target bytes.
 - Root lock and target locks are in-process coordination for cooperating callers, not OS-wide locks.
 - No arbitrary unmanaged or manually installed files are ever removed.
 - External processes can race between portable Dart filesystem inspections and rename; no no-replace native rename primitive is assumed.
