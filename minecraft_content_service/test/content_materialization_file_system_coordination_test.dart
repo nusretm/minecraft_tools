@@ -369,14 +369,14 @@ void main() {
 }
 
 class _Fixture {
-  const _Fixture(this.root, this.sourceRoot);
+  _Fixture(this.root, this.sourceRoot);
 
   final Directory root;
   final Directory sourceRoot;
 
-  MtnMinecraftContentMaterializationFileSystem get fileSystem => MtnMinecraftContentMaterializationFileSystem();
-  MtnMinecraftContentMaterializationFileSystemCoordinator get coordinator => MtnMinecraftContentMaterializationFileSystemCoordinator();
-  MtnMinecraftContentInstallationManifestFileSystem get manifests => MtnMinecraftContentInstallationManifestFileSystem();
+  final MtnMinecraftContentMaterializationFileSystem fileSystem = MtnMinecraftContentMaterializationFileSystem();
+  final MtnMinecraftContentMaterializationFileSystemCoordinator coordinator = MtnMinecraftContentMaterializationFileSystemCoordinator();
+  final MtnMinecraftContentInstallationManifestFileSystem manifests = MtnMinecraftContentInstallationManifestFileSystem();
 
   Future<void> dispose() async {
     await root.delete(recursive: true);
