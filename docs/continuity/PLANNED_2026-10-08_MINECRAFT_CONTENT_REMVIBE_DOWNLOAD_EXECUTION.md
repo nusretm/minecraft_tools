@@ -18,7 +18,9 @@ Actual-diff review: COMPLETE
 Validation: COMPLETE
 Continuity: CLOSED
 Validated feature HEAD: f15750d666d3b22f7ad7302e74fd025db01d14b3
-Merge: NOT REQUESTED
+Merge: COMPLETE
+PR: #49
+Merge commit: 313e21b268157ad6049b5b4e9f578b5e7f17c44a
 ```
 
 No `dart format` was run.
@@ -281,4 +283,4 @@ f15750d666d3b22f7ad7302e74fd025db01d14b3
 
 No `dart format` was run.
 
-The checkpoint is implementation-complete, actual-diff reviewed, validated, and continuity-closed. Merge still requires separate explicit user approval.
+The checkpoint is implementation-complete, actual-diff reviewed, validated, continuity-closed, and merged through PR #49 at merge commit `313e21b268157ad6049b5b4e9f578b5e7f17c44a`.
