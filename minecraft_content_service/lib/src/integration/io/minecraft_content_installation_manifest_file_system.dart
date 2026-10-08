@@ -26,6 +26,7 @@ class MtnMinecraftContentInstallationManifestFileSystemException implements Exce
 class MtnMinecraftContentInstallationManifestFileSystemPublication {
   MtnMinecraftContentInstallationManifestFileSystemPublication._({
     required this.installationRoot,
+    required this.resolvedInstallationRoot,
     required this.target,
     required this.backup,
     required this.previousTargetPath,
@@ -39,6 +40,7 @@ class MtnMinecraftContentInstallationManifestFileSystemPublication {
   }) : _owner = owner, _release = release;
 
   final Directory installationRoot;
+  final Directory resolvedInstallationRoot;
   final File target;
   final File? backup;
   final String? previousTargetPath;
@@ -192,6 +194,7 @@ class MtnMinecraftContentInstallationManifestFileSystem {
 
       return MtnMinecraftContentInstallationManifestFileSystemPublication._(
         installationRoot: installationRoot,
+        resolvedInstallationRoot: root,
         target: location.target,
         backup: backup,
         previousTargetPath: previousTargetPath,
@@ -378,9 +381,8 @@ class MtnMinecraftContentInstallationManifestFileSystem {
   }
 
   Future<void> _validateRootAndParent(MtnMinecraftContentInstallationManifestFileSystemPublication publication) async {
-    final resolved = await _resolveRoot(publication.installationRoot);
-    await _assertRootStable(publication.installationRoot, publication.installationRoot);
-    final location = await _inspectLocation(resolved);
+    await _assertRootStable(publication.installationRoot, publication.resolvedInstallationRoot);
+    final location = await _inspectLocation(publication.resolvedInstallationRoot);
     if (location.directory == null || _identity(location.target.path) != _identity(publication.target.path)) {
       throw StateError('Manifest directory or physical path changed before finalization.');
     }
