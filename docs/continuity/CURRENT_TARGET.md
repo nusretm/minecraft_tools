@@ -2795,7 +2795,30 @@ In particular:
 
 ## Next action
 
-The active content-service checkpoint is:
+The active feature checkpoint is:
+
+```text
+dev.24 — Whole-plan Materialization Transaction Foundation
+branch: feature/minecraft-content-materialization-transaction
+baseline main: 6955f67833875b17aeab43bf7579268d3a44834a
+package: minecraft_content_service 1.0.0-dev.24
+status: USER WINDOWS VALIDATION PASSED AT f8ea483 / DIFF-REVIEW HARDENING VALIDATION PENDING / NOT MERGED
+```
+
+Dev.24 implementation includes whole-plan reversible publication/removal execution,
+policy-normalized physical obsolete-path derivation, private recovery ledger,
+commit/rollback prevalidation, retained-file and backup snapshots, and root-level
+coordination with standalone dev.23 publication.
+
+Authoritative design and validation checklist:
+
+```text
+docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_WHOLE_PLAN_TRANSACTION.md
+```
+
+No merge without separate explicit approval. No dart format for Pure Dart.
+
+Historical completed checkpoint:
 
 ```text
 dev.23 — Single-target Safe Publication Foundation

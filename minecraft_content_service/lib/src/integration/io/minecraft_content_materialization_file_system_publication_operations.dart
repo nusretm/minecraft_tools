@@ -9,6 +9,19 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
     required MtnMinecraftContentMaterializationFileSystemPreflight preflight,
     required MtnMinecraftContentMaterializationTarget target,
     required File source,
+  }) => _publishInternal(preflight: preflight, target: target, source: source, withinTransaction: false);
+
+  Future<MtnMinecraftContentMaterializationFileSystemPublication> _publishWithinTransaction({
+    required MtnMinecraftContentMaterializationFileSystemPreflight preflight,
+    required MtnMinecraftContentMaterializationTarget target,
+    required File source,
+  }) => _publishInternal(preflight: preflight, target: target, source: source, withinTransaction: true);
+
+  Future<MtnMinecraftContentMaterializationFileSystemPublication> _publishInternal({
+    required MtnMinecraftContentMaterializationFileSystemPreflight preflight,
+    required MtnMinecraftContentMaterializationTarget target,
+    required File source,
+    required bool withinTransaction,
   }) async {
     if (!preflight.safe) {
       throw StateError('Publication requires a safe filesystem preflight.');
@@ -39,10 +52,24 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
       );
     }
 
-    final release = await _acquirePublicationTarget(_publicationLockKey(preflight, target.relativePath));
+    final releaseRoot = withinTransaction ? null : await _acquireMaterializationRoot(preflight, exclusive: false);
+    late final void Function() releaseTarget;
+    try {
+      releaseTarget = await _acquirePublicationTarget(_publicationLockKey(preflight, target.relativePath));
+    } catch (_) {
+      releaseRoot?.call();
+      rethrow;
+    }
+    void release() {
+      releaseTarget();
+      releaseRoot?.call();
+    }
     final createdDirectories = <Directory>[];
     File? siblingStaging;
     File? backup;
+    String? previousPhysicalPath;
+    int? previousLength;
+    String? previousSha256;
     bool preserveRecovery = false;
 
     try {
@@ -111,6 +138,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
           <MtnMinecraftContentMaterializationFileSystemPreflightIssue>[],
         );
         final existingTarget = File(observed.physicalPath);
+        previousPhysicalPath = existingTarget.path;
         backup = await _reservePublicationSibling(existingTarget, 'backup');
         try {
           await backup.delete();
@@ -123,6 +151,8 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
             cause: error,
           );
         }
+        previousLength = await existingTarget.length();
+        previousSha256 = await MtnMinecraftContentFileIntegrity.calculateSha256(existingTarget);
         try {
           await existingTarget.rename(backup.path);
         } catch (error) {
@@ -134,6 +164,20 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
             cause: error,
           );
         }
+        try {
+          if (await backup.length() != previousLength || await MtnMinecraftContentFileIntegrity.calculateSha256(backup) != previousSha256) {
+            throw StateError('Managed backup contents changed during publication rename.');
+          }
+        } catch (error) {
+          preserveRecovery = true;
+          throw MtnMinecraftContentMaterializationFileSystemPublicationException(
+            failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
+            message: 'Existing managed target backup could not be verified after rename. Recovery candidates were preserved.',
+            cause: error,
+            backup: backup,
+            staging: siblingStaging,
+          );
+        }
       }
 
       try {
@@ -142,7 +186,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
       } catch (promotionError) {
         if (backup != null) {
           try {
-            await backup.rename(targetFile.path);
+            await backup.rename(previousPhysicalPath ?? targetFile.path);
             backup = null;
           } catch (restoreError) {
             preserveRecovery = true;
@@ -168,6 +212,9 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
         source: source,
         target: targetFile,
         previousTargetExisted: expectedState.entityType == MtnMinecraftContentMaterializationFileSystemEntityType.file,
+        previousPhysicalPath: previousPhysicalPath,
+        previousLength: previousLength,
+        previousSha256: previousSha256,
         publishedLength: stagedLength,
         publishedSha256: publishedSha256,
         backup: backup,
@@ -199,6 +246,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
     }
 
     await _assertPublishedTargetStable(publication);
+    await _assertPublicationBackupStable(publication);
 
     final backup = publication.backup;
     if (backup != null) {
@@ -239,6 +287,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
     }
 
     await _assertPublishedTargetStable(publication);
+    await _assertPublicationBackupStable(publication);
 
     final backup = publication.backup;
     if (backup != null) {
@@ -276,7 +325,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
 
     if (backup != null) {
       try {
-        await backup.rename(publication.target.path);
+        await backup.rename(publication.previousPhysicalPath ?? publication.target.path);
       } catch (restoreError) {
         try {
           await displaced.rename(publication.target.path);
@@ -306,9 +355,45 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
     publication._releaseOnce();
   }
 
+  Future<void> _assertPublicationBackupStable(
+    MtnMinecraftContentMaterializationFileSystemPublication publication,
+  ) async {
+    final backup = publication.backup;
+    if (backup == null) {
+      return;
+    }
+    if (await FileSystemEntity.type(backup.path, followLinks: false) != FileSystemEntityType.file ||
+        await backup.length() != publication.previousLength ||
+        await MtnMinecraftContentFileIntegrity.calculateSha256(backup) != publication.previousSha256) {
+      throw MtnMinecraftContentMaterializationFileSystemPublicationException(
+        failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
+        message: 'Publication backup is missing or its contents changed; recovery state was preserved.',
+        backup: backup,
+      );
+    }
+  }
+
   Future<void> _assertPublishedTargetStable(
     MtnMinecraftContentMaterializationFileSystemPublication publication,
   ) async {
+    await _assertInstallationRootStable(publication.preflight);
+    final inspectionIssues = <MtnMinecraftContentMaterializationFileSystemPreflightIssue>[];
+    final observed = await _inspectArtifact(
+      publication.preflight.resolvedInstallationRoot,
+      publication.materializationTarget.artifact,
+      MtnMinecraftContentMaterializationFileSystemStateScope.resulting,
+      inspectionIssues,
+    );
+    if (inspectionIssues.isNotEmpty ||
+        observed.entityType != MtnMinecraftContentMaterializationFileSystemEntityType.file ||
+        _absolutePathIdentity(observed.physicalPath) != _absolutePathIdentity(publication.target.path)) {
+      throw MtnMinecraftContentMaterializationFileSystemPublicationException(
+        failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
+        message: 'Published target path or ancestor changed before finalization: "${publication.target.path}".',
+        backup: publication.backup,
+      );
+    }
+
     final targetType = await FileSystemEntity.type(publication.target.path, followLinks: false);
     if (targetType != FileSystemEntityType.file) {
       throw MtnMinecraftContentMaterializationFileSystemPublicationException(
