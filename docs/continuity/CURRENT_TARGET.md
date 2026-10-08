@@ -2795,6 +2795,29 @@ In particular:
 
 ## Next action
 
+The active feature checkpoint is:
+
+```text
+dev.25 — Installation Manifest Filesystem Persistence Foundation
+branch: feature/minecraft-content-installation-manifest-persistence
+baseline main: 39d8dc148489cb4f6b8003869486abcf7dc42820
+package: minecraft_content_service 1.0.0-dev.25
+status: IMPLEMENTED IN FEATURE BRANCH / WINDOWS VALIDATION PENDING / NOT MERGED
+```
+
+This checkpoint introduces reversible manifest IO, root-lease coordination with dev.24
+transactions and the reserved .mtn-content namespace. Generic manifest schema v1 and
+provider interfaces remain unchanged. Manifest + content transaction coordination is
+a separate future checkpoint.
+
+Design and validation contract:
+
+```text
+docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_MANIFEST_FILESYSTEM_PERSISTENCE.md
+```
+
+No merge without separate explicit approval. Do not run dart format.
+
 The latest completed content-service checkpoint is:
 
 ```text

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0-dev.25
+
+- Add explicit IO filesystem persistence for schema-v1 installation manifests while leaving the generic manifest serialization unchanged.
+- Read missing manifests as null and reject corrupt, linked, ambiguous, inaccessible or non-file manifest targets without adopting unmanaged state.
+- Publish manifests from flush-written, SHA-256-verified same-directory sibling staging; retain previous raw bytes in a reversible backup handle.
+- Support explicit commit and rollback with backup verification, concurrency-safe finalization state and retryable incomplete states.
+- Coordinate manifest read and publication with the dev.24 installation-root lease system; pending materialization transactions block manifest mutation.
+- Reserve the policy-normalized .mtn-content namespace against managed artifacts during filesystem preflight.
+- Add focused manifest IO, rollback, tampering, link safety, and transaction synchronization tests.
+- Keep manifest+materialization cross-resource commit orchestration and process-crash durable recovery out of this checkpoint.
+
 ## 1.0.0-dev.24
 
 - Add whole-plan reversible materialization transactions on the explicit IO surface, retaining canonical install/replace source associations independently of RemVibe.

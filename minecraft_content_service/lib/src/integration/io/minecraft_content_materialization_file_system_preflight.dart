@@ -16,6 +16,7 @@ enum MtnMinecraftContentMaterializationFileSystemStateScope {
 
 enum MtnMinecraftContentMaterializationFileSystemInvalidTargetPathReason {
   windowsInvalidSegment,
+  reservedManifestNamespace,
   ancestorNotDirectory,
   ambiguousPhysicalIdentity,
   inaccessible,
