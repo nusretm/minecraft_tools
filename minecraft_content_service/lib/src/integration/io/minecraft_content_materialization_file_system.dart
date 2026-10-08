@@ -12,6 +12,7 @@ import '../minecraft_content_file_integrity.dart';
 part 'minecraft_content_materialization_file_system_policy.dart';
 part 'minecraft_content_materialization_file_system_preflight.dart';
 part 'minecraft_content_materialization_file_system_publication.dart';
+part 'minecraft_content_materialization_file_system_publication_operations.dart';
 
 class MtnMinecraftContentMaterializationFileSystem {
   MtnMinecraftContentMaterializationFileSystem({
