@@ -392,7 +392,9 @@ class _Fixture {
   Future<List<int>> read(String relative) => File(p.joinAll(<String>[root.path, ...relative.split('/')])).readAsBytes();
 
   Future<void> existing(MtnMinecraftContentInstallationState state, Map<String, List<int>> contents) async {
-    for (final entry in contents.entries) await write(entry.key, entry.value);
+    for (final entry in contents.entries) {
+      await write(entry.key, entry.value);
+    }
     final publication = await manifests.publish(
       installationRoot: root,
       manifest: MtnMinecraftContentInstallationManifest.fromInstallationState(state),
@@ -409,7 +411,9 @@ Future<_Fixture> _fixture() async {
 
 Future<void> _resetService(RemVibeDownloadService service) async {
   await service.stop();
-  for (final job in List<RemVibeDownloadJob>.of(service.jobs)) await service.cancelJob(job);
+  for (final job in List<RemVibeDownloadJob>.of(service.jobs)) {
+    await service.cancelJob(job);
+  }
 }
 
 Future<HttpServer> _server(Future<void> Function(HttpRequest request) handler) async {
