@@ -2795,14 +2795,16 @@ In particular:
 
 ## Next action
 
-### Proposed checkpoint: dev.28 — Installation Recovery and Cancellation Boundary Hardening
+### Active checkpoint: dev.28 — Installation Recovery and Cancellation Boundary Hardening
 
 ```text
 package: minecraft_content_service
 latest completed: 1.0.0-dev.27 (PR #55, full Windows tests 244/244)
-candidate: dev.28 — In-Process Recovery + Cancellation Validation
-baseline main: 89f93a1b4727465c6c95ee0854418a73ddef607a
-status: DESIGN RECORDED / NOT IMPLEMENTED / NO DEV.28 FEATURE BRANCH
+checkpoint: dev.28 — In-Process Recovery + Cancellation Validation
+branch: feature/minecraft-content-installation-recovery-hardening
+baseline main: 92598cffa96dca105afde41d2d8b24de35b3be90
+package: minecraft_content_service 1.0.0-dev.28
+status: IMPLEMENTED / WINDOWS DART VALIDATION PENDING / NOT MERGED
 design: docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_RECOVERY_HARDENING.md
 ```
 
@@ -2815,11 +2817,16 @@ reversible publication and irreversible cleanup. Use existing dev.26/dev.27
 authorities; no new download manager, generic transaction subsystem, or
 persistent crash-recovery journal.
 
-Dev.27 remote/local feature branch deletion commands have been supplied
-to the user, but completion is not yet confirmed. User-supplied local `main`
-was synchronized and clean at 89f93a1. No dev.28 production implementation
-or merge is approved yet; `docs/WORKING_RULES.md` applies and pure Dart
-must not be passed through `dart format`.
+Dev.27 remote/local feature branch deletion commands were supplied
+but their execution has not yet been confirmed. User-supplied local `main`
+was synchronized and clean after pulling the dev.28 design at 92598cf.
+The user explicitly approved implementation. A dedicated dev.28 feature
+branch now contains policy-matched authority injection, deterministic
+commit/rollback interruption tests, executor recovery and cancellation
+boundary tests, and package dev.28 changelog/version updates. Nothing
+has been merged; Windows Dart validation and actual-diff audit are pending.
+`docs/WORKING_RULES.md` applies and pure Dart must not be passed through
+`dart format`.
 
 ### Latest completed checkpoint: dev.27 — RemVibe Batch-to-Coordinated Installation Execution
 
