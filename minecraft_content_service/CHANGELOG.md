@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0-dev.20
+
+- Add `MtnMinecraftContentDownloadIntegrityRemVibe` as the explicit staged-file integrity policy for RemVibe content downloads.
+- Capture expected size from the canonical content file instead of relying on mutable `RemVibeDownloadItem.size`, which is updated from the actual transfer.
+- Support MD5, SHA-1, SHA-256 and SHA-512 checksum validation with SHA dash aliases and lowercase digest normalization.
+- Ignore unknown provider-specific checksum algorithms while failing fast on malformed metadata for supported algorithms.
+- Reject conflicting aliases that declare different digests for the same canonical checksum algorithm.
+- Calculate every required supported checksum in one streamed file pass.
+- Attach the integrity policy to each dev.19 batch association and wire `validate()` into `RemVibeDownloadItem.validator`.
+- Keep validator null when neither expected size nor a supported checksum can be verified.
+- Keep service submission, transfer orchestration, publication, replacement/removal execution, rollback, manifest filesystem persistence and TaskService orchestration out of this checkpoint.
+
 ## 1.0.0-dev.19
 
 - Add an explicit RemVibe integration library without adding RemVibe types to the generic core service API.

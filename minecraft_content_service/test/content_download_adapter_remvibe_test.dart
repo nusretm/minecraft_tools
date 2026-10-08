@@ -71,7 +71,9 @@ void main() {
       expect(replacement.item.directory.path, p.join(stagingRoot.path, 'mods'));
       expect(replacement.item.filename, 'renamed-a.jar');
       expect(replacement.item.size, 20);
-      expect(replacement.item.validator, isNull);
+      expect(replacement.integrity, isNotNull);
+      expect(replacement.integrity!.expectedSize, 20);
+      expect(replacement.item.validator, isNotNull);
 
       final install = batch.items[1];
       expect(install.target.download.selection.desired.version, same(c));
@@ -79,7 +81,9 @@ void main() {
       expect(install.item.directory.path, p.join(stagingRoot.path, 'mods', 'libraries'));
       expect(install.item.filename, 'c.jar');
       expect(install.item.size, 40);
-      expect(install.item.validator, isNull);
+      expect(install.integrity, isNotNull);
+      expect(install.integrity!.expectedSize, 40);
+      expect(install.item.validator, isNotNull);
     });
 
     test('does not create download items for retained or removed artifacts', () async {
@@ -163,6 +167,8 @@ void main() {
       );
 
       expect(batch.items.single.item.size, isNull);
+      expect(batch.items.single.integrity, isNull);
+      expect(batch.items.single.item.validator, isNull);
     });
 
     test('forwards the RemVibe job status callback contract', () async {

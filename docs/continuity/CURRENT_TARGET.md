@@ -2795,98 +2795,71 @@ In particular:
 
 ## Next action
 
-dev.19 merge:
+The active content-service checkpoint is:
 
 ```text
-PR: #47
-merge commit:
-ceab133f18546ce0215da04c36339957bf2dfb31
-Add RemVibe content download adapter
-```
-
-The completed content-service checkpoint is:
-
-```text
-dev.19 — RemVibe Batch Download Adapter Foundation
-branch: feature/minecraft-content-remvibe-download-adapter
-baseline main: 4e6004fa8fc2830dff707df6747748a8c1473eaa
-production/test HEAD: 40f3484230c9f0f4cc8cf1aead8a924659e7e0fd
-status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATED / CONTINUITY CLOSED / MERGED
-package: minecraft_content_service 1.0.0-dev.19
-```
-
-External reusable infrastructure observed at implementation start:
-
-```text
-remvibe_dart_models main:
-2db0ec0f3168a08433dd8cbf687828b899e54745
-
-remvibe_download_service main:
-59422d90d22836ec7ee26904956c987174404c90
-
-remvibe_task_service main:
-46d274cc0a1128119a8253f834e56ed2f774909b
-```
-
-The package dependency intentionally follows the established RemVibe package convention:
-
-```yaml
-remvibe_download_service:
-  git:
-    url: https://github.com/nusretm/remvibe_download_service
-    ref: main
+dev.20 — Content Download Integrity Validator Foundation
+branch: feature/minecraft-content-download-integrity
+baseline main: cf1205d38502fa7cb56c851dd7804a70bc1b9085
+production/test HEAD: c66cbe6716aa6f6a5fffb39c274e6e94e304d5cf
+status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATED / CONTINUITY CLOSED
+package: minecraft_content_service 1.0.0-dev.20
 ```
 
 Implemented boundary:
 
 ```text
-MtnMinecraftContentMaterializationPlan
-        ↓
-MtnMinecraftContentDownloadAdapterRemVibe
-        ↓
-ONE MtnMinecraftContentDownloadAdapterRemVibeBatch
-        ├─ canonical target ↔ RemVibeDownloadItem associations
-        └─ ONE RemVibeDownloadJob
+canonical MtnMinecraftContentFile
+        ├─ expected size
+        └─ normalized hashes
+                 ↓
+MtnMinecraftContentDownloadIntegrityRemVibe
+                 ↓
+RemVibeDownloadItem.validator
+                 ↓
+RemVibe temporary .download file
 ```
 
 Locked design:
 
-- generic `minecraft_content_service.dart` does not export RemVibe types
-- integration is exposed explicitly through `minecraft_content_service_remvibe.dart`
-- one materialization plan maps to one RemVibe batch/job
-- canonical download-plan ordering is preserved
-- only install/replacement targets produce download items
-- retain/remove actions never produce download items
-- each RemVibe item preserves the exact canonical materialization target association
-- resolved content URL maps to `RemVibeDownloadItem.url`
-- caller-owned final relative-path basename maps to `filename`; provider source filename is not treated as final target authority
-- staging directory maps from caller-owned `stagingRoot` plus the target relative parent path
-- normalized content file size maps to the RemVibe expected size and remains null when unknown
-- `validator` remains unset in dev.19
-- adapter does not start `RemVibeDownloadService` and does not call `addJob()`
-- an empty/no-download materialization plan does not create a zero-item RemVibe job
-- RemVibe integration introduces `dart:io` only in the explicit integration layer; generic planning/persistence layers remain filesystem-free
-- package SDK lower bound increases from Dart 3.3 to 3.5 because `remvibe_download_service` requires Dart >=3.5
-- direct `path` dependency is used for host filesystem staging path composition
+- integrity metadata authority remains the exact canonical materialization target file
+- expected size is captured independently from mutable `RemVibeDownloadItem.size`
+- RemVibe updates its item size from the actual response/transfer before validator execution; integrity therefore never treats that mutable value as the expected size authority
+- supported canonical algorithms are `md5`, `sha1`, `sha256`, and `sha512`
+- SHA aliases `sha-1`, `sha-256`, and `sha-512` normalize to canonical algorithm names
+- supported digest values must have exact hexadecimal length and normalize to lowercase
+- duplicate aliases with the same digest collapse to one expectation
+- conflicting aliases for one canonical algorithm fail fast with `FormatException`
+- unknown/provider-specific algorithms remain preserved in the content model but are ignored by this verifier
+- when expected size exists but no supported checksum exists, size-only validation is used
+- when supported checksums exist but expected size is unknown, checksum-only validation is used
+- when both exist, both must pass
+- when neither expected size nor a supported checksum exists, no validator is attached
+- all supported checksums are calculated during one streamed file read
+- integrity failure throws `MtnMinecraftContentDownloadIntegrityException`
+- dev.19 batch association now exposes the exact integrity policy attached to each RemVibe item
+- validator executes on the RemVibe temporary download before RemVibe promotes it to the staging destination
+- validator failure remains inside RemVibe retry/error lifecycle
+- generic `minecraft_content_service.dart` remains free of RemVibe/filesystem execution types
+- integrity public surface remains under `minecraft_content_service_remvibe.dart`
 
 Still out of scope:
 
-- `RemVibeDownloadService.start()`
-- `RemVibeDownloadService.addJob()`
-- transfer completion/cancellation orchestration
-- hash validator / integrity verification
-- target-OS case/canonical collision preflight
+- starting/submitting RemVibe download jobs
+- job completion/cancellation orchestration
 - final target publication
 - replace/remove execution
+- target-OS case/canonical collision policy
+- staging cleanup policy
 - rollback/transaction sequencing
 - installation-manifest filesystem persistence
 - RemVibeTaskService orchestration
 - unmanaged/manual file cleanup
 - deferred resource rendering
 
-Independent actual-diff review completed before local validation. The bounded production diff changes only the explicit RemVibe integration library/adapter, its tests, package dependency/version metadata, README and changelog; existing core service/planner implementations are unchanged.
+Independent actual-diff review completed before local validation. Existing core service/planner implementations were not modified.
 
-Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `40f3484230c9f0f4cc8cf1aead8a924659e7e0fd`. PR #47 merged at `ceab133f18546ce0215da04c36339957bf2dfb31`.
+Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `50d906fbe4f8469ff7caa760e3a76821c03ee326`. Merge still requires separate explicit user approval.
 
 Validation:
 
@@ -2894,11 +2867,20 @@ Validation:
 dart analyze
 No issues found!
 
+content_download_integrity_remvibe_test.dart
+9/9 passed
+
 content_download_adapter_remvibe_test.dart
 7/7 passed
 
+content_materialization_plan_test.dart
+9/9 passed
+
+content_installation_manifest_test.dart
+9/9 passed
+
 full dart test
-134/134 passed
+143/143 passed
 
 git diff --check main...HEAD
 PASS
@@ -2907,35 +2889,26 @@ working tree
 clean
 
 validated feature HEAD:
-40f3484230c9f0f4cc8cf1aead8a924659e7e0fd
+50d906fbe4f8469ff7caa760e3a76821c03ee326
 ```
-
-Earlier focused validation:
-- materialization plan 9/9
-- download plan 9/9
-- installation manifest 9/9
-
-Dependency resolution:
-- remvibe_dart_models 1.0.0 @ 2db0ec
-- remvibe_download_service 1.0.0 @ 59422d
 
 Active continuity document:
 
 ```text
-docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_REMVIBE_DOWNLOAD_ADAPTER.md
+docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_DOWNLOAD_INTEGRITY.md
 ```
 
 Completion handoff:
 
 ```text
-docs/continuity/HANDOFF_2026-10-08_MINECRAFT_CONTENT_REMVIBE_DOWNLOAD_ADAPTER.md
+docs/continuity/HANDOFF_2026-10-08_MINECRAFT_CONTENT_DOWNLOAD_INTEGRITY.md
 ```
 
 Previous completed checkpoint:
 
 ```text
-dev.18 — Managed Installation Manifest Persistence Foundation
-PR: #46
-merge commit: 1d1d100e94fa7a1b49758ea333360652e75e8d6d
-post-merge main: 4e6004fa8fc2830dff707df6747748a8c1473eaa
+dev.19 — RemVibe Batch Download Adapter Foundation
+PR: #47
+merge commit: ceab133f18546ce0215da04c36339957bf2dfb31
+post-merge main: cf1205d38502fa7cb56c851dd7804a70bc1b9085
 ```
