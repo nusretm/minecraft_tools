@@ -296,6 +296,89 @@ void main() {
       expect(await fixture.readFile('mods/a.jar'), 'old');
     });
 
+    test('manifest backup corruption keeps lease and retryRollback restores manifest after managed rollback', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final old = _version('a:v1', 'a', 'a.jar');
+      final state = _state(<MtnMinecraftContentInstallationArtifact>[_artifact(old, 'mods/a.jar')]);
+      await fixture.existing(state, <String, String>{'mods/a.jar': 'old'});
+      final plan = await _plan(state, const <MtnMinecraftContentVersion>[], const <String, String>{});
+      final preflight = await fixture.fileSystem.preflight(plan: plan, installationRoot: fixture.root.absolute);
+      final tx = await fixture.coordinator.begin(
+        preflight: preflight,
+        sources: const <MtnMinecraftContentMaterializationFileSystemTransactionSource>[],
+      );
+
+      final manifestDirectory = Directory(p.join(fixture.root.path, '.mtn-content'));
+      final backups = await manifestDirectory.list(followLinks: false).where(
+        (entity) => p.basename(entity.path).startsWith('.mtn-content-manifest-backup-'),
+      ).toList();
+      expect(backups, hasLength(1));
+      final backup = File(backups.single.path);
+      final oldBytes = await backup.readAsBytes();
+      await backup.writeAsString('invalid-backup');
+
+      await expectLater(
+        fixture.coordinator.rollback(tx),
+        throwsA(isA<MtnMinecraftContentMaterializationFileSystemCoordinationException>()
+            .having((error) => error.failure, 'failure', MtnMinecraftContentMaterializationFileSystemCoordinationFailure.rollbackFailure)),
+      );
+      expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.rollbackIncomplete);
+      expect(await fixture.readFile('mods/a.jar'), 'old');
+
+      var readFinished = false;
+      final blockedRead = fixture.manifests.read(installationRoot: fixture.root.absolute).then((manifest) {
+        readFinished = true;
+        return manifest;
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      expect(readFinished, isFalse);
+
+      await backup.writeAsBytes(oldBytes);
+      await fixture.coordinator.rollback(tx);
+      expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.rolledBack);
+      expect((await blockedRead.timeout(const Duration(seconds: 5)))!.installationState.artifacts.single.version.key, 'a:v1');
+    });
+
+    test('managed replacement backup corruption retains lease until retryRollback restores old bytes', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final old = _version('a:v1', 'a', 'a.jar');
+      final state = _state(<MtnMinecraftContentInstallationArtifact>[_artifact(old, 'mods/a.jar')]);
+      await fixture.existing(state, <String, String>{'mods/a.jar': 'old'});
+      final next = _version('a:v2', 'a', 'new.jar');
+      final source = await fixture.source('new.jar', 'new');
+      final plan = await _plan(state, <MtnMinecraftContentVersion>[next], <String, String>{'a:v2': 'mods/a.jar'});
+      final preflight = await fixture.fileSystem.preflight(plan: plan, installationRoot: fixture.root.absolute);
+      final tx = await fixture.coordinator.begin(
+        preflight: preflight,
+        sources: <MtnMinecraftContentMaterializationFileSystemTransactionSource>[
+          MtnMinecraftContentMaterializationFileSystemTransactionSource(target: plan.replacements.single.target, source: source),
+        ],
+      );
+      final backups = await Directory(p.join(fixture.root.path, 'mods')).list(followLinks: false).where(
+        (entity) => p.basename(entity.path).startsWith('.mtn-content-backup-'),
+      ).toList();
+      expect(backups, hasLength(1));
+      final backup = File(backups.single.path);
+      final oldBytes = await backup.readAsBytes();
+      await backup.writeAsString('tampered-backup');
+
+      await expectLater(
+        fixture.coordinator.rollback(tx),
+        throwsA(isA<MtnMinecraftContentMaterializationFileSystemCoordinationException>()
+            .having((error) => error.failure, 'failure', MtnMinecraftContentMaterializationFileSystemCoordinationFailure.rollbackFailure)),
+      );
+      expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.rollbackIncomplete);
+      expect(await fixture.readFile('mods/a.jar'), 'new');
+
+      await backup.writeAsBytes(oldBytes);
+      await fixture.coordinator.rollback(tx);
+      expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.rolledBack);
+      expect(await fixture.readFile('mods/a.jar'), 'old');
+      expect((await fixture.manifests.read(installationRoot: fixture.root.absolute))!.installationState.artifacts.single.version.key, 'a:v1');
+    });
+
     test('exclusive combined lease blocks standalone manifest reads and content transactions', () async {
       final fixture = await _fixture();
       addTearDown(fixture.dispose);
