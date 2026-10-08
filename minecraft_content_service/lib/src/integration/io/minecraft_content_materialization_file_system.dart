@@ -7,8 +7,8 @@ import 'package:crypto/crypto.dart';
 
 import 'package:path/path.dart' as p;
 
-import '../../service/minecraft_content_installation_state.dart';
 import '../../service/minecraft_content_installation_manifest.dart';
+import '../../service/minecraft_content_installation_state.dart';
 import '../../service/minecraft_content_materialization_plan.dart';
 import '../minecraft_content_file_integrity.dart';
 
