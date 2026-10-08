@@ -147,7 +147,7 @@ class _MaterializationTransactionRemoval extends _MaterializationTransactionStep
     );
     if (issues.isNotEmpty ||
         observed.entityType != MtnMinecraftContentMaterializationFileSystemEntityType.missing) {
-      throw StateError('Managed removal target was externally recreated or changed: ' + original.path);
+      throw StateError('Managed removal target was externally recreated or changed: ${original.path}');
     }
     if (expectedMissing) {
       return;
@@ -157,7 +157,7 @@ class _MaterializationTransactionRemoval extends _MaterializationTransactionStep
         await FileSystemEntity.type(retainedBackup.path, followLinks: false) != FileSystemEntityType.file ||
         await retainedBackup.length() != length ||
         await MtnMinecraftContentFileIntegrity.calculateSha256(retainedBackup) != sha256) {
-      throw StateError('Managed removal recovery backup is missing or changed: ' + original.path);
+      throw StateError('Managed removal recovery backup is missing or changed: ${original.path}');
     }
   }
 
