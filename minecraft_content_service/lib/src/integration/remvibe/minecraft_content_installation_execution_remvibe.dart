@@ -107,6 +107,7 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
   bool _cancelRequested = false;
   bool _finished = false;
   String? _resolvedStagingRoot;
+  String? _resolvedInstallationRoot;
   MtnMinecraftContentMaterializationFileSystemCoordinatedTransaction? _pendingTransaction;
   bool _retrying = false;
 
@@ -201,6 +202,7 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
 
       final first = await _fileSystem.preflight(plan: plan, installationRoot: installationRoot);
       if (!first.safe) throw StateError('Materialization filesystem preflight is unsafe before transfer.');
+      _resolvedInstallationRoot = _identity(first.resolvedInstallationRoot.path);
       _checkCancellation();
 
       final sources = <MtnMinecraftContentMaterializationFileSystemTransactionSource>[];
@@ -246,6 +248,9 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
       }
 
       final refreshed = await _fileSystem.preflight(plan: plan, installationRoot: installationRoot);
+      if (_identity(refreshed.resolvedInstallationRoot.path) != _resolvedInstallationRoot) {
+        throw StateError('Installation root physical identity changed during download.');
+      }
       if (!refreshed.safe) throw StateError('Materialization filesystem preflight became unsafe after download.');
       _checkCancellation();
 
@@ -370,6 +375,9 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
       throw StateError('Staging root must be an existing absolute, regular directory.');
     }
     final resolvedStage = await root.resolveSymbolicLinks();
+    if (_resolvedInstallationRoot != null && _identity(resolvedInstallationRoot.path) != _resolvedInstallationRoot) {
+      throw StateError('Installation root physical identity changed during execution.');
+    }
     if (_resolvedStagingRoot != null && _resolvedStagingRoot != _identity(resolvedStage)) {
       throw StateError('Staging root physical identity changed during execution.');
     }
