@@ -11,7 +11,7 @@ Date: 2026-10-08
 - Status: **IMPLEMENTED ON FEATURE BRANCH / WINDOWS DART VALIDATION PENDING / NOT MERGED**
 - Branch: `feature/minecraft-content-remvibe-installation-execution`
 - Implementation explicitly approved by user after clean dev.26 branch cleanup
-- Focused regression tests added: 17
+- Focused regression tests added: 19
 - Previous checkpoint: dev.26, PR #54, squash `195af95f8523edac35e02a582d2cd1c01fa211d0`, 225/225 tests
 - Dev.26 branch cleanup: completed locally and remotely; user verified clean synchronized `main` at design baseline prior to dev.27 documentation commits
 
@@ -124,5 +124,5 @@ The design and dev.27 production implementation were explicitly approved. Next: 
 - Uses exact canonical batch item target/source pairs, confirms completed job/item states, verifies supported checksum/size and repeats destination preflight before coordinator mutation.
 - Cancellation before download or before commit rejects success; in-flight cancellation uses the existing exact RemVibe job. Cancellation is not honored once forward-only commit cleanup has begun.
 - Installation roots, job service lifecycle and caller-owned staging directories remain under their existing owners; executor neither deletes successful staged files nor alters global RemVibe service configuration.
-- Unit/integration tests include real local HTTP requests, two-item one-job installation, replacement, zero-download plans, retries, cancellation, symlink/case collision, manifest mismatch, stale destination and tampered output.
+- Unit/integration tests include real local HTTP requests, two-item one-job installation, replacement, zero-download plans, retries, cancellation, symlink/case collision, manifest mismatch, stale destination, tampered output, pre-existing partial downloads and unrelated singleton job preservation.
 - **Windows tests not yet run for this feature branch.** No PR/merge until verified.
