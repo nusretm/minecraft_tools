@@ -326,6 +326,8 @@ extension MtnMinecraftContentMaterializationFileSystemTransactionOperations on M
     }
     if (observed.entityType == MtnMinecraftContentMaterializationFileSystemEntityType.missing) {
       return _MaterializationTransactionRemoval(
+        preflight: preflight,
+        artifact: expected.artifact,
         original: File(observed.physicalPath),
         expectedMissing: true,
         backup: null,
@@ -369,6 +371,8 @@ extension MtnMinecraftContentMaterializationFileSystemTransactionOperations on M
       throw StateError('Managed removal backup changed during rename; original was restored.');
     }
     return _MaterializationTransactionRemoval(
+      preflight: preflight,
+      artifact: expected.artifact,
       original: original,
       expectedMissing: false,
       backup: backup,
