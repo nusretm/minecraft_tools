@@ -254,7 +254,11 @@ void main() {
         throwsA(isA<MtnMinecraftContentMaterializationFileSystemCoordinationException>()),
       );
       expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.pending);
-      expect(await tx.manifestPublication!.backup!.exists(), isTrue);
+      expect(
+        (await Directory(p.join(fixture.root.path, '.mtn-content')).list().toList())
+            .any((entity) => p.basename(entity.path).startsWith('.mtn-content-manifest-backup-')),
+        isTrue,
+      );
       await target.writeAsBytes(originalNew);
       await fixture.coordinator.rollback(tx);
       expect(await fixture.readFile('mods/a.jar'), 'old');
@@ -282,7 +286,11 @@ void main() {
         throwsA(isA<MtnMinecraftContentMaterializationFileSystemCoordinationException>()),
       );
       expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.pending);
-      expect(await tx.manifestPublication!.backup!.exists(), isTrue);
+      expect(
+        (await Directory(p.join(fixture.root.path, '.mtn-content')).list().toList())
+            .any((entity) => p.basename(entity.path).startsWith('.mtn-content-manifest-backup-')),
+        isTrue,
+      );
       await fixture.writeFile('mods/a.jar', 'new');
       await fixture.coordinator.rollback(tx);
       expect(await fixture.readFile('mods/a.jar'), 'old');
