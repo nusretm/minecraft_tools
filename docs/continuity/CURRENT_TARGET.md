@@ -2795,37 +2795,47 @@ In particular:
 
 ## Next action
 
-### Active checkpoint: dev.26
+### Latest completed checkpoint: dev.26
 
 ```text
 dev.26 — Materialization + Manifest Coordination
 branch: feature/minecraft-content-materialization-manifest-coordination
 baseline main: 096b328e4cfa8ea0ba4a2b62f1d3f994034803a8
+validated production/test HEAD: c9253473e9b31a6d1e8264db1478ebdd1193eac4
+final feature HEAD: 10086f58b4fc262183914a05c7aa5c31357e9051
+PR: #54
+main squash merge commit: 195af95f8523edac35e02a582d2cd1c01fa211d0
 package: minecraft_content_service 1.0.0-dev.26
-status: WINDOWS VALIDATED (225 TESTS) / ACTUAL-DIFF REVIEWED / NOT MERGED
-design: docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_MATERIALIZATION_MANIFEST_COORDINATION.md
+status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / WINDOWS VALIDATED (225 TESTS) / MERGED / CLOSED
 ```
 
-User approved the dev.26 design and implementation. The dev.25 feature branch
-was deleted locally and remotely; main was clean and synchronized at baseline.
-The dev.26 coordinator owns one exclusive in-process root lease and privately
-uses dev.24 materialization + dev.25 manifest reversible operations. Both
-recovery states are checked before forward-only commit cleanup. Manifest-first
-rollback and retained recovery candidates are supported. New integration
-tests have now passed final Windows validation: 16/16 coordination tests,
-225/225 package tests and a clean Dart analyzer. The queue-order test fix and
-the three redundant non-null assertion fixes were revalidated at
-c9253473e9b31a6d1e8264db1478ebdd1193eac4.
-The actual-diff and recovery audit found no critical production blocker.
-Commit-interruption fault injection remains outside the proven test coverage.
+Dev.26 unifies dev.24 managed-file publication and dev.25 manifest persistence
+under one in-process exclusive installation-root lease. It verifies current
+persisted manifest state against the canonical plan, publishes the resulting
+manifest, checks both recovery states before destructive commit cleanup,
+and rolls back manifest then files. Once cleanup begins, commit retry is
+forward-only.
 
-Do not merge without separate explicit approval. No pure Dart `dart format`.
+Windows validation (user-supplied): `dart analyze` no issues, 16/16 coordinated
+focused tests, 225/225 full package tests, clean diff check and working tree.
+The last feature commits after validation changed only continuity documents.
+Post-merge continuity closure was written directly to main.
 
-The design record documents the original non-reentrant root-lock problem and
-the one-lease, forward-only cleanup decision. It remains authoritative for
-failure boundaries and deferred crash-durable recovery.
+No crash-durable journal, power-loss or cross-process atomicity guarantee;
+injected interruption between managed-file and manifest cleanup phases
+was not covered by these tests. Dev.26 feature branch cleanup has not
+been requested or confirmed.
 
-The latest completed content-service checkpoint is:
+Authoritative design, boundary and validation record:
+
+```text
+docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_MATERIALIZATION_MANIFEST_COORDINATION.md
+```
+
+No next production checkpoint is approved. Future implementation and merge
+require separate explicit approval; do not run `dart format` for pure Dart.
+
+Historical completed checkpoint:
 
 ```text
 dev.25 — Installation Manifest Filesystem Persistence Foundation
