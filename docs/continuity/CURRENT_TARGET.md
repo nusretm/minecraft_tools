@@ -2802,7 +2802,7 @@ dev.23 — Single-target Safe Publication Foundation
 branch: feature/minecraft-content-single-target-publication
 baseline main: 58f598e2d43ecd1c75a49c83c88de4f8091e3feb
 production/test HEAD: eba5888e36847ca504cac59ea26a28ab49e0bed0
-status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATED / CONTINUITY CLOSED
+status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATED / CONTINUITY CLOSED / MERGED
 package: minecraft_content_service 1.0.0-dev.23
 ```
 
@@ -2927,7 +2927,14 @@ git status
 working tree clean
 ```
 
-Dev.23 is validated and continuity-closed. Merge still requires separate explicit user approval.
+Dev.23 is validated, continuity-closed and merged.
+
+```text
+PR: #51
+merge commit: d5fce84bef749d8f78e7916cb594b5ea582ebdc7
+```
+
+The next natural checkpoint is dev.24 — Whole-plan Materialization Transaction. Start with audit + architecture/design only; no production implementation without explicit approval.
 
 Active continuity document:
 
