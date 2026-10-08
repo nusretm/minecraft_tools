@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.0-dev.22
+
+- Add explicit `minecraft_content_service_io.dart` filesystem integration without introducing `dart:io` into the generic package entrypoint.
+- Add read-only `MtnMinecraftContentMaterializationFileSystem.preflight()` over one materialization plan and an existing absolute installation root.
+- Add host-default and explicitly testable filesystem path policies with Windows/POSIX identity and configurable case sensitivity.
+- Detect case-policy path collisions and file/descendant hierarchy collisions in both current and resulting managed states.
+- Reject Windows-illegal target path segments before any publication attempt.
+- Inspect current managed artifacts for missing retained files, wrong entity types, inaccessible paths and symbolic-link indirection.
+- Reject unmanaged occupancy at resulting target paths instead of silently adopting or overwriting manual files.
+- Allow an existing final path when it is owned by the current managed installation, including replacement/removal path reuse.
+- Detect non-directory ancestors and ambiguous physical child identities without mutating the filesystem.
+- Keep directory creation, staging publication, rename/copy/delete, replacement/removal execution, rollback and manifest filesystem persistence out of this checkpoint.
+
 ## 1.0.0-dev.21
 
 - Add `MtnMinecraftContentDownloadExecutionRemVibe` for submitting and awaiting one integrity-aware RemVibe content batch.
