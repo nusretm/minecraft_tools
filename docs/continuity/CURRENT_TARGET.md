@@ -2795,54 +2795,50 @@ In particular:
 
 ## Next action
 
-### Active checkpoint: dev.28 — Installation Recovery and Cancellation Boundary Hardening
+### Latest completed checkpoint: dev.28 — Installation Recovery and Cancellation Boundary Hardening
 
 ```text
-package: minecraft_content_service
-latest completed: 1.0.0-dev.27 (PR #55, full Windows tests 244/244)
 checkpoint: dev.28 — In-Process Recovery + Cancellation Validation
 branch: feature/minecraft-content-installation-recovery-hardening
 baseline main: 92598cffa96dca105afde41d2d8b24de35b3be90
+validated production/test HEAD: 1ff74dfd78c0482f9c3559765c5a0bc7046af371
+final feature HEAD: 25f6021173f27e47fdfb270ae3c40a91cd430b73
+PR: #56
+main squash merge: a0ff4ca33859c4f157b13bc0efaf9109940d643a
 package: minecraft_content_service 1.0.0-dev.28
-status: WINDOWS VALIDATED (257/257 TESTS) / ACTUAL-DIFF + RECOVERY AUDIT COMPLETED / NOT MERGED
-design: docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_RECOVERY_HARDENING.md
+status: IMPLEMENTED / WINDOWS VALIDATED (257/257 TESTS) / ACTUAL-DIFF + RECOVERY REVIEWED / SQUASH MERGED / CLOSED
 ```
 
-After the successful dev.27 installation executor merge, the next proposed
-scope is **deterministic in-process fault/recovery and cancellation verification**
-before starting launcher integration. Specifically: exercise interrupted
-forward-only commit, incomplete rollback retries, pre-handle begin failures
-that might retain a lease, and cancellation at the boundary between a
-reversible publication and irreversible cleanup. Use existing dev.26/dev.27
-authorities; no new download manager, generic transaction subsystem, or
-persistent crash-recovery journal.
+Dev.28 extends the existing coordinated materialization and installation
+executor with optional policy-compatible IO authority composition, retaining
+the same coordinator owner for in-process forward-only commit retry and
+reversible rollback retry. It introduces deterministic test collaborators
+rather than another transaction algorithm or public production failpoints.
 
-Dev.27 remote/local feature branch deletion commands were supplied
-but their execution has not yet been confirmed. User-supplied local `main`
-was synchronized and clean after pulling the dev.28 design at 92598cf.
-The user explicitly approved implementation. A dedicated dev.28 feature
-branch now contains policy-matched authority injection, deterministic
-commit/rollback interruption tests, executor recovery and cancellation
-boundary tests, and package dev.28 changelog/version updates. Nothing
-has been merged. Initial Windows validation found one Dart test compile
-error: `Future<void>.doWhile` in the executor test. Coordination tests
-passed 23/23, materialization transaction 15/15 and manifest IO 17/17;
-the executor and full suite were blocked by this compile error. The static
-call was corrected to `Future.doWhile` on the feature branch. Subsequent
-Windows validation at `1ff74dfd78c0482f9c3559765c5a0bc7046af371`
-returned `dart analyze` no issues, executor tests 25/25, coordinator tests
-23/23, full package tests 257/257, a clean `git diff --check` and a clean
-synchronized working tree. GitHub actual-diff review shows only scoped
-package/continuity changes (20 ahead, 0 behind main) and no new critical
-static blocker. Deterministic method-boundary injections verify forward-only
-commit retry and reversible rollback retry; they do NOT prove an interrupted
-OS `File.delete()`, persistent crash recovery, cross-process locking, or
-recovery of unowned manual candidates without a combined handle. The dev.28
-feature is **not merged** and requires separate merge approval.
-`docs/WORKING_RULES.md` applies and pure Dart must not be passed through
-`dart format`.
+User-supplied Windows validation on the production/test HEAD:
+`dart analyze` no issues, installation execution tests 25/25,
+coordinator tests 23/23, full package tests 257/257, clean
+`git diff --check main...HEAD`, clean synchronized working tree.
+After this validated commit only two continuity documents changed before
+PR #56 squash merge. The recovery audit found no critical static blocker.
 
-### Latest completed checkpoint: dev.27 — RemVibe Batch-to-Coordinated Installation Execution
+Explicit limitations remain: injected collaborator method failures do not
+prove interruption of an OS-level backup deletion inside its implementation.
+No process-crash durability, power-loss recovery, cross-process atomicity,
+or automatic recovery of manual candidates without a combined handle is
+claimed. Retain these boundaries when planning the launcher integration.
+
+Authoritative dev.28 record:
+
+```text
+docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_RECOVERY_HARDENING.md
+```
+
+Dev.27 and dev.28 merged feature branch cleanup is not yet confirmed.
+No next implementation checkpoint is approved. Future implementation and
+merges require separate explicit approval. No `dart format` for pure Dart.
+
+### Previously completed checkpoint: dev.27 — RemVibe Batch-to-Coordinated Installation Execution
 
 ```text
 checkpoint: dev.27 — RemVibe Batch-to-Coordinated Installation Execution
