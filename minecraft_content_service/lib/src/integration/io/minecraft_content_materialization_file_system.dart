@@ -3,9 +3,12 @@ library;
 import 'dart:async';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
+
 import 'package:path/path.dart' as p;
 
 import '../../service/minecraft_content_installation_state.dart';
+import '../../service/minecraft_content_installation_manifest.dart';
 import '../../service/minecraft_content_materialization_plan.dart';
 import '../minecraft_content_file_integrity.dart';
 
@@ -16,6 +19,7 @@ part 'minecraft_content_materialization_file_system_publication_operations.dart'
 part 'minecraft_content_materialization_file_system_transaction_lock.dart';
 part 'minecraft_content_materialization_file_system_transaction.dart';
 part 'minecraft_content_materialization_file_system_transaction_operations.dart';
+part 'minecraft_content_installation_manifest_file_system.dart';
 
 class MtnMinecraftContentMaterializationFileSystem {
   MtnMinecraftContentMaterializationFileSystem({
@@ -142,6 +146,17 @@ class MtnMinecraftContentMaterializationFileSystem {
     List<MtnMinecraftContentMaterializationFileSystemPreflightIssue> issues,
   ) {
     for (final artifact in state.artifacts) {
+      if (_pathIdentity(artifact.relativePath).split('/').first == '.mtn-content') {
+        issues.add(
+          MtnMinecraftContentMaterializationFileSystemPreflightIssueInvalidTargetPath(
+            scope: scope,
+            artifact: artifact,
+            physicalPath: artifact.relativePath,
+            reason: MtnMinecraftContentMaterializationFileSystemInvalidTargetPathReason.reservedManifestNamespace,
+            segment: artifact.relativePath.split('/').first,
+          ),
+        );
+      }
       if (policy.platform == MtnMinecraftContentMaterializationFileSystemPlatform.windows) {
         for (final segment in artifact.relativePath.split('/')) {
           if (!_validWindowsSegment(segment)) {
