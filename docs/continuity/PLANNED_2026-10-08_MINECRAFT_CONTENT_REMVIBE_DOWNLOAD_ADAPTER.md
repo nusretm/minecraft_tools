@@ -10,11 +10,13 @@ Package: minecraft_content_service/
 Checkpoint: dev.19 — RemVibe Batch Download Adapter Foundation
 Branch: feature/minecraft-content-remvibe-download-adapter
 Baseline main: 4e6004fa8fc2830dff707df6747748a8c1473eaa
-Production/test HEAD: 79e5d2d6fc47c9afdcce959763819e6ddc7b7f5f
+Production/test HEAD: 40f3484230c9f0f4cc8cf1aead8a924659e7e0fd
 Package version: 1.0.0-dev.19
 Implementation: COMPLETE
 Actual-diff review: COMPLETE
-Validation: PENDING
+Validation: COMPLETE
+Continuity: CLOSED
+Validated feature HEAD: 40f3484230c9f0f4cc8cf1aead8a924659e7e0fd
 Merge: NOT REQUESTED
 ```
 
@@ -283,32 +285,52 @@ This is a dependency requirement introduced by the approved integration.
 - unmanaged/manual file cleanup
 - resource/item rendering
 
-## Validation required
+## Validation
 
-Run from `minecraft_content_service/`:
+Initial local validation at continuity HEAD `8a1024c9620b21d68950c6cca3abd61abe54979f` found one `directives_ordering` info in the RemVibe integration library. The export order was corrected without changing behavior.
+
+Authoritative user-supplied final local validation on 2026-10-08 at feature HEAD `40f3484230c9f0f4cc8cf1aead8a924659e7e0fd`:
 
 ```text
-dart pub get
 dart analyze
-dart test test/content_download_adapter_remvibe_test.dart
-dart test test/content_materialization_plan_test.dart
-dart test test/content_download_plan_test.dart
-dart test test/content_installation_manifest_test.dart
-dart test
-```
+No issues found!
 
-Then from repository root:
+content_download_adapter_remvibe_test.dart
+7/7 passed
 
-```text
+full dart test
+134/134 passed
+
 git diff --check main...HEAD
+PASS
+
 git status
+working tree clean
+
 git rev-parse HEAD
+40f3484230c9f0f4cc8cf1aead8a924659e7e0fd
 ```
 
-Expected feature HEAD before continuity-only follow-up commits:
+Earlier focused validation before the export-order-only correction also passed:
 
 ```text
-79e5d2d6fc47c9afdcce959763819e6ddc7b7f5f
+content_materialization_plan_test.dart
+9/9
+
+content_download_plan_test.dart
+9/9
+
+content_installation_manifest_test.dart
+9/9
 ```
 
-Do not merge without separate explicit user approval.
+Dependency resolution observed:
+
+```text
+remvibe_dart_models 1.0.0 @ 2db0ec
+remvibe_download_service 1.0.0 @ 59422d
+```
+
+No `dart format` was run.
+
+The checkpoint is implementation-complete, actual-diff reviewed, validated, and continuity-closed. Merge still requires separate explicit user approval.
