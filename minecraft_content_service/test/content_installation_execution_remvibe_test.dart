@@ -200,7 +200,7 @@ void main() {
 
       final executor = fixture.execution(plan, withoutStage: true);
       final running = executor.execute();
-      await Future<void>.doWhile(() async {
+      await Future.doWhile(() async {
         if (executor.state == MtnMinecraftContentInstallationExecutionRemVibeState.publishing) {
           return false;
         }
