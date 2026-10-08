@@ -2802,7 +2802,7 @@ dev.23 — Single-target Safe Publication Foundation
 branch: feature/minecraft-content-single-target-publication
 baseline main: 58f598e2d43ecd1c75a49c83c88de4f8091e3feb
 production/test HEAD: eba5888e36847ca504cac59ea26a28ab49e0bed0
-status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATION PENDING
+status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATED / CONTINUITY CLOSED
 package: minecraft_content_service 1.0.0-dev.23
 ```
 
@@ -2887,7 +2887,47 @@ Still out of scope:
 
 Independent actual-diff review completed before local validation.
 
-Next required action is authoritative local validation on the feature branch. Do not merge until validation completes and the user separately approves merge.
+Authoritative local validation completed successfully on feature HEAD:
+
+```text
+494fc3769267d5a0366eefc7d249aec2ab853174
+```
+
+Validation:
+
+```text
+dart analyze
+No issues found!
+
+content_materialization_file_system_publication_test.dart
+14/14 passed
+
+content_materialization_file_system_preflight_test.dart
+12/12 passed
+
+content_download_integrity_remvibe_test.dart
+9/9 passed
+
+content_download_execution_remvibe_test.dart
+7/7 passed
+
+content_materialization_plan_test.dart
+9/9 passed
+
+content_installation_manifest_test.dart
+9/9 passed
+
+dart test
+176/176 passed
+
+git diff --check main...HEAD
+PASS
+
+git status
+working tree clean
+```
+
+Dev.23 is validated and continuity-closed. Merge still requires separate explicit user approval.
 
 Active continuity document:
 

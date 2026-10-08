@@ -14,7 +14,8 @@ Production/test HEAD: eba5888e36847ca504cac59ea26a28ab49e0bed0
 Package version: 1.0.0-dev.23
 Implementation: COMPLETE
 Actual-diff review: COMPLETE
-Validation: PENDING
+Validation: COMPLETE
+Continuity: CLOSED
 Merge: NOT REQUESTED
 ```
 
@@ -365,7 +366,56 @@ Existing dev.20 RemVibe integrity tests remain required regression coverage for 
 - unmanaged/manual cleanup
 - resource rendering
 
-## Validation required
+## Authoritative validation
+
+User-supplied local validation completed successfully on feature HEAD:
+
+```text
+494fc3769267d5a0366eefc7d249aec2ab853174
+```
+
+Results:
+
+```text
+dart pub get
+PASS
+
+dart analyze
+No issues found!
+
+content_materialization_file_system_publication_test.dart
+14/14 passed
+
+content_materialization_file_system_preflight_test.dart
+12/12 passed
+
+content_download_integrity_remvibe_test.dart
+9/9 passed
+
+content_download_execution_remvibe_test.dart
+7/7 passed
+
+content_materialization_plan_test.dart
+9/9 passed
+
+content_installation_manifest_test.dart
+9/9 passed
+
+dart test
+176/176 passed
+
+git diff --check main...HEAD
+PASS
+
+git status
+working tree clean
+```
+
+No `dart format` was run.
+
+The checkpoint is implementation-complete, actual-diff reviewed, validated and continuity-closed. Merge still requires separate explicit user approval.
+
+## Historical validation command set
 
 Run from `minecraft_content_service/`:
 
