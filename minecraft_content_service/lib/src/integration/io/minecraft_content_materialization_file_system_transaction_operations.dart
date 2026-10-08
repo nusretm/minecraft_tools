@@ -156,93 +156,109 @@ extension MtnMinecraftContentMaterializationFileSystemTransactionOperations on M
     MtnMinecraftContentMaterializationFileSystemTransaction transaction,
   ) async {
     _validateTransactionOwner(transaction);
-    if (transaction.state == MtnMinecraftContentMaterializationFileSystemTransactionState.committed) {
-      return;
+    if (transaction._finalizing) {
+      throw StateError('Transaction finalization is already in progress.');
     }
-    if (transaction.state != MtnMinecraftContentMaterializationFileSystemTransactionState.pending &&
-        transaction.state != MtnMinecraftContentMaterializationFileSystemTransactionState.commitIncomplete) {
-      throw StateError('Transaction cannot be committed after rollback or recovery failure.');
-    }
-
+    transaction._finalizing = true;
     try {
-      await _validateTransactionRecovery(transaction);
-    } catch (error) {
-      throw MtnMinecraftContentMaterializationFileSystemTransactionException(
-        failure: MtnMinecraftContentMaterializationFileSystemTransactionFailure.commitFailure,
-        message: 'Transaction commit prevalidation failed; recovery state was retained.',
-        cause: error,
-        transaction: transaction,
-      );
-    }
-
-    transaction._state = MtnMinecraftContentMaterializationFileSystemTransactionState.commitIncomplete;
-    try {
-      for (final step in transaction._ledger.reversed) {
-        if (!step.finalized) {
-          await step.commit(this);
-        }
+      if (transaction.state == MtnMinecraftContentMaterializationFileSystemTransactionState.committed) {
+        return;
       }
-    } catch (error) {
-      throw MtnMinecraftContentMaterializationFileSystemTransactionException(
-        failure: MtnMinecraftContentMaterializationFileSystemTransactionFailure.commitFailure,
-        message: 'Commit cleanup was interrupted; rollback is no longer permitted. Retry commit.',
-        cause: error,
-        transaction: transaction,
-      );
+      if (transaction.state != MtnMinecraftContentMaterializationFileSystemTransactionState.pending &&
+          transaction.state != MtnMinecraftContentMaterializationFileSystemTransactionState.commitIncomplete) {
+        throw StateError('Transaction cannot be committed after rollback or recovery failure.');
+      }
+
+      try {
+        await _validateTransactionRecovery(transaction);
+      } catch (error) {
+        throw MtnMinecraftContentMaterializationFileSystemTransactionException(
+          failure: MtnMinecraftContentMaterializationFileSystemTransactionFailure.commitFailure,
+          message: 'Transaction commit prevalidation failed; recovery state was retained.',
+          cause: error,
+          transaction: transaction,
+        );
+      }
+
+      transaction._state = MtnMinecraftContentMaterializationFileSystemTransactionState.commitIncomplete;
+      try {
+        for (final step in transaction._ledger.reversed) {
+          if (!step.finalized) {
+            await step.commit(this);
+          }
+        }
+      } catch (error) {
+        throw MtnMinecraftContentMaterializationFileSystemTransactionException(
+          failure: MtnMinecraftContentMaterializationFileSystemTransactionFailure.commitFailure,
+          message: 'Commit cleanup was interrupted; rollback is no longer permitted. Retry commit.',
+          cause: error,
+          transaction: transaction,
+        );
+      }
+      transaction._state = MtnMinecraftContentMaterializationFileSystemTransactionState.committed;
+      transaction._releaseOnce();
+    } finally {
+      transaction._finalizing = false;
     }
-    transaction._state = MtnMinecraftContentMaterializationFileSystemTransactionState.committed;
-    transaction._releaseOnce();
   }
 
   Future<void> rollbackTransaction(
     MtnMinecraftContentMaterializationFileSystemTransaction transaction,
   ) async {
     _validateTransactionOwner(transaction);
-    if (transaction.state == MtnMinecraftContentMaterializationFileSystemTransactionState.rolledBack) {
-      return;
+    if (transaction._finalizing) {
+      throw StateError('Transaction finalization is already in progress.');
     }
-    if (transaction.state != MtnMinecraftContentMaterializationFileSystemTransactionState.pending &&
-        transaction.state != MtnMinecraftContentMaterializationFileSystemTransactionState.rollbackIncomplete) {
-      throw StateError('Transaction cannot be rolled back after commit or commit cleanup.');
-    }
-
+    transaction._finalizing = true;
     try {
-      await _validateTransactionRecovery(transaction);
-    } catch (error) {
-      throw MtnMinecraftContentMaterializationFileSystemTransactionException(
-        failure: MtnMinecraftContentMaterializationFileSystemTransactionFailure.rollbackFailure,
-        message: 'Rollback prevalidation failed; no additional recovery files were mutated.',
-        cause: error,
-        transaction: transaction,
-        recoveryCandidates: transaction.recoveryCandidates,
-      );
-    }
-
-    transaction._state = MtnMinecraftContentMaterializationFileSystemTransactionState.rollbackIncomplete;
-    Object? firstFailure;
-    for (final step in transaction._ledger.reversed) {
-      if (step.finalized) {
-        continue;
+      if (transaction.state == MtnMinecraftContentMaterializationFileSystemTransactionState.rolledBack) {
+        return;
       }
+      if (transaction.state != MtnMinecraftContentMaterializationFileSystemTransactionState.pending &&
+          transaction.state != MtnMinecraftContentMaterializationFileSystemTransactionState.rollbackIncomplete) {
+        throw StateError('Transaction cannot be rolled back after commit or commit cleanup.');
+      }
+
       try {
-        await step.rollback(this);
+        await _validateTransactionRecovery(transaction);
       } catch (error) {
-        firstFailure ??= error;
+        throw MtnMinecraftContentMaterializationFileSystemTransactionException(
+          failure: MtnMinecraftContentMaterializationFileSystemTransactionFailure.rollbackFailure,
+          message: 'Rollback prevalidation failed; no additional recovery files were mutated.',
+          cause: error,
+          transaction: transaction,
+          recoveryCandidates: transaction.recoveryCandidates,
+        );
       }
-    }
 
-    if (firstFailure != null || transaction._recoveryCandidates.isNotEmpty) {
-      throw MtnMinecraftContentMaterializationFileSystemTransactionException(
-        failure: MtnMinecraftContentMaterializationFileSystemTransactionFailure.recoveryFailure,
-        message: 'Transaction rollback was incomplete; recovery state was retained.',
-        cause: firstFailure,
-        transaction: transaction,
-        recoveryCandidates: transaction.recoveryCandidates,
-      );
-    }
+      transaction._state = MtnMinecraftContentMaterializationFileSystemTransactionState.rollbackIncomplete;
+      Object? firstFailure;
+      for (final step in transaction._ledger.reversed) {
+        if (step.finalized) {
+          continue;
+        }
+        try {
+          await step.rollback(this);
+        } catch (error) {
+          firstFailure ??= error;
+        }
+      }
 
-    transaction._state = MtnMinecraftContentMaterializationFileSystemTransactionState.rolledBack;
-    transaction._releaseOnce();
+      if (firstFailure != null || transaction._recoveryCandidates.isNotEmpty) {
+        throw MtnMinecraftContentMaterializationFileSystemTransactionException(
+          failure: MtnMinecraftContentMaterializationFileSystemTransactionFailure.recoveryFailure,
+          message: 'Transaction rollback was incomplete; recovery state was retained.',
+          cause: firstFailure,
+          transaction: transaction,
+          recoveryCandidates: transaction.recoveryCandidates,
+        );
+      }
+
+      transaction._state = MtnMinecraftContentMaterializationFileSystemTransactionState.rolledBack;
+      transaction._releaseOnce();
+    } finally {
+      transaction._finalizing = false;
+    }
   }
 
   Future<void> _validateTransactionRecovery(
