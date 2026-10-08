@@ -229,6 +229,51 @@ void main() {
       expect(await fixture.read('mods/obsolete.jar'), 'obsolete');
     });
 
+    test('removal backup tampering blocks commit and keeps tombstone recoverable', () async {
+      final fixture = await _mixedFixture();
+      addTearDown(fixture.dispose);
+      final fileSystem = MtnMinecraftContentMaterializationFileSystem();
+      final preflight = await fileSystem.preflight(plan: fixture.plan, installationRoot: fixture.root.absolute);
+      final transaction = await fileSystem.beginTransaction(preflight: preflight, sources: fixture.sources);
+
+      final removals = (await Directory(p.join(fixture.root.path, 'mods')).list().toList()).where(
+        (entry) => p.basename(entry.path).startsWith('.mtn-content-removal-'),
+      ).toList();
+      expect(removals, hasLength(1));
+      final backup = File(removals.single.path);
+      expect(await backup.readAsString(), 'obsolete');
+      await backup.writeAsString('modified');
+      await expectLater(
+        fileSystem.commitTransaction(transaction),
+        throwsA(isA<MtnMinecraftContentMaterializationFileSystemTransactionException>()),
+      );
+      expect(transaction.state, MtnMinecraftContentMaterializationFileSystemTransactionState.pending);
+      await backup.writeAsString('obsolete');
+      await fileSystem.rollbackTransaction(transaction);
+      expect(await fixture.read('mods/obsolete.jar'), 'obsolete');
+    });
+
+    test('already-missing managed removals remain no-ops when they stay missing', () async {
+      final root = await Directory.systemTemp.createTemp('mtn-tx-root-');
+      addTearDown(() => root.delete(recursive: true));
+      final file = _file('old.jar');
+      final version = _version('old:v1', _content('old'), file);
+      final installation = MtnMinecraftContentInstallationState(
+        artifacts: <MtnMinecraftContentInstallationArtifact>[_artifact(version, file, 'mods/old.jar')],
+      );
+      final plan = await _plan(installation, const <MtnMinecraftContentVersion>[], const <String, String>{});
+      final fileSystem = MtnMinecraftContentMaterializationFileSystem();
+      final preflight = await fileSystem.preflight(plan: plan, installationRoot: root.absolute);
+      expect(preflight.safe, isTrue);
+      final transaction = await fileSystem.beginTransaction(
+        preflight: preflight,
+        sources: const <MtnMinecraftContentMaterializationFileSystemTransactionSource>[],
+      );
+      await fileSystem.commitTransaction(transaction);
+      expect(transaction.state, MtnMinecraftContentMaterializationFileSystemTransactionState.committed);
+      expect(await File(p.join(root.path, 'mods/old.jar')).exists(), isFalse);
+    });
+
     test('exclusive transaction blocks standalone publication on the same root until rollback', () async {
       final fixture = await _mixedFixture();
       addTearDown(fixture.dispose);
