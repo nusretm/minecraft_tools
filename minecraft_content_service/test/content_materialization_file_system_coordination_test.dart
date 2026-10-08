@@ -433,6 +433,41 @@ void main() {
       expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.committed);
     });
 
+    test('failed coordinated begin releases lease when rollback fully succeeds', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final first = _version('a:v1', 'a', 'a.jar');
+      final second = _version('b:v1', 'b', 'b.jar', expectedSize: 500);
+      final a = await fixture.source('a.jar', 'good');
+      final b = await fixture.source('b.jar', 'bad');
+      final plan = await _plan(_emptyState(), <MtnMinecraftContentVersion>[first, second], <String, String>{
+        'a:v1': 'mods/a.jar', 'b:v1': 'mods/b.jar',
+      });
+      final preflight = await fixture.fileSystem.preflight(plan: plan, installationRoot: fixture.root.absolute);
+      await expectLater(
+        fixture.coordinator.begin(
+          preflight: preflight,
+          sources: <MtnMinecraftContentMaterializationFileSystemTransactionSource>[
+            MtnMinecraftContentMaterializationFileSystemTransactionSource(target: plan.installs[0].target, source: a),
+            MtnMinecraftContentMaterializationFileSystemTransactionSource(target: plan.installs[1].target, source: b),
+          ],
+        ),
+        throwsA(isA<MtnMinecraftContentMaterializationFileSystemCoordinationException>()
+            .having((error) => error.failure, 'failure', MtnMinecraftContentMaterializationFileSystemCoordinationFailure.applicationFailure)),
+      );
+      expect(await fixture.fileExists('mods/a.jar'), isFalse);
+      expect(await fixture.fileExists('mods/b.jar'), isFalse);
+      expect(await fixture.manifests.read(installationRoot: fixture.root.absolute).timeout(const Duration(seconds: 5)), isNull);
+
+      final empty = await _plan(_emptyState(), const <MtnMinecraftContentVersion>[], const <String, String>{});
+      final fresh = await fixture.fileSystem.preflight(plan: empty, installationRoot: fixture.root.absolute);
+      final tx = await fixture.coordinator.begin(
+        preflight: fresh,
+        sources: const <MtnMinecraftContentMaterializationFileSystemTransactionSource>[],
+      ).timeout(const Duration(seconds: 5));
+      await fixture.coordinator.rollback(tx);
+    });
+
     test('manifest publication rollback protects against outside tampering', () async {
       final fixture = await _fixture();
       addTearDown(fixture.dispose);
