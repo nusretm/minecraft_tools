@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:minecraft_content_service/minecraft_content_service_io.dart';
@@ -93,7 +92,7 @@ void main() {
       final root = await Directory.systemTemp.createTemp('mtn-tx-root-');
       addTearDown(() => root.delete(recursive: true));
       final first = _version('a:v1', _content('a'), _file('a.jar'));
-      final second = _version('b:v1', _content('b'), _file('b.jar'));
+      final second = _version('b:v1', _content('b'), _file('b.jar', expectedSize: 999));
       final installation = MtnMinecraftContentInstallationState(artifacts: const <MtnMinecraftContentInstallationArtifact>[]);
       final plan = await _plan(installation, <MtnMinecraftContentVersion>[first, second], <String, String>{
         'a:v1': 'mods/a.jar',
@@ -101,7 +100,8 @@ void main() {
       });
       final source = await _source('a');
       addTearDown(() => source.parent.delete(recursive: true));
-      final missing = File(p.join(source.parent.path, 'missing.jar'));
+      final secondSource = File(p.join(source.parent.path, 'second.jar'));
+      await secondSource.writeAsString('b');
       final fileSystem = MtnMinecraftContentMaterializationFileSystem();
       final preflight = await fileSystem.preflight(plan: plan, installationRoot: root.absolute);
 
@@ -111,7 +111,7 @@ void main() {
           preflight: preflight,
           sources: <MtnMinecraftContentMaterializationFileSystemTransactionSource>[
             MtnMinecraftContentMaterializationFileSystemTransactionSource(target: plan.installs[0].target, source: source),
-            MtnMinecraftContentMaterializationFileSystemTransactionSource(target: plan.installs[1].target, source: missing),
+            MtnMinecraftContentMaterializationFileSystemTransactionSource(target: plan.installs[1].target, source: secondSource),
           ],
         );
       } on MtnMinecraftContentMaterializationFileSystemTransactionException catch (error) {
@@ -310,8 +310,9 @@ Future<MtnMinecraftContentMaterializationPlan> _plan(
 
 MtnMinecraftContentMod _content(String key) => MtnMinecraftContentMod(key: key, name: key);
 
-MtnMinecraftContentFile _file(String name) => MtnMinecraftContentFile(
+MtnMinecraftContentFile _file(String name, {int? expectedSize}) => MtnMinecraftContentFile(
   fileName: name,
+  size: expectedSize,
   primary: true,
   available: true,
   downloadUrl: 'https://cdn.example/' + name,
