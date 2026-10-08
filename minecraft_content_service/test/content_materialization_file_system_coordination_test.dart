@@ -470,6 +470,80 @@ void main() {
       expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.committed);
     });
 
+    test('interrupted manifest cleanup after managed commit requires forward-only retry', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final manifestIO = _InterruptedManifestIO()..interruptCommitOnce = true;
+      final authority = MtnMinecraftContentMaterializationFileSystemCoordinator(manifestFileSystem: manifestIO);
+      final old = _version('a:v1', 'a', 'old.jar');
+      final state = _state(<MtnMinecraftContentInstallationArtifact>[_artifact(old, 'mods/a.jar')]);
+      await fixture.existing(state, <String, String>{'mods/a.jar': 'old'});
+      final next = _version('a:v2', 'a', 'new.jar');
+      final source = await fixture.source('new.jar', 'new');
+      final plan = await _plan(state, <MtnMinecraftContentVersion>[next], <String, String>{'a:v2': 'mods/a.jar'});
+      final preflight = await fixture.fileSystem.preflight(plan: plan, installationRoot: fixture.root.absolute);
+      final tx = await authority.begin(
+        preflight: preflight,
+        sources: <MtnMinecraftContentMaterializationFileSystemTransactionSource>[
+          MtnMinecraftContentMaterializationFileSystemTransactionSource(target: plan.replacements.single.target, source: source),
+        ],
+      );
+
+      await expectLater(
+        authority.commit(tx),
+        throwsA(isA<MtnMinecraftContentMaterializationFileSystemCoordinationException>()
+            .having((error) => error.failure, 'failure', MtnMinecraftContentMaterializationFileSystemCoordinationFailure.commitFailure)
+            .having((error) => error.transaction, 'transaction', same(tx))),
+      );
+      expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.commitIncomplete);
+      expect(await fixture.readFile('mods/a.jar'), 'new');
+      expect(manifestIO.commitAttempts, 1);
+      await expectLater(authority.rollback(tx), throwsStateError);
+
+      var finished = false;
+      final pendingRead = fixture.manifests.read(installationRoot: fixture.root.absolute).then((manifest) {
+        finished = true;
+        return manifest;
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      expect(finished, isFalse);
+      await authority.commit(tx);
+      expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.committed);
+      expect(manifestIO.commitAttempts, 2);
+      expect((await pendingRead.timeout(const Duration(seconds: 5)))!.installationState.artifacts.single.version.key, 'a:v2');
+      expect(await fixture.readFile('mods/a.jar'), 'new');
+    });
+
+    test('manifest rollback interruption restores managed files and completes on retry', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final manifestIO = _InterruptedManifestIO()..interruptRollbackOnce = true;
+      final authority = MtnMinecraftContentMaterializationFileSystemCoordinator(manifestFileSystem: manifestIO);
+      final old = _version('a:v1', 'a', 'a.jar');
+      final state = _state(<MtnMinecraftContentInstallationArtifact>[_artifact(old, 'mods/a.jar')]);
+      await fixture.existing(state, <String, String>{'mods/a.jar': 'old'});
+      final plan = await _plan(state, const <MtnMinecraftContentVersion>[], const <String, String>{});
+      final preflight = await fixture.fileSystem.preflight(plan: plan, installationRoot: fixture.root.absolute);
+      final tx = await authority.begin(
+        preflight: preflight,
+        sources: const <MtnMinecraftContentMaterializationFileSystemTransactionSource>[],
+      );
+
+      await expectLater(
+        authority.rollback(tx),
+        throwsA(isA<MtnMinecraftContentMaterializationFileSystemCoordinationException>()
+            .having((error) => error.failure, 'failure', MtnMinecraftContentMaterializationFileSystemCoordinationFailure.rollbackFailure)),
+      );
+      expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.rollbackIncomplete);
+      expect(await fixture.readFile('mods/a.jar'), 'old');
+      expect(manifestIO.rollbackAttempts, 1);
+
+      await authority.rollback(tx);
+      expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.rolledBack);
+      expect(manifestIO.rollbackAttempts, 2);
+      expect((await fixture.manifests.read(installationRoot: fixture.root.absolute))!.installationState.artifacts.single.version.key, 'a:v1');
+    });
+
     test('failed coordinated begin releases lease when rollback fully succeeds', () async {
       final fixture = await _fixture();
       addTearDown(fixture.dispose);
@@ -527,6 +601,35 @@ void main() {
       expect(await fixture.readFile('mods/a.jar'), 'old');
     });
   });
+}
+
+/// Injects failure through the normal manifest filesystem collaborator, not
+/// through a production failpoint or an alternate transaction implementation.
+class _InterruptedManifestIO extends MtnMinecraftContentInstallationManifestFileSystem {
+  bool interruptCommitOnce = false;
+  bool interruptRollbackOnce = false;
+  int commitAttempts = 0;
+  int rollbackAttempts = 0;
+
+  @override
+  Future<void> commit(MtnMinecraftContentInstallationManifestFileSystemPublication publication) async {
+    commitAttempts++;
+    if (interruptCommitOnce) {
+      interruptCommitOnce = false;
+      throw StateError('One-shot manifest commit interruption');
+    }
+    await super.commit(publication);
+  }
+
+  @override
+  Future<void> rollback(MtnMinecraftContentInstallationManifestFileSystemPublication publication) async {
+    rollbackAttempts++;
+    if (interruptRollbackOnce) {
+      interruptRollbackOnce = false;
+      throw StateError('One-shot manifest rollback interruption');
+    }
+    await super.rollback(publication);
+  }
 }
 
 class _Fixture {
