@@ -323,9 +323,11 @@ void main() {
       expect(materializationDone, isFalse);
       await fixture.coordinator.rollback(tx);
 
-      expect(await readFuture.timeout(const Duration(seconds: 5)), isNull);
+      // Async manifest root resolution may queue the writer before the reader.
+      // Finalize the writer first, so the assertion does not depend on queue order.
       final standalone = await pendingContent.timeout(const Duration(seconds: 5));
       await fixture.fileSystem.rollbackTransaction(standalone);
+      expect(await readFuture.timeout(const Duration(seconds: 5)), isNull);
       expect(materializationDone, isTrue);
     });
 
