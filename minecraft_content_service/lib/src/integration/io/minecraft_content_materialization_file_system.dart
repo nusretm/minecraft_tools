@@ -358,7 +358,144 @@ class MtnMinecraftContentMaterializationFileSystem {
         base == 'PRN' ||
         base == 'AUX' ||
         base == 'NUL' ||
-        base == 'CONIN$' ||
+        base == r'CONIN
+        base == r'CONOUT
+        RegExp(r'^COM[1-9]$').hasMatch(base) ||
+        RegExp(r'^LPT[1-9]$').hasMatch(base)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  MtnMinecraftContentMaterializationFileSystemEntityType _entityType(FileSystemEntityType type) {
+    if (type == FileSystemEntityType.notFound) {
+      return MtnMinecraftContentMaterializationFileSystemEntityType.missing;
+    }
+    if (type == FileSystemEntityType.file) {
+      return MtnMinecraftContentMaterializationFileSystemEntityType.file;
+    }
+    if (type == FileSystemEntityType.directory) {
+      return MtnMinecraftContentMaterializationFileSystemEntityType.directory;
+    }
+    if (type == FileSystemEntityType.link) {
+      return MtnMinecraftContentMaterializationFileSystemEntityType.link;
+    }
+    return MtnMinecraftContentMaterializationFileSystemEntityType.other;
+  }
+}
+
+class _ChildResolution {
+  const _ChildResolution({
+    required this.matches,
+    required this.inaccessible,
+  });
+
+  final List<_PhysicalEntry> matches;
+  final bool inaccessible;
+}
+
+class _PhysicalEntry {
+  const _PhysicalEntry({
+    required this.path,
+    required this.type,
+  });
+
+  final String path;
+  final FileSystemEntityType type;
+}
+ ||
+        base == 'CONOUT$' ||
+        RegExp(r'^COM[1-9]$').hasMatch(base) ||
+        RegExp(r'^LPT[1-9]$').hasMatch(base)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  MtnMinecraftContentMaterializationFileSystemEntityType _entityType(FileSystemEntityType type) {
+    if (type == FileSystemEntityType.notFound) {
+      return MtnMinecraftContentMaterializationFileSystemEntityType.missing;
+    }
+    if (type == FileSystemEntityType.file) {
+      return MtnMinecraftContentMaterializationFileSystemEntityType.file;
+    }
+    if (type == FileSystemEntityType.directory) {
+      return MtnMinecraftContentMaterializationFileSystemEntityType.directory;
+    }
+    if (type == FileSystemEntityType.link) {
+      return MtnMinecraftContentMaterializationFileSystemEntityType.link;
+    }
+    return MtnMinecraftContentMaterializationFileSystemEntityType.other;
+  }
+}
+
+class _ChildResolution {
+  const _ChildResolution({
+    required this.matches,
+    required this.inaccessible,
+  });
+
+  final List<_PhysicalEntry> matches;
+  final bool inaccessible;
+}
+
+class _PhysicalEntry {
+  const _PhysicalEntry({
+    required this.path,
+    required this.type,
+  });
+
+  final String path;
+  final FileSystemEntityType type;
+}
+ ||
+        RegExp(r'^COM[1-9]$').hasMatch(base) ||
+        RegExp(r'^LPT[1-9]$').hasMatch(base)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  MtnMinecraftContentMaterializationFileSystemEntityType _entityType(FileSystemEntityType type) {
+    if (type == FileSystemEntityType.notFound) {
+      return MtnMinecraftContentMaterializationFileSystemEntityType.missing;
+    }
+    if (type == FileSystemEntityType.file) {
+      return MtnMinecraftContentMaterializationFileSystemEntityType.file;
+    }
+    if (type == FileSystemEntityType.directory) {
+      return MtnMinecraftContentMaterializationFileSystemEntityType.directory;
+    }
+    if (type == FileSystemEntityType.link) {
+      return MtnMinecraftContentMaterializationFileSystemEntityType.link;
+    }
+    return MtnMinecraftContentMaterializationFileSystemEntityType.other;
+  }
+}
+
+class _ChildResolution {
+  const _ChildResolution({
+    required this.matches,
+    required this.inaccessible,
+  });
+
+  final List<_PhysicalEntry> matches;
+  final bool inaccessible;
+}
+
+class _PhysicalEntry {
+  const _PhysicalEntry({
+    required this.path,
+    required this.type,
+  });
+
+  final String path;
+  final FileSystemEntityType type;
+}
+ ||
         base == 'CONOUT$' ||
         RegExp(r'^COM[1-9]$').hasMatch(base) ||
         RegExp(r'^LPT[1-9]$').hasMatch(base)) {
