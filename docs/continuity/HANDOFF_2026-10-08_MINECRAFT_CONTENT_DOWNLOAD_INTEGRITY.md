@@ -16,7 +16,9 @@ Implementation: COMPLETE
 Actual-diff review: COMPLETE
 Validation: COMPLETE
 Continuity: CLOSED
-Merge: NOT REQUESTED
+Merge: COMPLETE
+PR: #48
+Merge commit: a5c7c2adfc8fd2b38c82034733c34176aba91bca
 Package version: 1.0.0-dev.20
 ```
 
