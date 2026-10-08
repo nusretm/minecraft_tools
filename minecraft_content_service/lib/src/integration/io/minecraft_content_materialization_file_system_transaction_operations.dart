@@ -4,6 +4,18 @@ extension MtnMinecraftContentMaterializationFileSystemTransactionOperations on M
   Future<MtnMinecraftContentMaterializationFileSystemTransaction> beginTransaction({
     required MtnMinecraftContentMaterializationFileSystemPreflight preflight,
     required Iterable<MtnMinecraftContentMaterializationFileSystemTransactionSource> sources,
+  }) => _beginTransactionCore(preflight: preflight, sources: sources);
+
+  Future<MtnMinecraftContentMaterializationFileSystemTransaction> _beginTransactionWithinCoordinator({
+    required MtnMinecraftContentMaterializationFileSystemPreflight preflight,
+    required Iterable<MtnMinecraftContentMaterializationFileSystemTransactionSource> sources,
+    required _MaterializationCoordinatedRootLease lease,
+  }) => _beginTransactionCore(preflight: preflight, sources: sources, lease: lease);
+
+  Future<MtnMinecraftContentMaterializationFileSystemTransaction> _beginTransactionCore({
+    required MtnMinecraftContentMaterializationFileSystemPreflight preflight,
+    required Iterable<MtnMinecraftContentMaterializationFileSystemTransactionSource> sources,
+    _MaterializationCoordinatedRootLease? lease,
   }) async {
     if (!preflight.safe) {
       throw StateError('Whole-plan transaction requires safe filesystem preflight.');
@@ -36,7 +48,8 @@ extension MtnMinecraftContentMaterializationFileSystemTransactionOperations on M
         return first.compareTo(second);
       });
 
-    final release = await _acquireMaterializationRoot(preflight, exclusive: true);
+    if (lease != null) lease.assertOwns(preflight.resolvedInstallationRoot, policy);
+    final release = lease == null ? await _acquireMaterializationRoot(preflight, exclusive: true) : () {};
     final transaction = MtnMinecraftContentMaterializationFileSystemTransaction._(
       preflight: preflight,
       sources: sortedSources,
