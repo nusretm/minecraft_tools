@@ -232,6 +232,28 @@ void main() {
       await coordinator.rollback(next);
     });
 
+    test('executor refuses a coordinator with incompatible path identity policy', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final host = MtnMinecraftContentMaterializationFileSystemPolicy.host();
+      final incompatible = MtnMinecraftContentMaterializationFileSystemPolicy(
+        platform: host.platform,
+        caseSensitive: !host.caseSensitive,
+      );
+      final plan = await _plan(_empty(), const <MtnMinecraftContentVersion>[], const <String, String>{});
+      expect(
+        () => MtnMinecraftContentInstallationExecutionRemVibe(
+          plan: plan,
+          installationRoot: fixture.root,
+          key: 'mismatched-authority',
+          title: 'Mismatched authority',
+          policy: host,
+          coordinator: MtnMinecraftContentMaterializationFileSystemCoordinator(policy: incompatible),
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('cancel after real pending publication rolls back instead of reporting success', () async {
       final fixture = await _fixture();
       addTearDown(fixture.dispose);
