@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.0-dev.28
+
+- Strengthen in-process coordinated installation recovery and cancellation boundary validation.
+- Support composition of existing policy-matched manifest filesystem and coordinated transaction authorities, retaining the same owner through recovery retries without public test-only failpoints.
+- Add deterministic commit interruption and rollback interruption regression tests, including real forward-only commit retry, incomplete rollback retry, retained root lease, and restoration of prior manifest/managed-file contents.
+- Validate executor retryCommit/retryRollback outcomes, cancellation while awaiting an installation-root lease, cancellation after reversible pending publication, and non-reversing cancellation at the commit boundary.
+- Verify failed coordinated begin releases the root lease after successful automatic rollback; reject injected authorities using conflicting filesystem policies.
+- Preserve one-job RemVibe download behavior and caller-owned staging without modifying the download service.
+- This checkpoint does not add durable on-disk journaling, cross-process locking or crash/power-loss recovery.
+
 ## 1.0.0-dev.27
 
 - Add an explicit opt-in RemVibe + IO entrypoint for complete content installation execution.

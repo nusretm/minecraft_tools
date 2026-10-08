@@ -78,12 +78,18 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
     this.maxErrorCount = 3,
     this.onStatus,
     MtnMinecraftContentMaterializationFileSystemPolicy? policy,
-  }) : policy = policy ?? MtnMinecraftContentMaterializationFileSystemPolicy.host() {
+    MtnMinecraftContentMaterializationFileSystemCoordinator? coordinator,
+  }) : policy = policy ?? coordinator?.policy ?? MtnMinecraftContentMaterializationFileSystemPolicy.host() {
     if (key.isEmpty || title.isEmpty) throw ArgumentError('Download job key and title cannot be empty.');
     if (maxConcurrentItems < 1 || maxErrorCount < 1) throw RangeError('RemVibe concurrency and retry limits must be at least one.');
     if (plan.download.items.isNotEmpty && stagingRoot == null) throw ArgumentError.notNull('stagingRoot');
+    if (coordinator != null &&
+        (coordinator.policy.platform != this.policy.platform ||
+         coordinator.policy.caseSensitive != this.policy.caseSensitive)) {
+      throw ArgumentError.value(coordinator, 'coordinator', 'An injected coordinator must use the installation execution policy.');
+    }
     _fileSystem = MtnMinecraftContentMaterializationFileSystem(policy: this.policy);
-    _coordinator = MtnMinecraftContentMaterializationFileSystemCoordinator(policy: this.policy);
+    _coordinator = coordinator ?? MtnMinecraftContentMaterializationFileSystemCoordinator(policy: this.policy);
   }
 
   final MtnMinecraftContentMaterializationPlan plan;

@@ -6,6 +6,8 @@ import 'package:minecraft_content_service/minecraft_content_service_remvibe_io.d
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
+import 'support/content_recovery_test_authorities.dart';
+
 void main() {
   final service = RemVibeDownloadService();
   setUp(() async {
@@ -182,6 +184,193 @@ void main() {
       expect(service.jobs.where((job) => identical(job, executor.batch!.job)), isEmpty);
       expect(await fixture.manifests.read(installationRoot: fixture.root), isNull);
       expect(await File(p.join(fixture.root.path, 'mods', 'a.jar')).exists(), isFalse);
+    });
+
+    test('cancellation while coordinator begin waits on root lease rolls back without false success', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final plan = await _plan(_empty(), const <MtnMinecraftContentVersion>[], const <String, String>{});
+      final fileSystem = MtnMinecraftContentMaterializationFileSystem();
+      final coordinator = MtnMinecraftContentMaterializationFileSystemCoordinator();
+      final preflight = await fileSystem.preflight(plan: plan, installationRoot: fixture.root);
+      final held = await coordinator.begin(
+        preflight: preflight,
+        sources: const <MtnMinecraftContentMaterializationFileSystemTransactionSource>[],
+      );
+
+      final executor = fixture.execution(plan, withoutStage: true);
+      final running = executor.execute();
+      await Future.doWhile(() async {
+        if (executor.state == MtnMinecraftContentInstallationExecutionRemVibeState.publishing) {
+          return false;
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        return true;
+      }).timeout(const Duration(seconds: 5));
+
+      var settled = false;
+      final observed = running.then<void>((_) { settled = true; }, onError: (_) { settled = true; });
+      await executor.cancel();
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(settled, isFalse);
+      expect(executor.state, MtnMinecraftContentInstallationExecutionRemVibeState.publishing);
+      await coordinator.rollback(held);
+
+      await expectLater(
+        running.timeout(const Duration(seconds: 5)),
+        throwsA(isA<MtnMinecraftContentInstallationExecutionRemVibeException>()
+            .having((error) => error.cancelled, 'cancelled', isTrue)),
+      );
+      await observed;
+      expect(executor.state, MtnMinecraftContentInstallationExecutionRemVibeState.cancelled);
+      expect(await fixture.manifests.read(installationRoot: fixture.root), isNull);
+      expect(service.jobs, isEmpty);
+
+      final fresh = await fileSystem.preflight(plan: plan, installationRoot: fixture.root);
+      final next = await coordinator.begin(
+        preflight: fresh,
+        sources: const <MtnMinecraftContentMaterializationFileSystemTransactionSource>[],
+      ).timeout(const Duration(seconds: 5));
+      await coordinator.rollback(next);
+    });
+
+    test('executor refuses a coordinator with incompatible path identity policy', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final host = MtnMinecraftContentMaterializationFileSystemPolicy.host();
+      final incompatible = MtnMinecraftContentMaterializationFileSystemPolicy(
+        platform: host.platform,
+        caseSensitive: !host.caseSensitive,
+      );
+      final plan = await _plan(_empty(), const <MtnMinecraftContentVersion>[], const <String, String>{});
+      expect(
+        () => MtnMinecraftContentInstallationExecutionRemVibe(
+          plan: plan,
+          installationRoot: fixture.root,
+          key: 'mismatched-authority',
+          title: 'Mismatched authority',
+          policy: host,
+          coordinator: MtnMinecraftContentMaterializationFileSystemCoordinator(policy: incompatible),
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('cancel after real pending publication rolls back instead of reporting success', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final plan = await _plan(_empty(), const <MtnMinecraftContentVersion>[], const <String, String>{});
+      final coordinator = PausedBeginCoordinator();
+      final executor = MtnMinecraftContentInstallationExecutionRemVibe(
+        plan: plan,
+        installationRoot: fixture.root,
+        key: 'pending-cancel',
+        title: 'Pending cancellation',
+        coordinator: coordinator,
+      );
+
+      final running = executor.execute();
+      await coordinator.createdPending.future.timeout(const Duration(seconds: 5));
+      expect(executor.state, MtnMinecraftContentInstallationExecutionRemVibeState.publishing);
+      await executor.cancel();
+      coordinator.resumeBegin.complete();
+      await expectLater(
+        running.timeout(const Duration(seconds: 5)),
+        throwsA(isA<MtnMinecraftContentInstallationExecutionRemVibeException>()
+            .having((error) => error.cancelled, 'cancelled', isTrue)),
+      );
+      expect(executor.state, MtnMinecraftContentInstallationExecutionRemVibeState.cancelled);
+      expect(await fixture.manifests.read(installationRoot: fixture.root).timeout(const Duration(seconds: 5)), isNull);
+      expect(service.jobs, isEmpty);
+    });
+
+    test('cancellation in committing state cannot reverse or falsely cancel a completed commit', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final plan = await _plan(_empty(), const <MtnMinecraftContentVersion>[], const <String, String>{});
+      final coordinator = PausedCommitCoordinator();
+      final executor = MtnMinecraftContentInstallationExecutionRemVibe(
+        plan: plan,
+        installationRoot: fixture.root,
+        key: 'commit-cancel',
+        title: 'Commit boundary cancellation',
+        coordinator: coordinator,
+      );
+
+      final running = executor.execute();
+      await coordinator.reachedCommit.future.timeout(const Duration(seconds: 5));
+      expect(executor.state, MtnMinecraftContentInstallationExecutionRemVibeState.committing);
+      await executor.cancel();
+      coordinator.resumeCommit.complete();
+      final state = await running.timeout(const Duration(seconds: 5));
+      expect(state, same(plan.resultingInstallationState));
+      expect(executor.state, MtnMinecraftContentInstallationExecutionRemVibeState.completed);
+      expect((await fixture.manifests.read(installationRoot: fixture.root))!.installationState.artifacts, isEmpty);
+    });
+
+    test('executor retryCommit finishes real partial cleanup without redownloading', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final old = _version('a:v1', 'a', 'a.jar', 'https://cdn.example/a.jar');
+      final state = _state(<MtnMinecraftContentInstallationArtifact>[_artifact(old, 'mods/a.jar')]);
+      await fixture.existing(state, <String, List<int>>{'mods/a.jar': <int>[9]});
+      final plan = await _plan(state, const <MtnMinecraftContentVersion>[], const <String, String>{});
+      final manifestIO = InterruptedManifestIO()..interruptCommitOnce = true;
+      final coordinator = MtnMinecraftContentMaterializationFileSystemCoordinator(manifestFileSystem: manifestIO);
+      final executor = MtnMinecraftContentInstallationExecutionRemVibe(
+        plan: plan,
+        installationRoot: fixture.root,
+        key: 'recovery-commit',
+        title: 'Retry commit',
+        coordinator: coordinator,
+      );
+
+      await expectLater(
+        executor.execute(),
+        throwsA(isA<MtnMinecraftContentInstallationExecutionRemVibeException>()
+            .having((error) => error.recoveryRequired, 'recoveryRequired', isTrue)
+            .having((error) => error.transaction?.state, 'state', MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.commitIncomplete)),
+      );
+      expect(executor.state, MtnMinecraftContentInstallationExecutionRemVibeState.recoveryRequired);
+      expect(await File(p.join(fixture.root.path, 'mods', 'a.jar')).exists(), isFalse);
+      await expectLater(executor.retryRollback(), throwsStateError);
+      expect(await executor.retryCommit(), same(plan.resultingInstallationState));
+      expect(executor.state, MtnMinecraftContentInstallationExecutionRemVibeState.completed);
+      expect(manifestIO.commitAttempts, 2);
+      expect((await fixture.manifests.read(installationRoot: fixture.root))!.installationState.artifacts, isEmpty);
+      expect(service.jobs, isEmpty);
+    });
+
+    test('executor retryRollback restores previous installation after interrupted reversible rollback', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final old = _version('a:v1', 'a', 'a.jar', 'https://cdn.example/a.jar');
+      final state = _state(<MtnMinecraftContentInstallationArtifact>[_artifact(old, 'mods/a.jar')]);
+      await fixture.existing(state, <String, List<int>>{'mods/a.jar': <int>[7]});
+      final plan = await _plan(state, const <MtnMinecraftContentVersion>[], const <String, String>{});
+      final manifestIO = InterruptedManifestIO()..interruptRollbackOnce = true;
+      final coordinator = RejectedPrecommitCoordinator(manifestFileSystem: manifestIO);
+      final executor = MtnMinecraftContentInstallationExecutionRemVibe(
+        plan: plan,
+        installationRoot: fixture.root,
+        key: 'recovery-rollback',
+        title: 'Retry rollback',
+        coordinator: coordinator,
+      );
+
+      await expectLater(
+        executor.execute(),
+        throwsA(isA<MtnMinecraftContentInstallationExecutionRemVibeException>()
+            .having((error) => error.recoveryRequired, 'recoveryRequired', isTrue)
+            .having((error) => error.transaction?.state, 'state', MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.rollbackIncomplete)),
+      );
+      expect(executor.state, MtnMinecraftContentInstallationExecutionRemVibeState.recoveryRequired);
+      expect(await fixture.read('mods/a.jar'), <int>[7]);
+      await executor.retryRollback();
+      expect(executor.state, MtnMinecraftContentInstallationExecutionRemVibeState.failed);
+      expect((await fixture.manifests.read(installationRoot: fixture.root))!.installationState.artifacts.single.version.key, 'a:v1');
+      expect(await fixture.read('mods/a.jar'), <int>[7]);
+      await expectLater(executor.retryCommit(), throwsStateError);
     });
 
     test('staging root within the installation is rejected before RemVibe submission', () async {
