@@ -114,6 +114,8 @@ class _MaterializationTransactionPublication extends _MaterializationTransaction
 
 class _MaterializationTransactionRemoval extends _MaterializationTransactionStep {
   _MaterializationTransactionRemoval({
+    required this.preflight,
+    required this.artifact,
     required this.original,
     required this.expectedMissing,
     required this.backup,
@@ -121,6 +123,8 @@ class _MaterializationTransactionRemoval extends _MaterializationTransactionStep
     required this.sha256,
   });
 
+  final MtnMinecraftContentMaterializationFileSystemPreflight preflight;
+  final MtnMinecraftContentInstallationArtifact artifact;
   final File original;
   final bool expectedMissing;
   final File? backup;
@@ -136,8 +140,15 @@ class _MaterializationTransactionRemoval extends _MaterializationTransactionStep
     if (finalized) {
       return;
     }
-    final currentType = await FileSystemEntity.type(original.path, followLinks: false);
-    if (currentType != FileSystemEntityType.notFound) {
+    final issues = <MtnMinecraftContentMaterializationFileSystemPreflightIssue>[];
+    final observed = await fileSystem._inspectArtifact(
+      preflight.resolvedInstallationRoot,
+      artifact,
+      MtnMinecraftContentMaterializationFileSystemStateScope.current,
+      issues,
+    );
+    if (issues.isNotEmpty ||
+        observed.entityType != MtnMinecraftContentMaterializationFileSystemEntityType.missing) {
       throw StateError('Managed removal target was externally recreated or changed: ' + original.path);
     }
     if (expectedMissing) {
