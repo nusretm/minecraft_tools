@@ -472,6 +472,22 @@ void main() {
       expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.committed);
     });
 
+    test('injected manifest authority with a mismatched policy is rejected at construction', () {
+      final host = MtnMinecraftContentMaterializationFileSystemPolicy.host();
+      final incompatible = MtnMinecraftContentMaterializationFileSystemPolicy(
+        platform: host.platform,
+        caseSensitive: !host.caseSensitive,
+      );
+      final manifestIO = InterruptedManifestIO();
+      expect(
+        () => MtnMinecraftContentMaterializationFileSystemCoordinator(
+          policy: incompatible,
+          manifestFileSystem: manifestIO,
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('interrupted manifest cleanup after managed commit requires forward-only retry', () async {
       final fixture = await _fixture();
       addTearDown(fixture.dispose);
