@@ -288,7 +288,8 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
       }
 
       final coordinatedError = error is MtnMinecraftContentMaterializationFileSystemCoordinationException ? error : null;
-      if (coordinatedError?.transaction != null) _pendingTransaction = coordinatedError!.transaction;
+      final incompleteTransaction = coordinatedError?.transaction;
+      if (incompleteTransaction != null) _pendingTransaction = incompleteTransaction;
       final downloadedError = error is MtnMinecraftContentDownloadExecutionRemVibeException ? error : null;
       final failure = coordinatedError?.failure == MtnMinecraftContentMaterializationFileSystemCoordinationFailure.recoveryFailure
           ? MtnMinecraftContentInstallationExecutionRemVibeFailure.recoveryRequired
