@@ -223,6 +223,48 @@ void main() {
       await store.commit(publication);
     });
 
+    test('rollback does not remove unrelated metadata directory entries', () async {
+      final root = await _root();
+      addTearDown(() => root.delete(recursive: true));
+      final store = MtnMinecraftContentInstallationManifestFileSystem();
+      final publication = await store.publish(installationRoot: root.absolute, manifest: _manifest('a:v1'));
+      final unrelated = File(p.join(root.path, '.mtn-content', 'notes.txt'));
+      await unrelated.writeAsString('caller-owned');
+      await store.rollback(publication);
+      expect(await unrelated.readAsString(), 'caller-owned');
+      expect(await File(p.join(root.path, '.mtn-content', 'installation.json')).exists(), isFalse);
+    });
+
+    test('reserved namespace detection uses the configured Windows case identity', () async {
+      final root = await _root();
+      addTearDown(() => root.delete(recursive: true));
+      final version = _version('a:v1');
+      final state = MtnMinecraftContentInstallationState(
+        artifacts: <MtnMinecraftContentInstallationArtifact>[
+          MtnMinecraftContentInstallationArtifact(
+            version: version,
+            file: version.files.single,
+            relativePath: '.MTN-CONTENT/installation.json',
+          ),
+        ],
+      );
+      final plan = await _emptyDesiredPlan(state);
+      final materializer = MtnMinecraftContentMaterializationFileSystem(
+        policy: const MtnMinecraftContentMaterializationFileSystemPolicy(
+          platform: MtnMinecraftContentMaterializationFileSystemPlatform.windows,
+          caseSensitive: false,
+        ),
+      );
+      final preflight = await materializer.preflight(plan: plan, installationRoot: root.absolute);
+      expect(preflight.safe, isFalse);
+      expect(
+        preflight.issues.whereType<MtnMinecraftContentMaterializationFileSystemPreflightIssueInvalidTargetPath>().any(
+          (issue) => issue.reason == MtnMinecraftContentMaterializationFileSystemInvalidTargetPathReason.reservedManifestNamespace,
+        ),
+        isTrue,
+      );
+    });
+
     test('managed files cannot occupy reserved manifest namespace', () async {
       final root = await _root();
       addTearDown(() => root.delete(recursive: true));
