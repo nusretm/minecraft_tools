@@ -100,7 +100,7 @@ Alternative ordering (manifest first) must be evaluated against interruption sem
 
 ## Next action
 
-Review/approve the combined authority, one-lease ownership and forward-only commit ordering before beginning dev.26 production implementation. Continue from a new feature branch based on the verified current `main`. Respect `docs/WORKING_RULES.md`; pure Dart code must not be run through `dart format`; merge requires separate approval.
+The combined authority, one-lease ownership and forward-only commit ordering were explicitly approved and implemented on the dev.26 feature branch. Next verify Windows Dart analysis and regression results, review actual diff, and obtain separate merge approval. Respect `docs/WORKING_RULES.md`; pure Dart code must not be run through `dart format`.
 
 ## Implementation checkpoint (feature branch)
 
