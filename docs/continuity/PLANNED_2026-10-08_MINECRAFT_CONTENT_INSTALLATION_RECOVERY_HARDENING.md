@@ -1,15 +1,17 @@
-# Minecraft Tools — Proposed dev.28 In-Process Recovery and Cancellation Validation
+# Minecraft Tools — dev.28 In-Process Recovery and Cancellation Validation
 
 Date: 2026-10-08
 
 ## Status and authority
 
 - Repository: `nusretm/minecraft_tools`
-- Package: `minecraft_content_service`, latest merged release `1.0.0-dev.27`
+- Package: `minecraft_content_service 1.0.0-dev.28` on feature branch; latest merged release `1.0.0-dev.27`
 - Proposed checkpoint: **dev.28 — Installation Recovery and Cancellation Boundary Hardening**
 - Main baseline at design creation: `89f93a1b4727465c6c95ee0854418a73ddef607a`
 - PR #55 was squash merged at `d6adb12233dd9fc9395345f7d7bf56a6bf9cf44d`; dev.27 full Windows suite 244/244, `dart analyze` clean
-- Status: **DESIGN PROPOSED / NOT IMPLEMENTED / NO DEV.28 FEATURE BRANCH / IMPLEMENTATION REQUIRES EXPLICIT APPROVAL**
+- Status: **IMPLEMENTED ON FEATURE BRANCH / WINDOWS DART VALIDATION PENDING / NOT MERGED**
+- Branch: `feature/minecraft-content-installation-recovery-hardening`
+- Implementation explicitly approved by user after verified clean `main` at the baseline
 - Dev.27 merged feature branch cleanup: deletion commands supplied; user confirmation pending
 - Authoritative rules: `docs/WORKING_RULES.md`; no pure Dart `dart format`, no merge without separate approval
 
@@ -77,4 +79,34 @@ Test count alone cannot establish those guarantees. Resolve the observable in-pr
 
 ## Implementation gate
 
-This is a **scope/design proposal**, not production authorization. After explicit approval, create `feature/minecraft-content-installation-recovery-hardening` from verified current `main`, reproduce lifecycle/fault scenarios, make the smallest necessary production corrections, and update continuity. Do not merge without separate later approval.
+The user explicitly approved dev.28 implementation. A dedicated feature branch was created from verified main; no PR or merge has occurred. Run Windows Dart validation, inspect actual diff, and obtain separate merge approval before merging. Do not run `dart format`.
+
+## Implementation progress and exact demonstrated scenarios
+
+The feature branch now reuses existing public IO authorities rather than adding a failpoint or replacing the transaction implementation. Two **optional collaborator-injection parameters** were introduced:
+
+- `MtnMinecraftContentMaterializationFileSystemCoordinator(manifestFileSystem: ...)` accepts a policy-matched existing manifest IO authority; policy mismatches are rejected.
+- `MtnMinecraftContentInstallationExecutionRemVibe(coordinator: ...)` accepts a policy-matched coordinated transaction authority, preserving the exact owner through `retryCommit()` / `retryRollback()`. Existing callers retain the same default behavior.
+
+Dedicated `test/support/content_recovery_test_authorities.dart` defines test-only subclasses of the normal IO/collaboration classes. The tests drive real transaction state and filesystem bytes using one-shot manifest commit/rollback errors; no production failpoints or global IO override are introduced.
+
+Focused assertions newly added:
+
+1. Managed files finalize, then injected manifest commit fails -> `commitIncomplete`; rollback rejected, root lease retained, forward-only retry completes and releases the lease.
+2. Manifest-first rollback deliberately fails -> `rollbackIncomplete`; managed files restored, later manifest retry restores original snapshot.
+3. Real manifest backup tampering -> rollback failure, recoverable lease retained; restoration of backup allows retry.
+4. Real managed backup tampering -> rollback failure, recovery after restoring backup preserves prior files and manifest.
+5. Precommit tamper -> `commitFailure` while still pending; correcting bytes permits safe retry before any cleanup.
+6. Partial source application fails -> automatic rollback confirms no leaked exclusive lease; follow-up transaction allowed.
+7. Executor cancellation while waiting for an already-held root lease -> cancellation, not success, followed by lease release.
+8. Executor cancellation with a *real pending* transaction withheld from its `begin()` future -> rollback and cancelled result.
+9. Executor cancellation after entering the committing phase -> no reverse or false cancelled result.
+10. Executor `retryCommit()` after actual partial cleanup -> successful terminal state, no download job for removal-only plan.
+11. Executor `retryRollback()` after pending precommit failure plus one injected manifest rollback interruption -> restores original managed bytes and manifest, never claims installation success.
+12. Injected coordinator/manifest policy mismatch is rejected before execution/mutation.
+
+Existing tests are preserved and shared test support avoids copying fault-injection helpers across suites.
+
+**Still outside test proof:** a failure originating inside the *real* manifest backup `File.delete()` itself (rather than through its composable authority method), a crash/power loss, cross-process lock conflicts, and a manual recovery candidate with no combined handle. The static coordinator begin path was inspected: manifest publication happens only after a materialization transaction exists, while earlier pretransaction failures have no owned manifest candidates. If Windows validation or fault reproduction reveals a handleless retained lease, treat it as a blocker before merge.
+
+**Validation:** Tests have been committed but **not yet run with Windows Dart SDK**. Planned commands: `dart analyze`; focused coordination and executor tests; standalone transaction and manifest IO tests; full `dart test`; `git diff --check main...HEAD` and `git status`. The feature remains unmerged pending those results.
