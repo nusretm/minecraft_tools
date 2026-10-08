@@ -15,7 +15,9 @@ Production/test HEAD: 866b910b5ad4fc32f1d804333f148af21c1ebf96
 Package version: 1.0.0-dev.21
 Implementation: COMPLETE
 Actual-diff review: COMPLETE
-Validation: PENDING
+Validation: COMPLETE
+Continuity: CLOSED
+Validated feature HEAD: f15750d666d3b22f7ad7302e74fd025db01d14b3
 Merge: NOT REQUESTED
 ```
 
@@ -216,33 +218,67 @@ Focused execution tests cover:
 - unmanaged/manual cleanup
 - resource rendering
 
-## Validation required
+## Validation
 
-Run from `minecraft_content_service/`:
+Authoritative user-supplied local validation completed successfully on 2026-10-08 at feature HEAD `f15750d666d3b22f7ad7302e74fd025db01d14b3`.
+
+Behavioral validation before the final lint-only export-order fix:
 
 ```text
 dart pub get
+PASS
+
 dart analyze
-dart test test/content_download_execution_remvibe_test.dart
-dart test test/content_download_integrity_remvibe_test.dart
-dart test test/content_download_adapter_remvibe_test.dart
-dart test test/content_materialization_plan_test.dart
-dart test test/content_installation_manifest_test.dart
-dart test
-```
+1 info only:
+directives_ordering in minecraft_content_service_remvibe.dart
 
-Then from repository root:
+content_download_execution_remvibe_test.dart
+7/7 passed
 
-```text
+content_download_integrity_remvibe_test.dart
+9/9 passed
+
+content_download_adapter_remvibe_test.dart
+7/7 passed
+
+content_materialization_plan_test.dart
+9/9 passed
+
+content_installation_manifest_test.dart
+9/9 passed
+
+full dart test
+150/150 passed
+
 git diff --check main...HEAD
-git status
-git rev-parse HEAD
+PASS
+
+working tree
+clean
+
+HEAD before lint-only fix:
+5f2e0c759fbaacc6a871f88f820c936a5e1890c0
 ```
 
-Expected feature HEAD before continuity-only follow-up commits:
+Final validation after commit `f15750d666d3b22f7ad7302e74fd025db01d14b3`, which only reordered two export directives:
 
 ```text
-866b910b5ad4fc32f1d804333f148af21c1ebf96
+dart analyze
+No issues found!
+
+dart test
+150/150 passed
+
+git diff --check main...HEAD
+PASS
+
+git status
+working tree clean
+
+git rev-parse HEAD
+f15750d666d3b22f7ad7302e74fd025db01d14b3
 ```
 
-Do not merge without separate explicit user approval.
+No `dart format` was run.
+
+The checkpoint is implementation-complete, actual-diff reviewed, validated, and continuity-closed. Merge still requires separate explicit user approval.
