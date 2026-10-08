@@ -18,7 +18,9 @@ Implementation: COMPLETE
 Actual-diff review: COMPLETE
 Validation: COMPLETE
 Continuity: CLOSED
-Merge: NOT REQUESTED
+Merge: COMPLETE
+PR: #50
+Merge commit: 1b0a350578de4e2ef09b16a560ba1babfd21ae49
 ```
 
 No `dart format` was run.
@@ -420,4 +422,4 @@ working tree clean
 
 No `dart format` was run.
 
-The checkpoint is implementation-complete, actual-diff reviewed, validated and continuity-closed. Merge still requires separate explicit user approval.
+The checkpoint is implementation-complete, actual-diff reviewed, validated and continuity-closed. Merge completed through PR #50 at `1b0a350578de4e2ef09b16a560ba1babfd21ae49`.
