@@ -5,6 +5,8 @@ import 'package:minecraft_content_service/minecraft_content_service_io.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
+import 'support/content_recovery_test_authorities.dart';
+
 void main() {
   group('Coordinated materialization + manifest transaction', () {
     test('first install commits managed file and manifest together', () async {
@@ -473,7 +475,7 @@ void main() {
     test('interrupted manifest cleanup after managed commit requires forward-only retry', () async {
       final fixture = await _fixture();
       addTearDown(fixture.dispose);
-      final manifestIO = _InterruptedManifestIO()..interruptCommitOnce = true;
+      final manifestIO = InterruptedManifestIO()..interruptCommitOnce = true;
       final authority = MtnMinecraftContentMaterializationFileSystemCoordinator(manifestFileSystem: manifestIO);
       final old = _version('a:v1', 'a', 'old.jar');
       final state = _state(<MtnMinecraftContentInstallationArtifact>[_artifact(old, 'mods/a.jar')]);
@@ -517,7 +519,7 @@ void main() {
     test('manifest rollback interruption restores managed files and completes on retry', () async {
       final fixture = await _fixture();
       addTearDown(fixture.dispose);
-      final manifestIO = _InterruptedManifestIO()..interruptRollbackOnce = true;
+      final manifestIO = InterruptedManifestIO()..interruptRollbackOnce = true;
       final authority = MtnMinecraftContentMaterializationFileSystemCoordinator(manifestFileSystem: manifestIO);
       final old = _version('a:v1', 'a', 'a.jar');
       final state = _state(<MtnMinecraftContentInstallationArtifact>[_artifact(old, 'mods/a.jar')]);
@@ -601,35 +603,6 @@ void main() {
       expect(await fixture.readFile('mods/a.jar'), 'old');
     });
   });
-}
-
-/// Injects failure through the normal manifest filesystem collaborator, not
-/// through a production failpoint or an alternate transaction implementation.
-class _InterruptedManifestIO extends MtnMinecraftContentInstallationManifestFileSystem {
-  bool interruptCommitOnce = false;
-  bool interruptRollbackOnce = false;
-  int commitAttempts = 0;
-  int rollbackAttempts = 0;
-
-  @override
-  Future<void> commit(MtnMinecraftContentInstallationManifestFileSystemPublication publication) async {
-    commitAttempts++;
-    if (interruptCommitOnce) {
-      interruptCommitOnce = false;
-      throw StateError('One-shot manifest commit interruption');
-    }
-    await super.commit(publication);
-  }
-
-  @override
-  Future<void> rollback(MtnMinecraftContentInstallationManifestFileSystemPublication publication) async {
-    rollbackAttempts++;
-    if (interruptRollbackOnce) {
-      interruptRollbackOnce = false;
-      throw StateError('One-shot manifest rollback interruption');
-    }
-    await super.rollback(publication);
-  }
 }
 
 class _Fixture {
