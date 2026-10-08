@@ -16,7 +16,9 @@ Implementation: COMPLETE
 Actual-diff review: COMPLETE
 Validation: COMPLETE
 Continuity: CLOSED
-Merge: NOT REQUESTED
+Merge: COMPLETE
+PR: #51
+Merge commit: d5fce84bef749d8f78e7916cb594b5ea582ebdc7
 ```
 
 No `dart format` was run.
@@ -413,7 +415,7 @@ working tree clean
 
 No `dart format` was run.
 
-The checkpoint is implementation-complete, actual-diff reviewed, validated and continuity-closed. Merge still requires separate explicit user approval.
+The checkpoint is implementation-complete, actual-diff reviewed, validated, continuity-closed and merged through PR #51 at `d5fce84bef749d8f78e7916cb594b5ea582ebdc7`.
 
 ## Historical validation command set
 
@@ -447,4 +449,4 @@ Expected production/test HEAD before the continuity-only commit:
 eba5888e36847ca504cac59ea26a28ab49e0bed0
 ```
 
-Do not merge without separate explicit user approval.
+Merged through PR #51 at `d5fce84bef749d8f78e7916cb594b5ea582ebdc7`.
