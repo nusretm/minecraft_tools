@@ -211,6 +211,38 @@ void main() {
       expect(service.jobs, isEmpty);
     });
 
+    test('existing RemVibe partial download file cannot be overwritten', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final partial = File(p.join(fixture.stage.path, 'mods', 'a.jar.download'));
+      await partial.parent.create(recursive: true);
+      await partial.writeAsBytes(<int>[7, 8]);
+      final version = _version('a:v1', 'a', 'a.jar', 'http://127.0.0.1:1/unreachable');
+      final plan = await _plan(_empty(), <MtnMinecraftContentVersion>[version], <String, String>{'a:v1': 'mods/a.jar'});
+      await expectLater(fixture.execution(plan).execute(), throwsA(isA<MtnMinecraftContentInstallationExecutionRemVibeException>()));
+      expect(await partial.readAsBytes(), <int>[7, 8]);
+      expect(service.jobs, isEmpty);
+    });
+
+    test('zero-download installation never starts or cancels an unrelated queued job', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final unrelated = RemVibeDownloadJob(
+        key: 'unrelated-job',
+        title: 'Other owner',
+        items: <RemVibeDownloadItem>[
+          RemVibeDownloadItem(url: Uri.parse('https://cdn.example/unrelated.jar'), directory: fixture.stage, filename: 'unrelated.jar'),
+        ],
+      );
+      service.addJob(unrelated);
+      final plan = await _plan(_empty(), const <MtnMinecraftContentVersion>[], const <String, String>{});
+      await fixture.execution(plan, withoutStage: true).execute();
+      expect(service.active, isFalse);
+      expect(service.jobs, <RemVibeDownloadJob>[unrelated]);
+      expect(unrelated.status, RemVibeDownloadStatus.idle);
+      expect(unrelated.items.single.status, RemVibeDownloadStatus.idle);
+    });
+
     test('staging symlinked ancestor is rejected before downloading', () async {
       final fixture = await _fixture();
       addTearDown(fixture.dispose);
