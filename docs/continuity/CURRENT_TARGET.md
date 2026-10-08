@@ -2795,14 +2795,23 @@ In particular:
 
 ## Next action
 
-The active content-service checkpoint is:
+dev.19 merge:
+
+```text
+PR: #47
+merge commit:
+ceab133f18546ce0215da04c36339957bf2dfb31
+Add RemVibe content download adapter
+```
+
+The completed content-service checkpoint is:
 
 ```text
 dev.19 — RemVibe Batch Download Adapter Foundation
 branch: feature/minecraft-content-remvibe-download-adapter
 baseline main: 4e6004fa8fc2830dff707df6747748a8c1473eaa
 production/test HEAD: 40f3484230c9f0f4cc8cf1aead8a924659e7e0fd
-status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATED / CONTINUITY CLOSED
+status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATED / CONTINUITY CLOSED / MERGED
 package: minecraft_content_service 1.0.0-dev.19
 ```
 
@@ -2877,7 +2886,7 @@ Still out of scope:
 
 Independent actual-diff review completed before local validation. The bounded production diff changes only the explicit RemVibe integration library/adapter, its tests, package dependency/version metadata, README and changelog; existing core service/planner implementations are unchanged.
 
-Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `40f3484230c9f0f4cc8cf1aead8a924659e7e0fd`. Merge still requires separate explicit user approval.
+Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `40f3484230c9f0f4cc8cf1aead8a924659e7e0fd`. PR #47 merged at `ceab133f18546ce0215da04c36339957bf2dfb31`.
 
 Validation:
 
