@@ -2802,7 +2802,7 @@ dev.26 — Materialization + Manifest Coordination
 branch: feature/minecraft-content-materialization-manifest-coordination
 baseline main: 096b328e4cfa8ea0ba4a2b62f1d3f994034803a8
 package: minecraft_content_service 1.0.0-dev.26
-status: INITIAL WINDOWS RUN (3 ANALYZER WARNINGS, 1 LEASE TEST FAILURE) / TARGETED FIXES ON BRANCH / REVALIDATION PENDING / NOT MERGED
+status: WINDOWS VALIDATED (225 TESTS) / ACTUAL-DIFF REVIEWED / NOT MERGED
 design: docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_MATERIALIZATION_MANIFEST_COORDINATION.md
 ```
 
