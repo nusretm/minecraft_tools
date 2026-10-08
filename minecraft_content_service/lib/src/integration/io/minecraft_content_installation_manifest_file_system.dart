@@ -110,6 +110,7 @@ class MtnMinecraftContentInstallationManifestFileSystem {
     String? previousSha256;
     bool createdDirectory = false;
     bool preserveRecovery = false;
+    bool previousMoved = false;
     bool published = false;
     try {
       await _assertRootStable(installationRoot, root);
@@ -156,6 +157,7 @@ class MtnMinecraftContentInstallationManifestFileSystem {
         backup = await _reservePublicationSibling(original, 'manifest-backup');
         await backup.delete();
         await original.rename(backup.path);
+        previousMoved = true;
         try {
           if (await backup.length() != previousLength ||
               await MtnMinecraftContentFileIntegrity.calculateSha256(backup) != previousSha256) {
@@ -207,6 +209,9 @@ class MtnMinecraftContentInstallationManifestFileSystem {
         release: release,
       );
     } catch (_) {
+      if (!preserveRecovery && backup != null && !previousMoved) {
+        await _deletePublicationFileBestEffort(backup);
+      }
       if (staging != null && !preserveRecovery) {
         await _deletePublicationFileBestEffort(staging);
       }
