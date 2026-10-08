@@ -48,6 +48,15 @@ class MtnMinecraftContentInstallationExecutionRemVibeException implements Except
 
   bool get cancelled => failure == MtnMinecraftContentInstallationExecutionRemVibeFailure.cancelled;
   bool get recoveryRequired => failure == MtnMinecraftContentInstallationExecutionRemVibeFailure.recoveryRequired;
+  List<File> get recoveryCandidates {
+    final files = <File>[];
+    if (transaction != null) files.addAll(transaction!.recoveryCandidates);
+    final reason = cause;
+    if (reason is MtnMinecraftContentMaterializationFileSystemCoordinationException) {
+      files.addAll(reason.recoveryCandidates);
+    }
+    return List<File>.unmodifiable(files);
+  }
 
   @override
   String toString() => 'MtnMinecraftContentInstallationExecutionRemVibeException(${failure.name}): $message';
@@ -96,6 +105,7 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
   Future<void>? _cancelFuture;
   bool _cancelRequested = false;
   bool _finished = false;
+  String? _resolvedStagingRoot;
 
   MtnMinecraftContentInstallationExecutionRemVibeState get state => _state;
   MtnMinecraftContentDownloadAdapterRemVibeBatch? get batch => _batch;
@@ -276,7 +286,7 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
   bool _containsPath(String ancestor, String descendant) {
     final a = _identity(ancestor);
     final d = _identity(descendant);
-    return a == d || d.startsWith('$a${p.separator}');
+    return a == d || p.isWithin(a, d);
   }
 
   Future<void> _validateStagingRoot(Directory resolvedInstallationRoot, Directory root) async {
@@ -284,10 +294,14 @@ class MtnMinecraftContentInstallationExecutionRemVibe {
       throw StateError('Staging root must be an existing absolute, regular directory.');
     }
     final resolvedStage = await root.resolveSymbolicLinks();
+    if (_resolvedStagingRoot != null && _resolvedStagingRoot != _identity(resolvedStage)) {
+      throw StateError('Staging root physical identity changed during execution.');
+    }
     if (_containsPath(resolvedInstallationRoot.path, resolvedStage) ||
         _containsPath(resolvedStage, resolvedInstallationRoot.path)) {
       throw StateError('Staging root and managed installation root must not overlap.');
     }
+    _resolvedStagingRoot ??= _identity(resolvedStage);
   }
 
   Future<void> _validateStagingTargets(
