@@ -2795,126 +2795,101 @@ In particular:
 
 ## Next action
 
-dev.18 merge:
+The active content-service checkpoint is:
 
 ```text
-PR: #46
-merge commit:
-1d1d100e94fa7a1b49758ea333360652e75e8d6d
-Add managed installation manifest persistence
+dev.19 — RemVibe Batch Download Adapter Foundation
+branch: feature/minecraft-content-remvibe-download-adapter
+baseline main: 4e6004fa8fc2830dff707df6747748a8c1473eaa
+production/test HEAD: 79e5d2d6fc47c9afdcce959763819e6ddc7b7f5f
+status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATION PENDING
+package: minecraft_content_service 1.0.0-dev.19
 ```
 
-The completed content-service checkpoint is:
+External reusable infrastructure observed at implementation start:
 
 ```text
-dev.18 — Managed Installation Manifest Persistence Foundation
-branch: feature/minecraft-content-installation-manifest
-baseline main: fc29bda41c9fe659bb789ad7c9e33402afd4aeff
-production/test HEAD: 7aa0555336ab85c011fe7c34c9f0a6f5bb5a1d52
-status: IMPLEMENTED / VALIDATED / CONTINUITY CLOSED / MERGED
-package: minecraft_content_service 1.0.0-dev.18
+remvibe_dart_models main:
+2db0ec0f3168a08433dd8cbf687828b899e54745
+
+remvibe_download_service main:
+59422d90d22836ec7ee26904956c987174404c90
+
+remvibe_task_service main:
+46d274cc0a1128119a8253f834e56ed2f774909b
+```
+
+The package dependency intentionally follows the established RemVibe package convention:
+
+```yaml
+remvibe_download_service:
+  git:
+    url: https://github.com/nusretm/remvibe_download_service
+    ref: main
 ```
 
 Implemented boundary:
 
 ```text
-MtnMinecraftContentInstallationState
+MtnMinecraftContentMaterializationPlan
         ↓
-schema-versioned portable manifest
-        ├─ relativePath
-        ├─ content snapshot
-        ├─ version snapshot
-        └─ selected fileIndex
+MtnMinecraftContentDownloadAdapterRemVibe
         ↓
-JSON / UTF-8
-        ↓
-restart-safe MtnMinecraftContentInstallationState
+ONE MtnMinecraftContentDownloadAdapterRemVibeBatch
+        ├─ canonical target ↔ RemVibeDownloadItem associations
+        └─ ONE RemVibeDownloadJob
 ```
 
 Locked design:
 
-- manifest persistence is Pure Dart and contains no `dart:io`
-- the manifest is managed physical-artifact ownership persistence, not `MtnMinecraftContentList` catalog/dependency-graph persistence
-- each managed artifact persists its neutral installation-root-relative path
-- each artifact persists its normalized content and version snapshots
-- the selected canonical file is persisted by index within the version file list rather than by filename
-- decode reconstructs the selected file from `version.files[fileIndex]`, restoring dev.16 canonical object identity
-- embedded version `content` identity must exactly match the embedded content snapshot key
-- schema version, artifact list/object shapes, relativePath and fileIndex are parsed strictly
-- unsupported schema versions and malformed persistence fail fast
-- dev.16 installation artifact/state constructors remain the path-safety and duplicate version/content/path ownership authorities
-- artifact ordering is preserved
-- map, JSON and UTF-8 round trips are supported
-- version dependency records remain serialized snapshot metadata; the installation manifest does not resolve or become authority for the dependency graph
+- generic `minecraft_content_service.dart` does not export RemVibe types
+- integration is exposed explicitly through `minecraft_content_service_remvibe.dart`
+- one materialization plan maps to one RemVibe batch/job
+- canonical download-plan ordering is preserved
+- only install/replacement targets produce download items
+- retain/remove actions never produce download items
+- each RemVibe item preserves the exact canonical materialization target association
+- resolved content URL maps to `RemVibeDownloadItem.url`
+- caller-owned final relative-path basename maps to `filename`; provider source filename is not treated as final target authority
+- staging directory maps from caller-owned `stagingRoot` plus the target relative parent path
+- normalized content file size maps to the RemVibe expected size and remains null when unknown
+- `validator` remains unset in dev.19
+- adapter does not start `RemVibeDownloadService` and does not call `addJob()`
+- an empty/no-download materialization plan does not create a zero-item RemVibe job
+- RemVibe integration introduces `dart:io` only in the explicit integration layer; generic planning/persistence layers remain filesystem-free
+- package SDK lower bound increases from Dart 3.3 to 3.5 because `remvibe_download_service` requires Dart >=3.5
+- direct `path` dependency is used for host filesystem staging path composition
 
 Still out of scope:
 
-- filesystem read/write location
-- manifest file naming
-- `dart:io`
-- atomic manifest file publication
-- filesystem discovery
-- byte transfer
-- launcher DownloadJob/DownloadManager adapter
-- staging
-- hash/size verification
-- target-OS path collision policy
-- materialization execution
-- file copy/rename/delete
-- rollback/transactions
+- `RemVibeDownloadService.start()`
+- `RemVibeDownloadService.addJob()`
+- transfer completion/cancellation orchestration
+- hash validator / integrity verification
+- target-OS case/canonical collision preflight
+- final target publication
+- replace/remove execution
+- rollback/transaction sequencing
+- installation-manifest filesystem persistence
+- RemVibeTaskService orchestration
 - unmanaged/manual file cleanup
 - deferred resource rendering
 
-Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `c702247bc9cad837fd7ec997695d7c08b53799ea`. PR #46 merged at `1d1d100e94fa7a1b49758ea333360652e75e8d6d`.
+Independent actual-diff review completed before local validation. The bounded production diff changes only the explicit RemVibe integration library/adapter, its tests, package dependency/version metadata, README and changelog; existing core service/planner implementations are unchanged.
 
-Validation:
-
-```text
-dart analyze
-No issues found!
-
-content_installation_manifest_test.dart
-9/9 passed
-
-content_installation_state_test.dart
-8/8 passed
-
-content_materialization_plan_test.dart
-9/9 passed
-
-content_download_plan_test.dart
-9/9 passed
-
-full dart test
-127/127 passed
-
-git diff --check main...HEAD
-PASS
-
-working tree
-clean
-
-validated feature HEAD:
-c702247bc9cad837fd7ec997695d7c08b53799ea
-```
+Next required action is authoritative local validation on the feature branch. Do not merge until validation is complete and the user separately approves merge.
 
 Active continuity document:
 
 ```text
-docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_MANIFEST.md
-```
-
-Completion handoff:
-
-```text
-docs/continuity/HANDOFF_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_MANIFEST.md
+docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_REMVIBE_DOWNLOAD_ADAPTER.md
 ```
 
 Previous completed checkpoint:
 
 ```text
-dev.17 — Content Materialization Plan Foundation
-PR: #45
-merge commit: c1d03bf9caad65cae6771c63491eb421fdd1c6bd
-post-merge main: fc29bda41c9fe659bb789ad7c9e33402afd4aeff
+dev.18 — Managed Installation Manifest Persistence Foundation
+PR: #46
+merge commit: 1d1d100e94fa7a1b49758ea333360652e75e8d6d
+post-merge main: 4e6004fa8fc2830dff707df6747748a8c1473eaa
 ```
