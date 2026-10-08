@@ -42,6 +42,7 @@ class MtnMinecraftContentMaterializationFileSystemPublication {
     required this.source,
     required this.target,
     required this.previousTargetExisted,
+    required this.previousPhysicalPath,
     required this.previousLength,
     required this.previousSha256,
     required this.publishedLength,
@@ -59,6 +60,7 @@ class MtnMinecraftContentMaterializationFileSystemPublication {
   final File source;
   final File target;
   final bool previousTargetExisted;
+  final String? previousPhysicalPath;
   final int? previousLength;
   final String? previousSha256;
   final int publishedLength;
