@@ -2795,14 +2795,23 @@ In particular:
 
 ## Next action
 
-The active content-service checkpoint is:
+dev.20 merge:
+
+```text
+PR: #48
+merge commit:
+a5c7c2adfc8fd2b38c82034733c34176aba91bca
+Add content download integrity validation
+```
+
+The completed content-service checkpoint is:
 
 ```text
 dev.20 — Content Download Integrity Validator Foundation
 branch: feature/minecraft-content-download-integrity
 baseline main: cf1205d38502fa7cb56c851dd7804a70bc1b9085
 production/test HEAD: c66cbe6716aa6f6a5fffb39c274e6e94e304d5cf
-status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATED / CONTINUITY CLOSED
+status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATED / CONTINUITY CLOSED / MERGED
 package: minecraft_content_service 1.0.0-dev.20
 ```
 
@@ -2859,7 +2868,7 @@ Still out of scope:
 
 Independent actual-diff review completed before local validation. Existing core service/planner implementations were not modified.
 
-Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `50d906fbe4f8469ff7caa760e3a76821c03ee326`. Merge still requires separate explicit user approval.
+Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `50d906fbe4f8469ff7caa760e3a76821c03ee326`. PR #48 merged at `a5c7c2adfc8fd2b38c82034733c34176aba91bca`.
 
 Validation:
 
