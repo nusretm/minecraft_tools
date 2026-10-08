@@ -5,12 +5,15 @@ Date: 2026-10-08
 ## Status
 
 - Repository: `nusretm/minecraft_tools`
-- Package: `minecraft_content_service`, currently `1.0.0-dev.26`
+- Package: `minecraft_content_service 1.0.0-dev.27`
 - Proposed checkpoint: **dev.27 — RemVibe Batch-to-Coordinated Installation Execution**
 - Baseline main at design creation: `ec509b544dc37e155811d257b5a268a981d92273`
-- Status: **DESIGN ONLY / NO PRODUCTION CODE / NO DEV.27 FEATURE BRANCH / IMPLEMENTATION APPROVAL PENDING**
+- Status: **WINDOWS VALIDATED (244/244 TESTS) / ACTUAL-DIFF AND RECOVERY AUDIT RECORDED / NOT MERGED**
+- Branch: `feature/minecraft-content-remvibe-installation-execution`
+- Implementation explicitly approved by user after clean dev.26 branch cleanup
+- Focused regression tests added: 19
 - Previous checkpoint: dev.26, PR #54, squash `195af95f8523edac35e02a582d2cd1c01fa211d0`, 225/225 tests
-- Dev.26 branch cleanup: user requested; PowerShell deletion commands supplied; not yet confirmed
+- Dev.26 branch cleanup: completed locally and remotely; user verified clean synchronized `main` at design baseline prior to dev.27 documentation commits
 
 ## Existing implemented foundations (avoid reimplementation)
 
@@ -83,7 +86,7 @@ If the transaction is still pending, or if commit is incomplete, the overall ope
 - A stale/changed existing manifest or unsafe destination fails closed; do not silently treat a corrupt/absent manifest as an empty managed installation.
 - Manifest and file recovery candidates/combined handle from a failed dev.26 transaction must remain observable to the caller. Never swallow an incomplete rollback or claim success.
 - The orchestrator must not cancel unrelated RemVibe jobs or stop the global singleton.
-- Decide whether the executor itself creates its caller-owned staging root, or requires it to already exist, before implementation; no implicit unmanaged cleanup.
+- **Locked dev.27 decision:** installation root and (for nonempty download plans) staging root must already exist; the executor never creates the staging root and never deletes caller-owned staging outputs. Zero-download plans may omit staging root.
 
 ## Test/acceptance matrix
 
@@ -110,4 +113,21 @@ If the transaction is still pending, or if commit is incomplete, the overall ope
 
 ## Next action
 
-Discuss/approve this narrow IO+RemVibe orchestration boundary and the exact public executor/cancellation/staging-ownership contract before **dev.27 production implementation**. Start a dedicated feature branch only after explicit implementation approval; merge requires a separate later approval.
+The design and dev.27 production implementation were explicitly approved. Next: run `dart analyze`, `dart test test/content_installation_execution_remvibe_test.dart`, previous RemVibe/IO focused tests and full `dart test` on Windows; inspect actual diff; obtain separate merge approval. No `dart format`.
+
+## Implementation checkpoint (feature branch)
+
+- New explicit entrypoint: `minecraft_content_service/lib/minecraft_content_service_remvibe_io.dart`.
+- New owner: `MtnMinecraftContentInstallationExecutionRemVibe`, with one-shot `execute()`, `cancel()`, state, exact `batch`, and typed execution failure.
+- State-specific `retryCommit()` and `retryRollback()` retain the private dev.26 coordinator authority so recovery can continue after an unsuccessful initial invocation. A successful rollback does **not** convert a failed execution into an installation success.
+- Staging security checks run before download and after completion: absolute existing root, disjoint physical root, stable resolved root, no staging ancestor links, no case-folded aliases, no occupied pre-existing target and no existing temporary `.download` file.
+- Uses exact canonical batch item target/source pairs, confirms completed job/item states, verifies supported checksum/size and repeats destination preflight before coordinator mutation.
+- Cancellation before download or before commit rejects success; in-flight cancellation uses the existing exact RemVibe job. Cancellation is not honored once forward-only commit cleanup has begun.
+- Installation roots, job service lifecycle and caller-owned staging directories remain under their existing owners; executor neither deletes successful staged files nor alters global RemVibe service configuration.
+- Unit/integration tests include real local HTTP requests, two-item one-job installation, replacement, zero-download plans, retries, cancellation, symlink/case collision, manifest mismatch, stale destination, tampered output, pre-existing partial downloads and unrelated singleton job preservation.
+- **First Windows validation on feature HEAD `bac9634990fa27dad892dfe36e82505daf22b997` (user-provided logs):** `dart analyze` reported 2 `curly_braces_in_flow_control_structures` infos. The new installation execution suite passed 18/19, with only the post-transfer destination-preflight test failing because an unsafe refreshed preflight was classified as `download` rather than `validation`. The prior RemVibe adapter (7/7), download execution (7/7), integrity (9/9), and dev.26 coordination (16/16) focused tests all passed. The full suite reported 243 passes and that same single failure. `git diff --check` and working tree were clean.
+- **Targeted corrections now committed:** transition from `downloading` to `validating` immediately after successful RemVibe execution, before any post-download staging/integrity/destination checks; add missing braces to 2 test loops; assert `validation` failure for post-download staging tamper too. No change to RemVibe service, download retries, coordinator or rollback semantics.
+- **Successful Windows revalidation (user-supplied), production/test HEAD `0f32eab1e630412fbc4f1367bf63a1ba5e774235`:** `dart analyze` no issues, new executor 19/19, previous RemVibe execution 7/7, dev.26 coordinator 16/16, full package 244/244, `git diff --check main...HEAD` clean, working tree clean and tracking origin feature branch.
+- **Final actual-diff audit:** the feature branch is 21 commits ahead and 0 behind `main`; changed files are limited to the package, its new opt-in integration surface, package tests, and continuity. Verified design boundaries: one RemVibe job for nonempty downloads; no download job for empty/removal/retain; caller-owned staging; refreshed destination preflight; dev.26 coordinated transaction and forward-only cleanup; retained coordinator authority for retry methods. No additional static blocker identified for the reviewed paths.
+- **Recovery coverage limits:** the 244 passing tests do not directly inject an interrupted `commitIncomplete` or `rollbackIncomplete` cleanup, nor cancellation precisely during the pending coordinated-publication boundary. `retryCommit` and `retryRollback` are checked for rejection in unsupported states, but their successful fault-recovery paths were not empirically exercised here. Crash-durable and cross-process recovery remain explicitly out of scope.
+- No PR or merge yet; separate user merge approval required. No `dart format`.

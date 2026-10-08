@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.0-dev.27
+
+- Add an explicit opt-in RemVibe + IO entrypoint for complete content installation execution.
+- Compose existing dev.19 one-job batch creation, dev.20 file integrity, dev.21 batch execution, and dev.26 coordinated managed-file/manifest commit.
+- Skip download service entirely for retain, remove and empty plans while still committing the installation manifest.
+- Reject unsafe staging roots, symlinks, case-folded path aliases, occupied outputs and staging/managed-root overlaps before transfer; validate exact completed item paths and checksums again after download.
+- Refresh the destination preflight after transfer; retain source identity through canonical batch item targets.
+- Preserve caller-owned staging files, existing RemVibe singleton ownership and unrelated jobs.
+- Coordinate cancellation before submission, during transfer, and at the reversible publication boundary.
+- Surface incomplete recovery and permit owner-held retryCommit / retryRollback without redownloading or exposing private coordinator internals.
+- Add local HTTP and filesystem regression coverage for one-batch installs, replacements, zero-download transactions, failure, cancellation, staging safety and manifest consistency.
+- Defer crash-durable recovery, cross-process isolation, TaskService integration and staging cleanup policy.
+
 ## 1.0.0-dev.26
 
 - Add a single-authority coordinator for dev.24 managed-file and dev.25 manifest publication under one exclusive installation-root lease.

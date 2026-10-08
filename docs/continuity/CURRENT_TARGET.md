@@ -2795,13 +2795,14 @@ In particular:
 
 ## Next action
 
-### Proposed checkpoint: dev.27 — RemVibe Batch-to-Installation Execution
+### Active checkpoint: dev.27 — RemVibe Batch-to-Installation Execution
 
 ```text
 checkpoint: dev.27 — RemVibe Batch-to-Coordinated Installation Execution
-package: minecraft_content_service (currently 1.0.0-dev.26)
-design baseline: ec509b544dc37e155811d257b5a268a981d92273
-status: DESIGN RECORDED / NOT IMPLEMENTED / NO DEV.27 FEATURE BRANCH
+branch: feature/minecraft-content-remvibe-installation-execution
+baseline main: 0556ec6a20360a9ab840dc0d4010451d480ee260
+package: minecraft_content_service 1.0.0-dev.27
+status: WINDOWS VALIDATED (244/244 TESTS) / ACTUAL-DIFF AND RECOVERY AUDIT RECORDED / NOT MERGED
 design: docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_REMVIBE_BATCH_INSTALLATION_EXECUTION.md
 ```
 
@@ -2814,11 +2815,21 @@ retain-only plans, no RemVibe job is created, but the transaction is still
 executed. Global download service and staging-root ownership stay with
 their existing owners.
 
-User requested dev.26 branch cleanup. GitHub connector cannot delete branches,
-so PowerShell remote/local deletion commands were provided; deletion has not
-yet been confirmed by user output. The preceding local main was synchronized
-and clean at ec509b5. Dev.27 architecture remains design-only; production
-implementation needs separate explicit approval. Do not run `dart format`.
+Dev.26 feature branch cleanup was confirmed by user PowerShell logs:
+remote and local branches deleted, pruned, and local main synchronized and clean.
+Dev.27 design was subsequently saved to main at 0556ec6; the user explicitly
+approved dev.27 production implementation. The new opt-in RemVibe+IO executor,
+19 integration tests, package version bump and continuity changes are committed
+only to the dev.27 feature branch. The first Windows validation identified one post-download error-phase
+classification failure and two test-loop lint infos. Corrections were committed
+and the updated production/test HEAD
+0f32eab1e630412fbc4f1367bf63a1ba5e774235 was revalidated on Windows:
+`dart analyze` no issues, new executor tests 19/19, all package tests
+244/244, `git diff --check` clean and working tree clean. GitHub actual-diff
+and recovery audit found no new static blocker; forward-only commit/rollback
+recovery fault injection and pending-publication cancellation have not been
+directly exercised. See the dev.27 design continuity for precise coverage.
+Separate PR merge approval is required. No `dart format`.
 
 ### Latest completed checkpoint: dev.26
 
