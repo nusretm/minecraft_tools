@@ -2802,7 +2802,7 @@ dev.24 — Whole-plan Materialization Transaction Foundation
 branch: feature/minecraft-content-materialization-transaction
 baseline main: 6955f67833875b17aeab43bf7579268d3a44834a
 package: minecraft_content_service 1.0.0-dev.24
-status: IMPLEMENTED ON FEATURE BRANCH / LOCAL VALIDATION PENDING / NOT MERGED
+status: USER WINDOWS VALIDATION PASSED AT f8ea483 / DIFF-REVIEW HARDENING VALIDATION PENDING / NOT MERGED
 ```
 
 Dev.24 implementation includes whole-plan reversible publication/removal execution,
