@@ -211,7 +211,8 @@ class MtnMinecraftContentMaterializationFileSystemCoordinator {
         throw StateError('Coordinated commit is unavailable after rollback or interrupted rollback.');
       }
       transaction._lease.assertOwns(transaction.preflight.resolvedInstallationRoot, policy);
-      if (transaction._manifestPublication == null || transaction.recoveryCandidates.isNotEmpty) {
+      final manifestPublication = transaction._manifestPublication;
+      if (manifestPublication == null || transaction.recoveryCandidates.isNotEmpty) {
         throw StateError('Coordinated transaction has unresolved recovery candidates.');
       }
 
@@ -219,8 +220,8 @@ class MtnMinecraftContentMaterializationFileSystemCoordinator {
       if (transaction.state == MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.pending) {
         try {
           await _materialization._validateTransactionRecovery(transaction._materialization);
-          await _manifest._validatePublished(transaction._manifestPublication!);
-          await _manifest._validateBackup(transaction._manifestPublication!);
+          await _manifest._validatePublished(manifestPublication);
+          await _manifest._validateBackup(manifestPublication);
         } catch (error) {
           throw MtnMinecraftContentMaterializationFileSystemCoordinationException(
             failure: MtnMinecraftContentMaterializationFileSystemCoordinationFailure.commitFailure,
@@ -234,7 +235,7 @@ class MtnMinecraftContentMaterializationFileSystemCoordinator {
       transaction._state = MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.commitIncomplete;
       try {
         await _materialization.commitTransaction(transaction._materialization);
-        await _manifest.commit(transaction._manifestPublication!);
+        await _manifest.commit(manifestPublication);
       } catch (error) {
         throw MtnMinecraftContentMaterializationFileSystemCoordinationException(
           failure: MtnMinecraftContentMaterializationFileSystemCoordinationFailure.commitFailure,
