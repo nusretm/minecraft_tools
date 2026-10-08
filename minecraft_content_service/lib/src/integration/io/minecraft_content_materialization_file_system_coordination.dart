@@ -107,13 +107,14 @@ class MtnMinecraftContentMaterializationFileSystemCoordinator {
         lease: lease,
       );
 
-      if (current.manifest == null) {
+      final persisted = current.manifest;
+      if (persisted == null) {
         if (preflight.plan.installation.artifacts.isNotEmpty) {
           throw StateError('A missing manifest cannot authorize a nonempty managed installation state.');
         }
       } else {
         final intended = MtnMinecraftContentInstallationManifest.fromInstallationState(preflight.plan.installation);
-        if (current.manifest!.toJson() != intended.toJson()) {
+        if (persisted.toJson() != intended.toJson()) {
           throw StateError('Installation plan does not match the persisted current manifest state.');
         }
       }
