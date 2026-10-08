@@ -443,9 +443,11 @@ void main() {
         target: fixture.target,
         source: secondSource,
       );
-      secondFuture.then<void>(
-        (_) => secondSettled = true,
-        onError: (_) => secondSettled = true,
+      unawaited(
+        secondFuture.then<void>(
+          (_) => secondSettled = true,
+          onError: (_) => secondSettled = true,
+        ),
       );
 
       await Future<void>.delayed(Duration.zero);
