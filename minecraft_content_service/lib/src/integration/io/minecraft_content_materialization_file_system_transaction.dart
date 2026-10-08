@@ -62,6 +62,7 @@ class MtnMinecraftContentMaterializationFileSystemTransaction {
   final List<_MaterializationRetainedSnapshot> _retained = <_MaterializationRetainedSnapshot>[];
   final List<File> _recoveryCandidates = <File>[];
   bool _released = false;
+  bool _finalizing = false;
 
   MtnMinecraftContentMaterializationFileSystemTransactionState _state = MtnMinecraftContentMaterializationFileSystemTransactionState.pending;
 
