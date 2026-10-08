@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.0-dev.24
+
+- Add whole-plan reversible materialization transactions on the explicit IO surface, retaining canonical install/replace source associations independently of RemVibe.
+- Publish deterministic install/replacement targets through the dev.23 single-target publication primitive.
+- Derive obsolete physical removals from current minus resulting policy-normalized managed path identities, including moved replacements and path reuse.
+- Stage managed removals as same-parent reversible backup renames; never delete unmanaged files.
+- Add one private transaction recovery ledger with reverse-order rollback, non-destructive finalization validation, and retryable incomplete states.
+- Coordinate standalone publications (shared root lease) and whole-plan transactions (exclusive root lease), preserving existing per-target publication locks.
+- Capture and verify previous managed publication backups, removal backups, and retained-file integrity snapshots before finalization.
+- Reject caller-owned sources aliasing any current/resulting managed artifact path; sources remain read-only and are never consumed.
+- Preserve recovery candidates and report unresolved failures instead of claiming a full rollback.
+- Keep manifest filesystem persistence, TaskService, RemVibe batch orchestration/cleanup, native crash recovery, and MtnLauncher integration out of scope.
+- Add focused transaction execution, rollback, tamper, and serialization regression tests.
+
 ## 1.0.0-dev.23
 
 - Add a single-target safe publication primitive to the explicit IO integration.
