@@ -2795,7 +2795,16 @@ In particular:
 
 ## Next action
 
-The active content-service checkpoint is:
+dev.21 merge:
+
+```text
+PR: #49
+merge commit:
+313e21b268157ad6049b5b4e9f578b5e7f17c44a
+Add RemVibe content download execution
+```
+
+The completed content-service checkpoint is:
 
 ```text
 dev.21 — RemVibe Batch Execution Foundation
@@ -2803,7 +2812,7 @@ branch: feature/minecraft-content-remvibe-download-execution
 baseline main: 026693122556626934c5d1ee35795bebb0b3fddd
 implementation HEAD: 338841ec2b6445dc45022d33ec53160fcf331a0e
 production/test HEAD: 866b910b5ad4fc32f1d804333f148af21c1ebf96
-status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATED / CONTINUITY CLOSED
+status: IMPLEMENTED / ACTUAL-DIFF REVIEWED / VALIDATED / CONTINUITY CLOSED / MERGED
 package: minecraft_content_service 1.0.0-dev.21
 ```
 
@@ -2861,7 +2870,7 @@ Still out of scope:
 
 Independent actual-diff review completed before local validation. Existing generic service/planner implementations were not modified.
 
-Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `f15750d666d3b22f7ad7302e74fd025db01d14b3`. Merge still requires separate explicit user approval.
+Authoritative local validation completed successfully on 2026-10-08 at feature HEAD `f15750d666d3b22f7ad7302e74fd025db01d14b3`. PR #49 merged at `313e21b268157ad6049b5b4e9f578b5e7f17c44a`.
 
 Validation:
 
