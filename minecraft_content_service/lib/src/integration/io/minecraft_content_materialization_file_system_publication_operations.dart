@@ -152,11 +152,16 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
             cause: error,
           );
         }
-        if (await backup.length() != previousLength || await MtnMinecraftContentFileIntegrity.calculateSha256(backup) != previousSha256) {
+        try {
+          if (await backup.length() != previousLength || await MtnMinecraftContentFileIntegrity.calculateSha256(backup) != previousSha256) {
+            throw StateError('Managed backup contents changed during publication rename.');
+          }
+        } catch (error) {
           preserveRecovery = true;
           throw MtnMinecraftContentMaterializationFileSystemPublicationException(
             failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
-            message: 'Existing managed target changed during backup publication. Recovery candidates were preserved.',
+            message: 'Existing managed target backup could not be verified after rename. Recovery candidates were preserved.',
+            cause: error,
             backup: backup,
             staging: siblingStaging,
           );
