@@ -179,6 +179,83 @@ void main() {
       await first.rollbackTransaction(transaction);
     });
 
+    test('backup tampering blocks rollback until the original recovery content is restored', () async {
+      final fixture = await _mixedFixture();
+      addTearDown(fixture.dispose);
+      final fileSystem = MtnMinecraftContentMaterializationFileSystem();
+      final preflight = await fileSystem.preflight(plan: fixture.plan, installationRoot: fixture.root.absolute);
+      final transaction = await fileSystem.beginTransaction(preflight: preflight, sources: fixture.sources);
+
+      final mods = Directory(p.join(fixture.root.path, 'mods'));
+      final backups = (await mods.list().toList()).where(
+        (entry) => p.basename(entry.path).startsWith('.mtn-content-backup-'),
+      ).map((entry) => File(entry.path)).toList();
+      expect(backups, hasLength(2));
+      File? backupA;
+      for (final backup in backups) {
+        if (await backup.readAsString() == 'old-a') {
+          backupA = backup;
+        }
+      }
+      expect(backupA, isNotNull);
+      await backupA!.writeAsString('tampered-backup');
+      await expectLater(
+        fileSystem.rollbackTransaction(transaction),
+        throwsA(isA<MtnMinecraftContentMaterializationFileSystemTransactionException>()),
+      );
+      expect(transaction.state, MtnMinecraftContentMaterializationFileSystemTransactionState.pending);
+      expect(await fixture.read('mods/a.jar'), 'new-a');
+      await backupA.writeAsString('old-a');
+      await fileSystem.rollbackTransaction(transaction);
+      expect(await fixture.read('mods/a.jar'), 'old-a');
+    });
+
+    test('external occupancy of removed path blocks rollback without overwrite', () async {
+      final fixture = await _mixedFixture();
+      addTearDown(fixture.dispose);
+      final fileSystem = MtnMinecraftContentMaterializationFileSystem();
+      final preflight = await fileSystem.preflight(plan: fixture.plan, installationRoot: fixture.root.absolute);
+      final transaction = await fileSystem.beginTransaction(preflight: preflight, sources: fixture.sources);
+
+      final external = await _write(fixture.root, 'mods/obsolete.jar', 'manual');
+      await expectLater(
+        fileSystem.rollbackTransaction(transaction),
+        throwsA(isA<MtnMinecraftContentMaterializationFileSystemTransactionException>()),
+      );
+      expect(await external.readAsString(), 'manual');
+      expect(transaction.state, MtnMinecraftContentMaterializationFileSystemTransactionState.pending);
+      await external.delete();
+      await fileSystem.rollbackTransaction(transaction);
+      expect(await fixture.read('mods/obsolete.jar'), 'obsolete');
+    });
+
+    test('exclusive transaction blocks standalone publication on the same root until rollback', () async {
+      final fixture = await _mixedFixture();
+      addTearDown(fixture.dispose);
+      final owner = MtnMinecraftContentMaterializationFileSystem();
+      final standalone = MtnMinecraftContentMaterializationFileSystem();
+      final preflight = await owner.preflight(plan: fixture.plan, installationRoot: fixture.root.absolute);
+      final transaction = await owner.beginTransaction(preflight: preflight, sources: fixture.sources);
+
+      bool completed = false;
+      final pendingPublication = standalone.publish(
+        preflight: preflight,
+        target: fixture.plan.replacements.single.target,
+        source: fixture.sources.first.source,
+      ).then((publication) {
+        completed = true;
+        return publication;
+      });
+
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      expect(completed, isFalse);
+      await owner.rollbackTransaction(transaction);
+      final publication = await pendingPublication;
+      expect(await fixture.read('mods/a.jar'), 'new-a');
+      await standalone.commit(publication);
+      expect(completed, isTrue);
+    });
+
     test('empty plan commits without mutation', () async {
       final root = await Directory.systemTemp.createTemp('mtn-tx-root-');
       addTearDown(() => root.delete(recursive: true));
