@@ -437,7 +437,7 @@ MtnMinecraftContentFile _file(String name, {int? expectedSize}) => MtnMinecraftC
   size: expectedSize,
   primary: true,
   available: true,
-  downloadUrl: 'https://cdn.example/' + name,
+  downloadUrl: 'https://cdn.example/$name',
 );
 
 MtnMinecraftContentVersion _version(String key, MtnMinecraftContent content, MtnMinecraftContentFile file) => MtnMinecraftContentVersion(
