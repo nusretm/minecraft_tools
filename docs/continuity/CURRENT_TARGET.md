@@ -2804,7 +2804,7 @@ checkpoint: dev.28 — In-Process Recovery + Cancellation Validation
 branch: feature/minecraft-content-installation-recovery-hardening
 baseline main: 92598cffa96dca105afde41d2d8b24de35b3be90
 package: minecraft_content_service 1.0.0-dev.28
-status: IMPLEMENTED / WINDOWS DART VALIDATION PENDING / NOT MERGED
+status: INITIAL WINDOWS RUN (1 TEST COMPILE ERROR) / FIX COMMITTED / REVALIDATION PENDING / NOT MERGED
 design: docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_INSTALLATION_RECOVERY_HARDENING.md
 ```
 
@@ -2824,7 +2824,12 @@ The user explicitly approved implementation. A dedicated dev.28 feature
 branch now contains policy-matched authority injection, deterministic
 commit/rollback interruption tests, executor recovery and cancellation
 boundary tests, and package dev.28 changelog/version updates. Nothing
-has been merged; Windows Dart validation and actual-diff audit are pending.
+has been merged. Initial Windows validation found one Dart test compile
+error: `Future<void>.doWhile` in the executor test. Coordination tests
+passed 23/23, materialization transaction 15/15 and manifest IO 17/17;
+the executor and full suite were blocked by this compile error. The static
+call was corrected to `Future.doWhile` on the feature branch; Windows
+revalidation and actual-diff audit remain pending.
 `docs/WORKING_RULES.md` applies and pure Dart must not be passed through
 `dart format`.
 
