@@ -77,8 +77,10 @@ Current foundation includes:
 - explicit RemVibe integration through `minecraft_content_service_remvibe.dart`
 - one materialization plan to one `RemVibeDownloadJob` batch mapping
 - canonical download/target association with staging-directory and caller-owned target-filename mapping
+- RemVibe staged-file integrity validation for expected size plus supported MD5/SHA-1/SHA-256/SHA-512 metadata
+- single-pass multi-checksum calculation before RemVibe promotes its temporary download to the staging destination
 
-Version-constraint interpretation, manifest file-location/storage policy, download-service submission/lifecycle, integrity verification, staging publication, target-OS path policy, replacement/removal execution, rollback and TaskService orchestration remain separate later checkpoints.
+Version-constraint interpretation, manifest file-location/storage policy, download-service submission/lifecycle, staging publication, target-OS path policy, replacement/removal execution, rollback and TaskService orchestration remain separate later checkpoints.
 
 
 ## CLI example

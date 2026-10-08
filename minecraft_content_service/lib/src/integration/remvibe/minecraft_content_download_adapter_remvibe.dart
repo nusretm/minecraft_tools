@@ -5,14 +5,17 @@ import 'package:remvibe_download_service/remvibe_download_service.dart';
 
 import '../../service/minecraft_content_download_plan.dart';
 import '../../service/minecraft_content_materialization_plan.dart';
+import 'minecraft_content_download_integrity_remvibe.dart';
 
 class MtnMinecraftContentDownloadAdapterRemVibeItem {
   const MtnMinecraftContentDownloadAdapterRemVibeItem({
     required this.target,
+    required this.integrity,
     required this.item,
   });
 
   final MtnMinecraftContentMaterializationTarget target;
+  final MtnMinecraftContentDownloadIntegrityRemVibe? integrity;
   final RemVibeDownloadItem item;
 }
 
@@ -65,16 +68,21 @@ class MtnMinecraftContentDownloadAdapterRemVibe {
         directorySegments.isEmpty ? stagingRoot.path : p.joinAll(<String>[stagingRoot.path, ...directorySegments]),
       );
 
+      final integrity = MtnMinecraftContentDownloadIntegrityRemVibe.fromFile(
+        target.artifact.file,
+      );
       final item = RemVibeDownloadItem(
         url: download.url,
         directory: directory,
         filename: filename,
         size: target.artifact.file.size,
+        validator: integrity?.validate,
       );
 
       items.add(
         MtnMinecraftContentDownloadAdapterRemVibeItem(
           target: target,
+          integrity: integrity,
           item: item,
         ),
       );

@@ -1,12 +1,13 @@
 name: minecraft_content_service
 description: Pure Dart Minecraft content catalog, provider, version, dependency, and relation service foundation.
-version: 1.0.0-dev.19
+version: 1.0.0-dev.20
 publish_to: none
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
+  crypto: ^3.0.7
   http: ^1.2.2
   path: ^1.9.1
   remvibe_download_service:
