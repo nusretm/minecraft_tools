@@ -112,7 +112,17 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
         );
         final existingTarget = File(observed.physicalPath);
         backup = await _reservePublicationSibling(existingTarget, 'backup');
-        await backup.delete();
+        try {
+          await backup.delete();
+        } catch (error) {
+          await _deletePublicationFileBestEffort(backup);
+          backup = null;
+          throw MtnMinecraftContentMaterializationFileSystemPublicationException(
+            failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.fileSystemFailure,
+            message: 'Failed to prepare a publication backup path for "${existingTarget.path}".',
+            cause: error,
+          );
+        }
         try {
           await existingTarget.rename(backup.path);
         } catch (error) {
@@ -243,7 +253,16 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
     }
 
     final displaced = await _reservePublicationSibling(publication.target, 'rollback');
-    await displaced.delete();
+    try {
+      await displaced.delete();
+    } catch (error) {
+      await _deletePublicationFileBestEffort(displaced);
+      throw MtnMinecraftContentMaterializationFileSystemPublicationException(
+        failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
+        message: 'Failed to prepare rollback recovery space for "${publication.target.path}".',
+        cause: error,
+      );
+    }
     try {
       await publication.target.rename(displaced.path);
     } catch (error) {
