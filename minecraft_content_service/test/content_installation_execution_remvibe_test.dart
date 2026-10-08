@@ -315,7 +315,16 @@ void main() {
           }
         },
       );
-      await expectLater(executor.execute(), throwsA(isA<MtnMinecraftContentInstallationExecutionRemVibeException>()));
+      await expectLater(
+        executor.execute(),
+        throwsA(
+          isA<MtnMinecraftContentInstallationExecutionRemVibeException>().having(
+            (error) => error.failure,
+            'failure',
+            MtnMinecraftContentInstallationExecutionRemVibeFailure.validation,
+          ),
+        ),
+      );
       expect(await fixture.manifests.read(installationRoot: fixture.root), isNull);
       expect(await File(p.join(fixture.root.path, 'mods', 'a.jar')).exists(), isFalse);
     });
