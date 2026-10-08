@@ -17,7 +17,9 @@ Actual-diff review: COMPLETE
 Validation: COMPLETE
 Continuity: CLOSED
 Validated feature HEAD: 40f3484230c9f0f4cc8cf1aead8a924659e7e0fd
-Merge: NOT REQUESTED
+Merge: COMPLETE
+PR: #47
+Merge commit: ceab133f18546ce0215da04c36339957bf2dfb31
 ```
 
 No `dart format` was run.
@@ -333,4 +335,4 @@ remvibe_download_service 1.0.0 @ 59422d
 
 No `dart format` was run.
 
-The checkpoint is implementation-complete, actual-diff reviewed, validated, and continuity-closed. Merge still requires separate explicit user approval.
+The checkpoint is implementation-complete, actual-diff reviewed, validated, continuity-closed, and merged through PR #47 at merge commit `ceab133f18546ce0215da04c36339957bf2dfb31`.
