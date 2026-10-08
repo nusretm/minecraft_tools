@@ -2795,6 +2795,31 @@ In particular:
 
 ## Next action
 
+### Proposed checkpoint: dev.27 — RemVibe Batch-to-Installation Execution
+
+```text
+checkpoint: dev.27 — RemVibe Batch-to-Coordinated Installation Execution
+package: minecraft_content_service (currently 1.0.0-dev.26)
+design baseline: ec509b544dc37e155811d257b5a268a981d92273
+status: DESIGN RECORDED / NOT IMPLEMENTED / NO DEV.27 FEATURE BRANCH
+design: docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_REMVIBE_BATCH_INSTALLATION_EXECUTION.md
+```
+
+Existing dev.19 adapter, dev.20 integrity, dev.21 RemVibe batch execution,
+and dev.26 materialization+manifest transaction are already implemented.
+Dev.27 proposes a narrow opt-in RemVibe+IO orchestration layer that runs
+one batch when required, revalidates exact completed staging sources, then
+commits the canonical dev.26 coordinated transaction. For removal-only or
+retain-only plans, no RemVibe job is created, but the transaction is still
+executed. Global download service and staging-root ownership stay with
+their existing owners.
+
+User requested dev.26 branch cleanup. GitHub connector cannot delete branches,
+so PowerShell remote/local deletion commands were provided; deletion has not
+yet been confirmed by user output. The preceding local main was synchronized
+and clean at ec509b5. Dev.27 architecture remains design-only; production
+implementation needs separate explicit approval. Do not run `dart format`.
+
 ### Latest completed checkpoint: dev.26
 
 ```text
