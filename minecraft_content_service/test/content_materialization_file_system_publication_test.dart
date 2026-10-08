@@ -130,6 +130,46 @@ void main() {
       expect(await source.readAsBytes(), newBytes);
     });
 
+    test('changed managed backup blocks both publication finalizations without discarding recovery', () async {
+      final root = await Directory.systemTemp.createTemp();
+      final sourceRoot = await Directory.systemTemp.createTemp();
+      addTearDown(() => root.delete(recursive: true));
+      addTearDown(() => sourceRoot.delete(recursive: true));
+
+      final oldBytes = utf8.encode('previous managed bytes');
+      final newBytes = utf8.encode('replacement bytes');
+      final fixture = await _replacementFixture(
+        root: root,
+        relativePath: 'mods/a.jar',
+        oldBytes: oldBytes,
+        newBytes: newBytes,
+      );
+      final fileSystem = _posix();
+      final preflight = await fileSystem.preflight(plan: fixture.plan, installationRoot: root.absolute);
+      final source = File(p.join(sourceRoot.path, 'a.jar'));
+      await source.writeAsBytes(newBytes);
+
+      final publication = await fileSystem.publish(preflight: preflight, target: fixture.target, source: source);
+      expect(publication.previousLength, oldBytes.length);
+      expect(publication.previousSha256, sha256.convert(oldBytes).toString());
+      await publication.backup!.writeAsString('externally changed');
+
+      await expectLater(
+        fileSystem.commit(publication),
+        throwsA(isA<MtnMinecraftContentMaterializationFileSystemPublicationException>()),
+      );
+      await expectLater(
+        fileSystem.rollback(publication),
+        throwsA(isA<MtnMinecraftContentMaterializationFileSystemPublicationException>()),
+      );
+      expect(publication.state, MtnMinecraftContentMaterializationFileSystemPublicationState.pending);
+      expect(await publication.target.readAsBytes(), newBytes);
+
+      await publication.backup!.writeAsBytes(oldBytes);
+      await fileSystem.rollback(publication);
+      expect(await publication.target.readAsBytes(), oldBytes);
+    });
+
     test('replacement commit discards the owned backup and keeps the published file', () async {
       final root = await Directory.systemTemp.createTemp();
       final sourceRoot = await Directory.systemTemp.createTemp();
