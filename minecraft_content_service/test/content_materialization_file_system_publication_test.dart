@@ -467,6 +467,65 @@ void main() {
       expect(await File(p.join(root.path, 'mods', 'a.jar')).readAsBytes(), bytes);
     });
 
+    test('finalization refuses to destroy recovery state after the published target changes externally', () async {
+      final root = await Directory.systemTemp.createTemp();
+      final sourceRoot = await Directory.systemTemp.createTemp();
+      addTearDown(() => root.delete(recursive: true));
+      addTearDown(() => sourceRoot.delete(recursive: true));
+
+      final oldBytes = utf8.encode('old managed');
+      final newBytes = utf8.encode('new managed');
+      final fixture = await _replacementFixture(
+        root: root,
+        relativePath: 'mods/a.jar',
+        oldBytes: oldBytes,
+        newBytes: newBytes,
+      );
+      final fileSystem = _posix();
+      final preflight = await fileSystem.preflight(
+        plan: fixture.plan,
+        installationRoot: root.absolute,
+      );
+      final source = File(p.join(sourceRoot.path, 'a.jar'));
+      await source.writeAsBytes(newBytes);
+      final publication = await fileSystem.publish(
+        preflight: preflight,
+        target: fixture.target,
+        source: source,
+      );
+
+      await publication.target.writeAsString('externally changed');
+
+      await expectLater(
+        fileSystem.commit(publication),
+        throwsA(
+          isA<MtnMinecraftContentMaterializationFileSystemPublicationException>().having(
+            (error) => error.failure,
+            'failure',
+            MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
+          ),
+        ),
+      );
+      expect(publication.state, MtnMinecraftContentMaterializationFileSystemPublicationState.pending);
+      expect(await publication.backup!.readAsBytes(), oldBytes);
+
+      await expectLater(
+        fileSystem.rollback(publication),
+        throwsA(
+          isA<MtnMinecraftContentMaterializationFileSystemPublicationException>().having(
+            (error) => error.failure,
+            'failure',
+            MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
+          ),
+        ),
+      );
+      expect(await publication.backup!.readAsBytes(), oldBytes);
+
+      await publication.target.writeAsBytes(newBytes);
+      await fileSystem.rollback(publication);
+      expect(await publication.target.readAsBytes(), oldBytes);
+    });
+
     test('only the authority that created a publication may finalize it', () async {
       final root = await Directory.systemTemp.createTemp();
       final sourceRoot = await Directory.systemTemp.createTemp();

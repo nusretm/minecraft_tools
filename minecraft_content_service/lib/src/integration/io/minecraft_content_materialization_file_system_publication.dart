@@ -42,6 +42,7 @@ class MtnMinecraftContentMaterializationFileSystemPublication {
     required this.source,
     required this.target,
     required this.previousTargetExisted,
+    required this.publishedLength,
     required this.backup,
     required List<Directory> createdDirectories,
     required Object authorityToken,
@@ -55,6 +56,7 @@ class MtnMinecraftContentMaterializationFileSystemPublication {
   final File source;
   final File target;
   final bool previousTargetExisted;
+  final int publishedLength;
   final File? backup;
   final List<Directory> createdDirectories;
   final Object _authorityToken;
@@ -223,6 +225,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
         source: source,
         target: targetFile,
         previousTargetExisted: expectedState.entityType == MtnMinecraftContentMaterializationFileSystemEntityType.file,
+        publishedLength: stagedLength,
         backup: backup,
         createdDirectories: createdDirectories,
         authorityToken: _publicationAuthorityToken(this),
@@ -250,6 +253,8 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
     if (publication.state != MtnMinecraftContentMaterializationFileSystemPublicationState.pending) {
       throw StateError('A rolled-back publication cannot be committed.');
     }
+
+    await _assertPublishedTargetStable(publication);
 
     final backup = publication.backup;
     if (backup != null) {
@@ -289,12 +294,18 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
       throw StateError('A committed publication cannot be rolled back.');
     }
 
-    final targetType = await FileSystemEntity.type(publication.target.path, followLinks: false);
-    if (targetType != FileSystemEntityType.file) {
-      throw MtnMinecraftContentMaterializationFileSystemPublicationException(
-        failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
-        message: 'Published target is no longer a regular file and cannot be rolled back safely: "${publication.target.path}".',
-      );
+    await _assertPublishedTargetStable(publication);
+
+    final backup = publication.backup;
+    if (backup != null) {
+      final backupType = await FileSystemEntity.type(backup.path, followLinks: false);
+      if (backupType != FileSystemEntityType.file) {
+        throw MtnMinecraftContentMaterializationFileSystemPublicationException(
+          failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
+          message: 'Publication backup is missing or is no longer a regular file; rollback will not alter the published target: "${backup.path}".',
+          backup: backup,
+        );
+      }
     }
 
     final displaced = await _reservePublicationSibling(publication.target, 'rollback');
@@ -310,7 +321,6 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
       );
     }
 
-    final backup = publication.backup;
     if (backup != null) {
       try {
         await backup.rename(publication.target.path);
@@ -341,6 +351,44 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
 
     publication._state = MtnMinecraftContentMaterializationFileSystemPublicationState.rolledBack;
     publication._releaseOnce();
+  }
+
+  Future<void> _assertPublishedTargetStable(
+    MtnMinecraftContentMaterializationFileSystemPublication publication,
+  ) async {
+    final targetType = await FileSystemEntity.type(publication.target.path, followLinks: false);
+    if (targetType != FileSystemEntityType.file) {
+      throw MtnMinecraftContentMaterializationFileSystemPublicationException(
+        failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
+        message: 'Published target is missing or is no longer a regular file: "${publication.target.path}".',
+      );
+    }
+
+    final integrity = MtnMinecraftContentFileIntegrity.fromFile(publication.materializationTarget.artifact.file);
+    if (integrity != null) {
+      try {
+        await integrity.validate(
+          publication.target,
+          subject: 'Published target',
+        );
+      } on MtnMinecraftContentFileIntegrityException catch (error) {
+        throw MtnMinecraftContentMaterializationFileSystemPublicationException(
+          failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
+          message: 'Published target changed before finalization: "${publication.target.path}".',
+          cause: error,
+          backup: publication.backup,
+        );
+      }
+      return;
+    }
+
+    if (await publication.target.length() != publication.publishedLength) {
+      throw MtnMinecraftContentMaterializationFileSystemPublicationException(
+        failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
+        message: 'Metadata-less published target changed length before finalization: "${publication.target.path}".',
+        backup: publication.backup,
+      );
+    }
   }
 
   bool _isPublicationTarget(
