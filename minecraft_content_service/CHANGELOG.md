@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0-dev.19
+
+- Add an explicit RemVibe integration library without adding RemVibe types to the generic core service API.
+- Add `MtnMinecraftContentDownloadAdapterRemVibe` for mapping one complete materialization plan to one `RemVibeDownloadJob`.
+- Preserve canonical content download ordering while associating every RemVibe item with its exact materialization target.
+- Map resolved URL, caller-owned target basename, staging parent directory, and expected normalized file size into each `RemVibeDownloadItem`.
+- Keep retain/remove actions out of the download batch.
+- Reject no-download materialization plans instead of manufacturing an empty RemVibe job.
+- Leave `validator` unset; integrity verification remains a later checkpoint.
+- Do not start `RemVibeDownloadService` or call `addJob()`; transfer lifecycle remains executor-owned.
+- Keep publication, replacement/removal execution, target-OS collision policy, manifest filesystem persistence and TaskService orchestration out of this checkpoint.
+
 ## 1.0.0-dev.18
 
 - Add `MtnMinecraftContentInstallationManifest` as the portable persistence contract for managed installation state.
