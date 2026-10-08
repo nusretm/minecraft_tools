@@ -5,11 +5,13 @@ Date: 2026-10-08
 ## Status
 
 - Repository: `nusretm/minecraft_tools`
-- Baseline: `main` at `ea15f1670dd98f1cc1230c3fec09b00d174ef258`
-- Package: `minecraft_content_service` (current: `1.0.0-dev.25`; planned: dev.26)
-- Scope: **DESIGN ONLY / NOT IMPLEMENTED / NO FEATURE BRANCH / NOT APPROVED FOR PRODUCTION**
+- Baseline: `main` at `096b328e4cfa8ea0ba4a2b62f1d3f994034803a8`
+- Package: `minecraft_content_service 1.0.0-dev.26`
+- Scope: **IMPLEMENTED IN FEATURE BRANCH / LOCAL DART VALIDATION PENDING / NOT MERGED**
+- Feature branch: `feature/minecraft-content-materialization-manifest-coordination` (implementation explicitly approved)
+- New coordinated regression test count: 16
 - Last completed checkpoint: dev.25, PR #53, squash commit `76b01cc4a4f465fdd27d4960fe12683e6ee874ec`, Windows `dart analyze` clean and 209/209 tests
-- Dev.25 feature branch removal: user PowerShell commands provided; completion not yet confirmed
+- Dev.25 feature branch: removed locally and remotely (user-verified PowerShell output); main clean before dev.26
 
 ## Verified current boundaries
 
@@ -99,3 +101,14 @@ Alternative ordering (manifest first) must be evaluated against interruption sem
 ## Next action
 
 Review/approve the combined authority, one-lease ownership and forward-only commit ordering before beginning dev.26 production implementation. Continue from a new feature branch based on the verified current `main`. Respect `docs/WORKING_RULES.md`; pure Dart code must not be run through `dart format`; merge requires separate approval.
+
+## Implementation checkpoint (feature branch)
+
+- Root ownership is represented by a private `_MaterializationCoordinatedRootLease`, which verifies the same resolved installation root and case/path policy.
+- Dev.24 and dev.25 share private lease-aware core entrypoints; original public calls continue acquiring their own root lease.
+- Coordinator `begin(preflight, sources)` snapshots the manifest, verifies the persisted schema-v1 current installation state, applies a reversible file transaction, rechecks the raw manifest digest and publishes the resulting manifest.
+- Combined pending handle holds private sub-handles; only the coordinator can finalize. `commit()` validates both recovery states before forward-only cleanup. `rollback()` restores manifest first, then files.
+- Automatic application rollback and typed incomplete-recovery handling keep the root lease held if unsafe recovery remains.
+- Focused tests target initial install, replacement, removal, empty state, stale/missing/corrupt manifests, externally changed snapshots, integrity tampering and pending root leases.
+- **Validation not yet run on Windows**. Before merge review: `dart analyze`, focused coordinated tests, previous transaction/manifest tests, full `dart test`, `git diff --check` and clean `git status`.
+- Separate merge approval is still required. No `dart format` for pure Dart.
