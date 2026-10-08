@@ -236,16 +236,24 @@ class MtnMinecraftContentInstallationManifestFileSystem {
       await _validatePublished(publication);
       if (publication.state == MtnMinecraftContentInstallationManifestFileSystemPublicationState.pending) {
         await _validateBackup(publication);
-      } else if (publication.backup != null &&
-          await FileSystemEntity.type(publication.backup!.path, followLinks: false) == FileSystemEntityType.file) {
-        await _validateBackup(publication);
+      } else if (publication.backup != null) {
+        final kind = await FileSystemEntity.type(publication.backup!.path, followLinks: false);
+        if (kind == FileSystemEntityType.file) {
+          await _validateBackup(publication);
+        } else if (kind != FileSystemEntityType.notFound) {
+          throw StateError('Manifest backup path was replaced after a partial commit.');
+        }
       }
 
       publication._state = MtnMinecraftContentInstallationManifestFileSystemPublicationState.commitIncomplete;
       try {
-        if (publication.backup != null &&
-            await FileSystemEntity.type(publication.backup!.path, followLinks: false) == FileSystemEntityType.file) {
-          await publication.backup!.delete();
+        if (publication.backup != null) {
+          final kind = await FileSystemEntity.type(publication.backup!.path, followLinks: false);
+          if (kind == FileSystemEntityType.file) {
+            await publication.backup!.delete();
+          } else if (kind != FileSystemEntityType.notFound) {
+            throw StateError('Manifest backup path is no longer a regular file.');
+          }
         }
       } catch (error) {
         throw MtnMinecraftContentInstallationManifestFileSystemException(
