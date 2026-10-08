@@ -10,7 +10,8 @@ Package: minecraft_content_service/
 Checkpoint: dev.22 — Materialization Filesystem Preflight Foundation
 Branch: feature/minecraft-content-materialization-filesystem-preflight
 Baseline main: eb4e4ba70c681ea1ba32ea5caef675229132d128
-Production/test HEAD: 0bd3ff1f08aed852d2b9475778b6169cd952db26
+Initial production/test HEAD: 0bd3ff1f08aed852d2b9475778b6169cd952db26
+Corrected production/test HEAD: 244b1150a3e9d633a0bf38a661c6160ddcd07ac9
 Package version: 1.0.0-dev.22
 Implementation: COMPLETE
 Actual-diff review: COMPLETE
@@ -322,6 +323,127 @@ The new test file contains 12 tests covering:
 - TaskService orchestration
 - unmanaged/manual cleanup
 - resource rendering
+
+## Validation history
+
+First authoritative local validation attempt on feature HEAD `c31d406a564112880e52e4ef6720c1084efecad1` found a compile-time literal bug:
+
+```text
+dart analyze
+2 errors
+
+minecraft_content_materialization_file_system.dart
+CONIN$ / CONOUT$ were parsed as Dart interpolation
+```
+
+Focused and existing suites that did not load the IO file remained green:
+
+```text
+content_materialization_plan_test.dart
+9/9 passed
+
+content_installation_state_test.dart
+8/8 passed
+
+content_installation_manifest_test.dart
+9/9 passed
+
+content_download_execution_remvibe_test.dart
+7/7 passed
+
+git diff --check main...HEAD
+PASS
+
+working tree
+clean
+```
+
+The focused IO test and full suite failed only because the new IO source could not compile.
+
+Correction:
+
+```text
+CONIN$  -> r'CONIN
+
+```text
+dart pub get
+dart analyze
+
+dart test test/content_materialization_file_system_preflight_test.dart
+dart test test/content_materialization_plan_test.dart
+dart test test/content_installation_state_test.dart
+dart test test/content_installation_manifest_test.dart
+dart test test/content_download_execution_remvibe_test.dart
+
+dart test
+```
+
+Then from repository root:
+
+```text
+git diff --check main...HEAD
+git status
+git rev-parse HEAD
+```
+
+Expected production/test HEAD before the new continuity-only follow-up commit:
+
+```text
+244b1150a3e9d633a0bf38a661c6160ddcd07ac9
+```
+
+Do not merge without separate explicit user approval.
+
+CONOUT$ -> r'CONOUT
+
+```text
+dart pub get
+dart analyze
+
+dart test test/content_materialization_file_system_preflight_test.dart
+dart test test/content_materialization_plan_test.dart
+dart test test/content_installation_state_test.dart
+dart test test/content_installation_manifest_test.dart
+dart test test/content_download_execution_remvibe_test.dart
+
+dart test
+```
+
+Then from repository root:
+
+```text
+git diff --check main...HEAD
+git status
+git rev-parse HEAD
+```
+
+Expected feature HEAD before continuity-only follow-up commits:
+
+```text
+0bd3ff1f08aed852d2b9475778b6169cd952db26
+```
+
+Do not merge without separate explicit user approval.
+
+```
+
+Regression coverage now also includes `CONIN$.jar` and `CONOUT$.jar`.
+
+A failed intermediate connector write temporarily duplicated a source tail; the final source was rebuilt from the pre-fix feature source and verified against it. Final tree delta from the validation-attempt HEAD is exactly:
+
+```text
+minecraft_content_materialization_file_system.dart
+2 lines changed (+2/-2)
+
+content_materialization_file_system_preflight_test.dart
+1 line changed (+1/-1)
+```
+
+Corrected production/test HEAD:
+
+```text
+244b1150a3e9d633a0bf38a661c6160ddcd07ac9
+```
 
 ## Validation required
 
