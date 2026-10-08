@@ -2795,43 +2795,51 @@ In particular:
 
 ## Next action
 
-### Active checkpoint: dev.27 — RemVibe Batch-to-Installation Execution
+### Latest completed checkpoint: dev.27 — RemVibe Batch-to-Coordinated Installation Execution
 
 ```text
 checkpoint: dev.27 — RemVibe Batch-to-Coordinated Installation Execution
 branch: feature/minecraft-content-remvibe-installation-execution
 baseline main: 0556ec6a20360a9ab840dc0d4010451d480ee260
+validated production/test HEAD: 0f32eab1e630412fbc4f1367bf63a1ba5e774235
+final feature HEAD: 4695564356548732027d7627bce4547457aca3c6
+PR: #55
+main squash merge: d6adb12233dd9fc9395345f7d7bf56a6bf9cf44d
 package: minecraft_content_service 1.0.0-dev.27
-status: WINDOWS VALIDATED (244/244 TESTS) / ACTUAL-DIFF AND RECOVERY AUDIT RECORDED / NOT MERGED
-design: docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_REMVIBE_BATCH_INSTALLATION_EXECUTION.md
+status: IMPLEMENTED / WINDOWS VALIDATED (244 TESTS) / ACTUAL-DIFF REVIEWED / SQUASH MERGED / CLOSED
 ```
 
-Existing dev.19 adapter, dev.20 integrity, dev.21 RemVibe batch execution,
-and dev.26 materialization+manifest transaction are already implemented.
-Dev.27 proposes a narrow opt-in RemVibe+IO orchestration layer that runs
-one batch when required, revalidates exact completed staging sources, then
-commits the canonical dev.26 coordinated transaction. For removal-only or
-retain-only plans, no RemVibe job is created, but the transaction is still
-executed. Global download service and staging-root ownership stay with
-their existing owners.
+Dev.27 adds an opt-in `minecraft_content_service_remvibe_io.dart` integration.
+A canonical materialization plan uses one existing RemVibe download batch when
+transfers are needed, validates completed staging sources and a refreshed target
+filesystem preflight, then uses the dev.26 coordinator to finalize managed
+files and `.mtn-content/installation.json`. Empty/retain/remove-only plans
+skip RemVibe entirely while still completing the coordinated transaction.
+Staging files and global RemVibe job/service ownership remain with their
+existing callers. The executor exposes guarded recovery retry methods.
 
-Dev.26 feature branch cleanup was confirmed by user PowerShell logs:
-remote and local branches deleted, pruned, and local main synchronized and clean.
-Dev.27 design was subsequently saved to main at 0556ec6; the user explicitly
-approved dev.27 production implementation. The new opt-in RemVibe+IO executor,
-19 integration tests, package version bump and continuity changes are committed
-only to the dev.27 feature branch. The first Windows validation identified one post-download error-phase
-classification failure and two test-loop lint infos. Corrections were committed
-and the updated production/test HEAD
-0f32eab1e630412fbc4f1367bf63a1ba5e774235 was revalidated on Windows:
-`dart analyze` no issues, new executor tests 19/19, all package tests
-244/244, `git diff --check` clean and working tree clean. GitHub actual-diff
-and recovery audit found no new static blocker; forward-only commit/rollback
-recovery fault injection and pending-publication cancellation have not been
-directly exercised. See the dev.27 design continuity for precise coverage.
-Separate PR merge approval is required. No `dart format`.
+Windows verification supplied by the user at the production/test HEAD:
+`dart analyze` no issues; new installation-execution tests 19/19;
+previous download-execution tests 7/7 and coordinator tests 16/16;
+full package tests 244/244; `git diff --check` clean and worktree clean.
+Only documentation changed after the production/test validation commit.
+Actual-diff/recovery audit found no critical static blocker for merge.
 
-### Latest completed checkpoint: dev.26
+Recovery limitations: these tests do not inject partial commit/rollback IO
+cleanup failures or cancellation during pending coordinated publication;
+no process-crash-durable journal or cross-process atomicity is claimed.
+The dev.27 feature branch has not yet been cleaned up after the merge.
+
+Authoritative design, implementation and validation record:
+
+```text
+docs/continuity/PLANNED_2026-10-08_MINECRAFT_CONTENT_REMVIBE_BATCH_INSTALLATION_EXECUTION.md
+```
+
+No next production checkpoint is approved. Future implementation and merges
+require separate explicit approval; do not run `dart format` for pure Dart.
+
+### Previously completed checkpoint: dev.26
 
 ```text
 dev.26 — Materialization + Manifest Coordination
