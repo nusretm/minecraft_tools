@@ -72,9 +72,15 @@ class MtnMinecraftContentMaterializationFileSystemCoordinatedTransaction {
 class MtnMinecraftContentMaterializationFileSystemCoordinator {
   MtnMinecraftContentMaterializationFileSystemCoordinator({
     MtnMinecraftContentMaterializationFileSystemPolicy? policy,
-  }) : policy = policy ?? MtnMinecraftContentMaterializationFileSystemPolicy.host() {
+    MtnMinecraftContentInstallationManifestFileSystem? manifestFileSystem,
+  }) : policy = policy ?? manifestFileSystem?.policy ?? MtnMinecraftContentMaterializationFileSystemPolicy.host() {
+    if (manifestFileSystem != null &&
+        (manifestFileSystem.policy.platform != this.policy.platform ||
+         manifestFileSystem.policy.caseSensitive != this.policy.caseSensitive)) {
+      throw ArgumentError.value(manifestFileSystem, 'manifestFileSystem', 'The injected manifest filesystem must use the coordinator policy.');
+    }
     _materialization = MtnMinecraftContentMaterializationFileSystem(policy: this.policy);
-    _manifest = MtnMinecraftContentInstallationManifestFileSystem(policy: this.policy);
+    _manifest = manifestFileSystem ?? MtnMinecraftContentInstallationManifestFileSystem(policy: this.policy);
   }
 
   final MtnMinecraftContentMaterializationFileSystemPolicy policy;
