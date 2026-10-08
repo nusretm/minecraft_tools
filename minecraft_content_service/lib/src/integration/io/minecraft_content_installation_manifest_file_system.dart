@@ -423,8 +423,9 @@ class MtnMinecraftContentInstallationManifestFileSystem {
       if (directory != null && await directory.list(followLinks: false).isEmpty) {
         await directory.delete();
       }
-    } on FileSystemException {
-      // Never remove nonempty or externally modified manifest directories.
+    } catch (_) {
+      // Best-effort only: never remove nonempty, linked or externally modified metadata directories.
+      // Cleanup failure must not shadow the original publication error or strand the root lease.
     }
   }
 }
