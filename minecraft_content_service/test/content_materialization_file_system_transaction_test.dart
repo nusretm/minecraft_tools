@@ -301,6 +301,56 @@ void main() {
       expect(completed, isTrue);
     });
 
+    test('simultaneous commit and rollback of the same transaction are rejected', () async {
+      final fixture = await _mixedFixture();
+      addTearDown(fixture.dispose);
+      final fileSystem = MtnMinecraftContentMaterializationFileSystem();
+      final preflight = await fileSystem.preflight(plan: fixture.plan, installationRoot: fixture.root.absolute);
+      final transaction = await fileSystem.beginTransaction(preflight: preflight, sources: fixture.sources);
+
+      final committing = fileSystem.commitTransaction(transaction);
+      await expectLater(fileSystem.rollbackTransaction(transaction), throwsStateError);
+      await expectLater(fileSystem.commitTransaction(transaction), throwsStateError);
+      await committing;
+      expect(transaction.state, MtnMinecraftContentMaterializationFileSystemTransactionState.committed);
+      expect(await fixture.read('mods/a.jar'), 'new-a');
+    });
+
+    test('changed target parent symlink blocks finalization until restored', () async {
+      final fixture = await _mixedFixture();
+      addTearDown(fixture.dispose);
+      final fileSystem = MtnMinecraftContentMaterializationFileSystem();
+      final preflight = await fileSystem.preflight(plan: fixture.plan, installationRoot: fixture.root.absolute);
+      final transaction = await fileSystem.beginTransaction(preflight: preflight, sources: fixture.sources);
+
+      final mods = Directory(p.join(fixture.root.path, 'mods'));
+      final relocated = Directory(p.join(fixture.root.path, 'mods-relocated'));
+      await mods.rename(relocated.path);
+      final parentLink = Link(mods.path);
+      try {
+        await parentLink.create(relocated.path);
+      } on FileSystemException {
+        // Some Windows installations do not grant directory symbolic-link creation.
+        await relocated.rename(mods.path);
+        await fileSystem.rollbackTransaction(transaction);
+        return;
+      }
+      expect(await File(p.join(mods.path, 'a.jar')).readAsString(), 'new-a');
+      await expectLater(
+        fileSystem.commitTransaction(transaction),
+        throwsA(isA<MtnMinecraftContentMaterializationFileSystemTransactionException>()),
+      );
+      await expectLater(
+        fileSystem.rollbackTransaction(transaction),
+        throwsA(isA<MtnMinecraftContentMaterializationFileSystemTransactionException>()),
+      );
+      expect(transaction.state, MtnMinecraftContentMaterializationFileSystemTransactionState.pending);
+      await parentLink.delete();
+      await relocated.rename(mods.path);
+      await fileSystem.rollbackTransaction(transaction);
+      expect(await fixture.read('mods/a.jar'), 'old-a');
+    });
+
     test('empty plan commits without mutation', () async {
       final root = await Directory.systemTemp.createTemp('mtn-tx-root-');
       addTearDown(() => root.delete(recursive: true));
