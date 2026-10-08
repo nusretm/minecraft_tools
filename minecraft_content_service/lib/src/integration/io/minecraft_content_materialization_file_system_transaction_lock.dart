@@ -4,17 +4,28 @@ final Map<String, _MaterializationRootGate> _materializationRootGates = <String,
 
 String _materializationRootKey(
   MtnMinecraftContentMaterializationFileSystemPreflight preflight,
+) => _materializationRootKeyFor(preflight.resolvedInstallationRoot, preflight.policy);
+
+String _materializationRootKeyFor(
+  Directory resolvedInstallationRoot,
+  MtnMinecraftContentMaterializationFileSystemPolicy policy,
 ) {
-  final normalized = p.normalize(p.absolute(preflight.resolvedInstallationRoot.path));
-  final root = preflight.policy.caseSensitive ? normalized : normalized.toLowerCase();
-  return '${preflight.policy.platform.name}:${preflight.policy.caseSensitive}:$root';
+  final normalized = p.normalize(p.absolute(resolvedInstallationRoot.path));
+  final root = policy.caseSensitive ? normalized : normalized.toLowerCase();
+  return '${policy.platform.name}:${policy.caseSensitive}:$root';
 }
 
 Future<void Function()> _acquireMaterializationRoot(
   MtnMinecraftContentMaterializationFileSystemPreflight preflight, {
   required bool exclusive,
+}) => _acquireMaterializationRootFor(preflight.resolvedInstallationRoot, preflight.policy, exclusive: exclusive);
+
+Future<void Function()> _acquireMaterializationRootFor(
+  Directory resolvedInstallationRoot,
+  MtnMinecraftContentMaterializationFileSystemPolicy policy, {
+  required bool exclusive,
 }) {
-  final key = _materializationRootKey(preflight);
+  final key = _materializationRootKeyFor(resolvedInstallationRoot, policy);
   final gate = _materializationRootGates.putIfAbsent(key, () => _MaterializationRootGate());
   return gate.acquire(exclusive: exclusive, onEmpty: () {
     if (identical(_materializationRootGates[key], gate)) {
