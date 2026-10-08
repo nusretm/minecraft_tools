@@ -115,15 +115,6 @@ class MtnMinecraftContentMaterializationFileSystem {
             entityType: state.entityType,
           ),
         );
-      } else if (state.entityType != MtnMinecraftContentMaterializationFileSystemEntityType.file) {
-        issues.add(
-          MtnMinecraftContentMaterializationFileSystemPreflightIssueManagedArtifact(
-            artifact: owners.first,
-            physicalPath: state.physicalPath,
-            entityType: state.entityType,
-            reason: MtnMinecraftContentMaterializationFileSystemManagedArtifactReason.expectedRegularFile,
-          ),
-        );
       }
     }
 
