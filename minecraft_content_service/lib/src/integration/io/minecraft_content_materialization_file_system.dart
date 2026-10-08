@@ -358,8 +358,8 @@ class MtnMinecraftContentMaterializationFileSystem {
         base == 'PRN' ||
         base == 'AUX' ||
         base == 'NUL' ||
-        base == r'CONIN
-        base == r'CONOUT
+        base == r'CONIN$' ||
+        base == r'CONOUT$' ||
         RegExp(r'^COM[1-9]$').hasMatch(base) ||
         RegExp(r'^LPT[1-9]$').hasMatch(base)) {
       return false;
