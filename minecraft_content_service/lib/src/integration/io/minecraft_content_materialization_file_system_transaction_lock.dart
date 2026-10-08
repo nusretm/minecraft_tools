@@ -7,7 +7,7 @@ String _materializationRootKey(
 ) {
   final normalized = p.normalize(p.absolute(preflight.resolvedInstallationRoot.path));
   final root = preflight.policy.caseSensitive ? normalized : normalized.toLowerCase();
-  return preflight.policy.platform.name + ':' + preflight.policy.caseSensitive.toString() + ':' + root;
+  return '${preflight.policy.platform.name}:${preflight.policy.caseSensitive}:$root';
 }
 
 Future<void Function()> _acquireMaterializationRoot(
