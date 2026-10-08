@@ -356,19 +356,18 @@ extension MtnMinecraftContentMaterializationFileSystemTransactionOperations on M
       rethrow;
     }
 
-    if (await backup.length() != length ||
-        await MtnMinecraftContentFileIntegrity.calculateSha256(backup) != sha256) {
-      try {
-        await backup.rename(original.path);
-      } catch (error) {
-        throw MtnMinecraftContentMaterializationFileSystemTransactionException(
-          failure: MtnMinecraftContentMaterializationFileSystemTransactionFailure.recoveryFailure,
-          message: 'Managed removal backup verification and restoration failed.',
-          cause: error,
-          recoveryCandidates: <File>[backup],
-        );
+    try {
+      if (await backup.length() != length ||
+          await MtnMinecraftContentFileIntegrity.calculateSha256(backup) != sha256) {
+        throw StateError('Managed removal backup changed during rename.');
       }
-      throw StateError('Managed removal backup changed during rename; original was restored.');
+    } catch (error) {
+      throw MtnMinecraftContentMaterializationFileSystemTransactionException(
+        failure: MtnMinecraftContentMaterializationFileSystemTransactionFailure.recoveryFailure,
+        message: 'Managed removal backup could not be verified after rename; recovery candidate was preserved.',
+        cause: error,
+        recoveryCandidates: <File>[backup],
+      );
     }
     return _MaterializationTransactionRemoval(
       preflight: preflight,
