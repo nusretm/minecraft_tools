@@ -2812,11 +2812,12 @@ The dev.26 coordinator owns one exclusive in-process root lease and privately
 uses dev.24 materialization + dev.25 manifest reversible operations. Both
 recovery states are checked before forward-only commit cleanup. Manifest-first
 rollback and retained recovery candidates are supported. New integration
-tests have been run on Windows: 15 of 16 new cases succeeded; the remaining case
-timed out due to a queue-order assumption in the test. Existing focused tests
-passed, while the full suite reported the same single failure. Three redundant
-null assertions were also reported by the analyzer. Targeted fixes are now
-committed to the feature branch; revalidation is required.
+tests have now passed final Windows validation: 16/16 coordination tests,
+225/225 package tests and a clean Dart analyzer. The queue-order test fix and
+the three redundant non-null assertion fixes were revalidated at
+c9253473e9b31a6d1e8264db1478ebdd1193eac4.
+The actual-diff and recovery audit found no critical production blocker.
+Commit-interruption fault injection remains outside the proven test coverage.
 
 Do not merge without separate explicit approval. No pure Dart `dart format`.
 
