@@ -376,6 +376,24 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
   Future<void> _assertPublishedTargetStable(
     MtnMinecraftContentMaterializationFileSystemPublication publication,
   ) async {
+    await _assertInstallationRootStable(publication.preflight);
+    final inspectionIssues = <MtnMinecraftContentMaterializationFileSystemPreflightIssue>[];
+    final observed = await _inspectArtifact(
+      publication.preflight.resolvedInstallationRoot,
+      publication.materializationTarget.artifact,
+      MtnMinecraftContentMaterializationFileSystemStateScope.resulting,
+      inspectionIssues,
+    );
+    if (inspectionIssues.isNotEmpty ||
+        observed.entityType != MtnMinecraftContentMaterializationFileSystemEntityType.file ||
+        _absolutePathIdentity(observed.physicalPath) != _absolutePathIdentity(publication.target.path)) {
+      throw MtnMinecraftContentMaterializationFileSystemPublicationException(
+        failure: MtnMinecraftContentMaterializationFileSystemPublicationFailure.recoveryFailure,
+        message: 'Published target path or ancestor changed before finalization: "${publication.target.path}".',
+        backup: publication.backup,
+      );
+    }
+
     final targetType = await FileSystemEntity.type(publication.target.path, followLinks: false);
     if (targetType != FileSystemEntityType.file) {
       throw MtnMinecraftContentMaterializationFileSystemPublicationException(
