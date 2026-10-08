@@ -8,7 +8,7 @@ Date: 2026-10-08
 - Package: `minecraft_content_service 1.0.0-dev.27`
 - Proposed checkpoint: **dev.27 — RemVibe Batch-to-Coordinated Installation Execution**
 - Baseline main at design creation: `ec509b544dc37e155811d257b5a268a981d92273`
-- Status: **IMPLEMENTED ON FEATURE BRANCH / WINDOWS DART VALIDATION PENDING / NOT MERGED**
+- Status: **INITIAL WINDOWS VALIDATION (18/19 NEW TESTS, 1 PHASE-CLASSIFICATION FAILURE, 2 LINT INFOS) / TARGETED FIXES COMMITTED / REVALIDATION PENDING / NOT MERGED**
 - Branch: `feature/minecraft-content-remvibe-installation-execution`
 - Implementation explicitly approved by user after clean dev.26 branch cleanup
 - Focused regression tests added: 19
@@ -125,4 +125,6 @@ The design and dev.27 production implementation were explicitly approved. Next: 
 - Cancellation before download or before commit rejects success; in-flight cancellation uses the existing exact RemVibe job. Cancellation is not honored once forward-only commit cleanup has begun.
 - Installation roots, job service lifecycle and caller-owned staging directories remain under their existing owners; executor neither deletes successful staged files nor alters global RemVibe service configuration.
 - Unit/integration tests include real local HTTP requests, two-item one-job installation, replacement, zero-download plans, retries, cancellation, symlink/case collision, manifest mismatch, stale destination, tampered output, pre-existing partial downloads and unrelated singleton job preservation.
-- **Windows tests not yet run for this feature branch.** No PR/merge until verified.
+- **First Windows validation on feature HEAD `bac9634990fa27dad892dfe36e82505daf22b997` (user-provided logs):** `dart analyze` reported 2 `curly_braces_in_flow_control_structures` infos. The new installation execution suite passed 18/19, with only the post-transfer destination-preflight test failing because an unsafe refreshed preflight was classified as `download` rather than `validation`. The prior RemVibe adapter (7/7), download execution (7/7), integrity (9/9), and dev.26 coordination (16/16) focused tests all passed. The full suite reported 243 passes and that same single failure. `git diff --check` and working tree were clean.
+- **Targeted corrections now committed:** transition from `downloading` to `validating` immediately after successful RemVibe execution, before any post-download staging/integrity/destination checks; add missing braces to 2 test loops; assert `validation` failure for post-download staging tamper too. No change to RemVibe service, download retries, coordinator or rollback semantics.
+- **Revalidation required:** run `dart analyze`, focused dev.27 tests and full `dart test` on updated feature HEAD; record results before merge review. No PR or merge yet.
