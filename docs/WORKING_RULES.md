@@ -468,3 +468,28 @@ Her implementation öncesi ve sonrası şu soru sorulur:
 > Bu kod yalnız bugün çalışıyor mu, yoksa projenin omurgasına doğal bir dal olarak mı ekleniyor?
 
 İkinci cevap açık değilse kod tamamlanmış kabul edilmez.
+
+
+---
+
+## 21. Ortak mühendislik standardı — sınıf ailesi, API ve sorumluluk
+
+Bu bölüm mevcut kuralları tamamlar; geçmişte doğrulanmış API'leri veya sınıfları topluca yeniden adlandırma yetkisi vermez.
+
+- **Naming:** Abstract class `Abs` (ör. `ClassPageContentAbs`), instantiate edilebilen ortak base class `Base` (ör. `ClassPageContentBase`) eki alır. Somut alt sınıflar aile önekini koruyup specialization ekler (`ClassPageContentHome`, `ClassPageContentAbout`). Enum/tipler ilgili kavramsal öneki korur (`ClassPageType`, `ClassPageStatus`). Gereksiz `Abs`/`Base` katmanı oluşturulmaz; var olan public API yalnız ayrı onaylı migration ile değişir.
+- **Shared behavior:** Gerçekten ortak validation, serialization, lookup, lifecycle ve algoritma kodu, subclass'lardan semantik olarak uygun en yakın ortak ataya taşınır. Yalnız benzer görünen ama farklı sözleşmeli kod birleştirilmez; doğal inheritance yoksa composition kullanılır.
+- **Anti-spagetti:** Birden çok sorumluluk taşıyan büyük sınıf, ardışık forwarding/helper katmanları, dağınık state değişiklikleri ve core'daki provider-specific dallanmalar mimari uyarıdır. Önce davranışın sahibi belirlenir; yanlış ownership başka bir wrapper ile örtülmez.
+- **API ve state:** Public API'nin girdi/çıktı/hata sözleşmesi, mutable state otoritesi ve ilgili invariant'lar açık olmalıdır. Gerekli yerlerde retry, cancellation, cleanup, recovery ve resource ownership tanımlanır. Hata, anlamını bilen katmanda ele alınır; sessizce yutulmaz.
+- **Dependency:** Önce standart kütüphane ve mevcut dependency'ler değerlendirilir. Yeni bağımlılık onaya tabidir. Core, Modrinth/CurseForge/loader wire-format detaylarını sahiplenmez.
+
+## 22. Repository organizasyonu, build ve doğrulama
+
+- **Mevcut repo:** `minecraft_info_provider/`, `minecraft_content_service/`, `minecraft_loader_version_list/` ve `hypixel_api/` ayrı Dart paketleridir. Her paketin sorumluluğu, public API'si ve kendi `.gitignore` / build kuralları korunur. `minecraft_loader_version_list/WORKING_RULES.md` gibi paket talimatları geçerlidir; bir paketteki iş izinsiz biçimde kardeş paketlere yayılmaz.
+- **Klasör:** Kod dil/teknoloji içinde domain ve subsystem sahipliğine göre gruplanır; gerçek ihtiyaç varsa core/implementation ayrımı yapılır. Çok dilli projeler için root `docs/`, `rust/`, `dart/`, `ui/`, `scripts/`, `build/` düzeni tercih edilebilir. Ancak bu saf Dart repository'si sırf şablona uymak için yeniden düzenlenmez.
+- **Build/.gitignore:** Root `build/` ve ilgili paketlerdeki generated build/cache/coverage çıktıları Git dışında tutulur. Kaynak dosyalar, gerekli toolchain dosyaları, kasıtlı takip edilen bağımlılıklar ve uygulama lockfile'ları rastgele ignore edilmez. Ignore kuralı daha önce track edilen dosyaları Git'ten kendiliğinden çıkarmaz; böyle bir temizlik ayrı onay gerektirir.
+- **FFI gelecekte eklenirse:** Native producer ve consumer arasında tek yetkili build artifact yolu tanımlanır; ABI, veri tipi, memory ownership ve hata sözleşmesi belgelenir. Binary'ler elle kopyalanmaz; stale/uyumsuz binary sessizce yüklenmez.
+- **Checkpoint:** Önce kanıt veya gereksinim, sonra bounded responsibility/owner, scope/non-goals, contract ve invariant'lar belirlenir. Yalnız onaylı checkpoint uygulanır; focused validation ve gerekli regression, bağımsız actual-diff/mimari review, gerekiyorsa gerçek runtime doğrulaması yapılır.
+- **Continuity:** `docs/continuity/CURRENT_TARGET.md` ve ilgili aktif handoff/plan dosyaları kararları, doğrulama kanıtını, unresolved sorunları ve next target'ı taşır. `implemented`, `synthetically validated`, `live validated`, `blocked` ve `deferred` tek bir belirsiz `done` olarak raporlanmaz.
+- **Not:** 19. bölümdeki `MtnLauncher`/`_trash` örneği bu repository'nin klasör veya migration talimatı değildir; yalnız adım adım ilerleme prensibi burada geçerlidir.
+
+**Ana soru:** Yeni davranış mimariye doğal bir sorumluluk olarak mı ekleniyor, yoksa yalnız bugünkü özel durumu çalıştırmak için mi yamalanıyor?
