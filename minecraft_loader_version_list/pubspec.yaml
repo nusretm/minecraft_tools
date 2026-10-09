@@ -1,0 +1,14 @@
+name: minecraft_loader_version_list
+description: Shared Minecraft game-loader support catalog, loader-build discovery, and JSON cache.
+version: 1.0.0-dev.1
+publish_to: none
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  http: ^1.2.2
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.25.0
