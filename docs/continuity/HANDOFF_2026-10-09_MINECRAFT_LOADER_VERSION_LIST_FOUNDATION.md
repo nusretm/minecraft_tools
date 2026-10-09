@@ -11,7 +11,7 @@
 - This is a standalone pure-Dart package. `mtn_launcher` and sibling packages were not changed.
 - `docs/WORKING_RULES.md` remains authoritative; package-specific constraints are in `minecraft_loader_version_list/WORKING_RULES.md`.
 
-No commit, push, PR update or merge was performed during LVL-1A through LVL-1D.
+No commit, push, PR update or merge was performed during LVL-1A through LVL-1D. LVL-1E closes with a dedicated cache-hardening commit and PR update; PR #57 remains draft and unmerged.
 
 ## Completed levels
 
@@ -50,6 +50,19 @@ No commit, push, PR update or merge was performed during LVL-1A through LVL-1D.
 - Extended the example output with catalog state, channel counts and automatic resolver results.
 - Completed real Windows provider smoke for Minecraft `1.21.1` and Forge legacy target `1.8.9`.
 - Restored the pre-existing ignored `.mtn_loader_cache` after smoke; no smoke artifact entered Git status.
+
+### LVL-1E — Windows cache recovery and canonical path locking
+
+- Cache reads prefer a valid primary and fall back to `.bak` only when the primary is missing or invalid; an invalid backup is never accepted as a catalog.
+- A valid backup remains usable without network access, including stale-data fallback when refresh fails.
+- Windows publication retains a valid rollback copy while replacing the primary and restores that copy when promotion fails.
+- Writes from separate `MtnLauncherGameLoaderVersionList` instances are serialized by canonical cache path within the current Dart isolate, preventing shared `.tmp` corruption.
+- The cache parent is created and resolved with `resolveSymbolicLinks()` before queue selection. Windows path keys are case-insensitive; case-sensitive platforms retain exact case.
+- Canonicalization failures are reported as cache-write errors and never fall back to the previous non-canonical key.
+- The original six focused tests were first run against the unchanged baseline: four failed for missing-primary recovery, invalid-primary recovery, offline stale-backup fallback and concurrent publication.
+- Final focused coverage is 8/8, including direct-path, `sub/../` dot-segment and Windows directory-link aliases. The complete package suite is 43/43.
+
+The shared queue is process-local and isolate-local. It does not coordinate independent operating-system processes or Dart isolates, and it does not merge the in-memory catalogs of separate instances. The last successfully completed valid publication determines the persisted cache. Non-cooperating external filesystem mutations remain outside this coordination boundary.
 
 ## Public API contract
 
@@ -95,6 +108,17 @@ git diff --check   PASS
 ```
 
 Focused coverage includes 6 provider parsing tests and 16 catalog/resolver tests. The remaining tests cover shared identity, cache compatibility, timestamps, stale fallback, HTTP errors and coalescing.
+
+Final LVL-1E Windows validation from `minecraft_loader_version_list/`:
+
+```text
+dart analyze                         No issues found
+dart test test/cache_hardening_test.dart   8/8 PASS
+dart test                            43/43 PASS
+git diff --check                     PASS
+```
+
+The dot-segment and Windows directory-link alias tests both executed and passed; no environment skip was required.
 
 ## Real provider smoke
 

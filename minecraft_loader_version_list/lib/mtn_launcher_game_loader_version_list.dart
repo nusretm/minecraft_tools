@@ -15,6 +15,8 @@ enum MtnLauncherGameLoaderCatalogState {
 }
 
 class MtnLauncherGameLoaderVersionList {
+  static final Map<String, Future<void>> _cacheWrites = {};
+
   MtnLauncherGameLoaderVersionList({
     required this.cacheDirectory,
     required this.filename,
@@ -51,7 +53,6 @@ class MtnLauncherGameLoaderVersionList {
   bool _cacheRead = false;
   Future<_CatalogLoadResult>? _pendingLoad;
   final Map<String, Future<_GeneratedLoadResult>> _pendingGenerated = {};
-  Future<void> _pendingSave = Future<void>.value();
 
   int _errorCode = 0;
   String _errorMessage = '';
@@ -321,10 +322,25 @@ class MtnLauncherGameLoaderVersionList {
     if (_cacheRead) return;
     _cacheRead = true;
     final file = _cacheFile;
-    if (!await file.exists()) return;
+    final restored = await _readCacheFile(file) ?? await _readCacheFile(File('${file.path}.bak'));
+    if (restored == null) return;
+
+    _minecraftVersions
+      ..clear()
+      ..addAll(restored.minecraftVersions);
+    _catalogUpdatedAt = restored.catalogUpdatedAt;
+    _hasMinecraftVersionCatalog = true;
+    _generated
+      ..clear()
+      ..addAll(restored.generated);
+    _rebuildItems();
+  }
+
+  Future<_RestoredCache?> _readCacheFile(File file) async {
+    if (!await file.exists()) return null;
     try {
       final root = jsonDecode(await file.readAsString());
-      if (root is! Map<String, dynamic> || root['schemaVersion'] != 1) return;
+      if (root is! Map<String, dynamic> || root['schemaVersion'] != 1) return null;
       final catalogDate = DateTime.parse(root['catalogUpdatedAt'] as String).toUtc();
       final restoredVersions = <MtnLauncherGameLoaderMinecraftVersion>[];
       for (final raw in root['minecraftVersions'] as List<dynamic>) {
@@ -346,63 +362,100 @@ class MtnLauncherGameLoaderVersionList {
         final versions = (entry['items'] as List<dynamic>).map((raw) => MtnLauncherGameLoaderVersion.fromJson(raw as Map<String, dynamic>)).toList();
         restoredGenerated[_key(game)] = _GeneratedVersions(game: game, updatedAt: DateTime.parse(entry['updatedAt'] as String).toUtc(), versions: versions);
       }
-      _minecraftVersions
-        ..clear()
-        ..addAll(restoredVersions);
-      _catalogUpdatedAt = catalogDate;
-      _hasMinecraftVersionCatalog = true;
-      _generated
-        ..clear()
-        ..addAll(restoredGenerated);
-      _rebuildItems();
+      return _RestoredCache(catalogUpdatedAt: catalogDate, minecraftVersions: restoredVersions, generated: restoredGenerated);
     } catch (_) {
-      // Invalid/legacy cache: refresh from the provider.
+      return null;
     }
   }
 
   Future<void> _saveCache() async {
-    _pendingSave = _pendingSave.then((_) async {
-      final file = _cacheFile;
-      try {
-        await file.parent.create(recursive: true);
-        final temporary = File('${file.path}.tmp');
-        final root = {
-          'schemaVersion': 1,
-          'catalogUpdatedAt': _catalogUpdatedAt?.toIso8601String(),
-          'minecraftVersions': _minecraftVersions.map((game) => {
-            'mcVersion': game.mcVersion,
-            'versionId': game.versionId,
-            'type': game.type.name,
-          }).toList(),
-          'generated': _generated.values.map((entry) => {
-            'mcVersion': entry.game.mcVersion,
-            'versionId': entry.game.versionId,
-            'type': entry.game.type.name,
-            'updatedAt': entry.updatedAt.toIso8601String(),
-            'items': entry.versions.map((item) => item.toJson()).toList(),
-          }).toList(),
-        };
-        await temporary.writeAsString(jsonEncode(root), flush: true);
-        // Windows File.rename may not replace an existing target.
-        final backup = File('${file.path}.bak');
-        if (await file.exists()) {
+    final requestedFile = _cacheFile;
+    late final String canonicalParent;
+    try {
+      await requestedFile.parent.create(recursive: true);
+      canonicalParent = await requestedFile.parent.resolveSymbolicLinks();
+    } catch (error) {
+      _errorCode = -5;
+      _errorMessage = 'Version cache path resolution error: $error';
+      return;
+    }
+
+    final file = File('$canonicalParent${Platform.pathSeparator}$filename');
+    final path = file.path;
+    final key = Platform.isWindows ? path.toLowerCase() : path;
+    final previous = _cacheWrites[key] ?? Future<void>.value();
+    late final Future<void> current;
+    current = previous.then((_) => _writeCache(file)).whenComplete(() {
+      if (identical(_cacheWrites[key], current)) _cacheWrites.remove(key);
+    });
+    _cacheWrites[key] = current;
+    await current;
+  }
+
+  Future<void> _writeCache(File file) async {
+    final temporary = File('${file.path}.tmp');
+    final backup = File('${file.path}.bak');
+    try {
+      await file.parent.create(recursive: true);
+      final root = {
+        'schemaVersion': 1,
+        'catalogUpdatedAt': _catalogUpdatedAt?.toIso8601String(),
+        'minecraftVersions': _minecraftVersions.map((game) => {
+          'mcVersion': game.mcVersion,
+          'versionId': game.versionId,
+          'type': game.type.name,
+        }).toList(),
+        'generated': _generated.values.map((entry) => {
+          'mcVersion': entry.game.mcVersion,
+          'versionId': entry.game.versionId,
+          'type': entry.game.type.name,
+          'updatedAt': entry.updatedAt.toIso8601String(),
+          'items': entry.versions.map((item) => item.toJson()).toList(),
+        }).toList(),
+      };
+      await temporary.writeAsString(jsonEncode(root), flush: true);
+
+      // Windows File.rename may not replace an existing target. Keep a valid
+      // rollback copy until the new primary has been published.
+      final primaryIsValid = await _readCacheFile(file) != null;
+      final backupIsValid = await _readCacheFile(backup) != null;
+      if (await file.exists()) {
+        if (primaryIsValid) {
           if (await backup.exists()) await backup.delete();
           await file.rename(backup.path);
+        } else {
+          await file.delete();
+          if (!backupIsValid && await backup.exists()) await backup.delete();
         }
-        try {
-          await temporary.rename(file.path);
-          if (await backup.exists()) await backup.delete();
-        } catch (_) {
-          if (!await file.exists() && await backup.exists()) await backup.rename(file.path);
-          rethrow;
-        }
-      } catch (error) {
-        _errorCode = -5;
-        _errorMessage = 'Version cache write error: $error';
+      } else if (!backupIsValid && await backup.exists()) {
+        await backup.delete();
       }
-    });
-    await _pendingSave;
+
+      try {
+        await temporary.rename(file.path);
+        if (await backup.exists()) await backup.delete();
+      } catch (_) {
+        if (!await file.exists() && await _readCacheFile(backup) != null) await backup.rename(file.path);
+        rethrow;
+      }
+    } catch (error) {
+      _errorCode = -5;
+      _errorMessage = 'Version cache write error: $error';
+    } finally {
+      try {
+        if (await temporary.exists()) await temporary.delete();
+      } catch (_) {
+        // A leftover temporary file is ignored and replaced by the next save.
+      }
+    }
   }
+}
+
+class _RestoredCache {
+  const _RestoredCache({required this.catalogUpdatedAt, required this.minecraftVersions, required this.generated});
+  final DateTime catalogUpdatedAt;
+  final List<MtnLauncherGameLoaderMinecraftVersion> minecraftVersions;
+  final Map<String, _GeneratedVersions> generated;
 }
 
 class _GeneratedVersions {
