@@ -1,2 +1,19 @@
 minecraft_info_provider/.dart_tool/
 minecraft_info_provider/pubspec.lock
+
+# Generated output (root build/ and package-level build/ directories)
+**/build/
+**/coverage/
+
+# Dart-generated tooling and dependency caches
+**/.dart_tool/
+**/.pub/
+**/.pub-cache/
+**/.packages
+
+# Local machine settings and temporary files
+.env
+.env.*
+!.env.example
+*.log
+*.tmp
