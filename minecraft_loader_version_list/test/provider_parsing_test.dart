@@ -8,6 +8,21 @@ void main() {
     expect(example.readMavenVersions(xml), ['1.8.9-11.15.1.2318-1.8.9', '1.20.1-47.3.0']);
   });
 
+  test('Fabric uses only affirmative official stable metadata for stable', () {
+    expect(example.fabricLoaderChannel({'version': '0.16.10', 'stable': true}), MtnLauncherGameLoaderChannel.stable);
+    expect(example.fabricLoaderChannel({'version': '0.16.10', 'stable': false}), MtnLauncherGameLoaderChannel.unknown);
+    expect(example.fabricLoaderChannel({'version': '0.17.0-beta.1', 'stable': false}), MtnLauncherGameLoaderChannel.beta);
+  });
+
+  test('Loader channels require explicit prerelease markers', () {
+    expect(example.loaderChannelFromVersion('1.20.1-47.3.0'), MtnLauncherGameLoaderChannel.unknown);
+    expect(example.loaderChannelFromVersion('21.1.211'), MtnLauncherGameLoaderChannel.unknown);
+    expect(example.loaderChannelFromVersion('0.28.0-rc.1'), MtnLauncherGameLoaderChannel.unknown);
+    expect(example.loaderChannelFromVersion('0.28.0-beta.1'), MtnLauncherGameLoaderChannel.beta);
+    expect(example.loaderChannelFromVersion('21.4.0-alpha.3'), MtnLauncherGameLoaderChannel.alpha);
+    expect(example.loaderChannelFromVersion('21.4.0-experimental.2'), MtnLauncherGameLoaderChannel.experimental);
+  });
+
   test('Minecraft type is independent of loader build stability', () {
     expect(example.minecraftTypeFromId('1.21.1', manifestType: 'release'), MtnLauncherGameVersionType.release);
     expect(example.minecraftTypeFromId('1.21.1-pre1', manifestType: 'snapshot'), MtnLauncherGameVersionType.preRelease);

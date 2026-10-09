@@ -1,3 +1,3 @@
-export 'mtn_launcher_game_loader_version.dart';
+export 'package:minecraft_models/minecraft_models.dart' show MtnLauncherGameVersionType, MtnLauncherGameLoaderMinecraftVersion, MtnLauncherGameLoaderVersion, MtnLauncherGameLoaderChannel;
+
 export 'mtn_launcher_game_loader_version_list.dart';
-export 'mtn_launcher_game_version_type.dart';

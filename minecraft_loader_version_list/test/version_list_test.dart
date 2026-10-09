@@ -13,8 +13,8 @@ void main() {
     return (mcVersion: mc, versionId: id ?? mc, type: type);
   }
 
-  MtnLauncherGameLoaderVersion build(MtnLauncherGameLoaderMinecraftVersion game, String version, {String url = 'https://example.com/installer.jar'}) {
-    return MtnLauncherGameLoaderVersion(mcVersion: game.mcVersion, version: version, url: url, type: game.type);
+  MtnLauncherGameLoaderVersion build(MtnLauncherGameLoaderMinecraftVersion game, String version, {String url = 'https://example.com/installer.jar', MtnLauncherGameLoaderChannel channel = MtnLauncherGameLoaderChannel.unknown}) {
+    return MtnLauncherGameLoaderVersion(mcVersion: game.mcVersion, version: version, url: url, type: game.type, channel: channel);
   }
 
   MtnLauncherGameLoaderVersionList create(
@@ -67,7 +67,7 @@ void main() {
     });
     await first.load();
     final items = await first.loadMinecraftVersion('1.8.9', [MtnLauncherGameVersionType.release]);
-    expect(items.single.text, '11.15.1.2318');
+    expect(items.single.text, '11.15.1.2318-1.8.9');
     expect(items.single.url, 'https://example.com/1.8.9.jar');
     expect(first.getFromMinecraftVersion('1.8.9', [MtnLauncherGameVersionType.preRelease]), isEmpty);
     expect(calls, 1);
@@ -77,6 +77,7 @@ void main() {
     final disk = jsonDecode(await File('${directory.path}/forge.json').readAsString()) as Map<String, dynamic>;
     expect(disk['schemaVersion'], 1);
     expect((disk['generated'] as List).single['items'][0]['url'], 'https://example.com/1.8.9.jar');
+    expect((disk['generated'] as List).single['items'][0]['channel'], 'unknown');
 
     final second = create('forge.json', catalog: (list) async => throw StateError('catalog callback unexpected'), builds: (list, g) async => throw StateError('build callback unexpected'));
     await second.load();
@@ -193,6 +194,49 @@ void main() {
       expect(restored.version, item.version);
       expect(restored.url, item.url);
     }
+  });
+
+  test('Legacy cache without channel restores it as unknown', () async {
+    final g = game('1.20.1');
+    final first = create('legacy-channel.json', catalog: (list) async => [g], builds: (list, g) async => [build(g, '1.20.1-loader')]);
+    await first.loadMinecraftVersion('1.20.1');
+
+    final file = File('${directory.path}/legacy-channel.json');
+    final disk = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    ((disk['generated'] as List<dynamic>).single['items'] as List<dynamic>).single.remove('channel');
+    await file.writeAsString(jsonEncode(disk));
+
+    final second = create('legacy-channel.json', catalog: (list) async => throw StateError('catalog callback unexpected'), builds: (list, g) async => throw StateError('build callback unexpected'));
+    await second.load();
+    expect(second.items.single.channel, MtnLauncherGameLoaderChannel.unknown);
+  });
+
+  test('Valid cache channel is preserved', () async {
+    final g = game('1.20.1');
+    final first = create('valid-channel.json', catalog: (list) async => [g], builds: (list, g) async => [build(g, 'loader', channel: MtnLauncherGameLoaderChannel.beta)]);
+    await first.loadMinecraftVersion('1.20.1');
+
+    final second = create('valid-channel.json', catalog: (list) async => throw StateError('catalog callback unexpected'), builds: (list, g) async => throw StateError('build callback unexpected'));
+    await second.load();
+    expect(second.items.single.channel, MtnLauncherGameLoaderChannel.beta);
+  });
+
+  test('Invalid cache channel is rejected and refreshed', () async {
+    final g = game('1.20.1');
+    final first = create('invalid-channel.json', catalog: (list) async => [g], builds: (list, g) async => [build(g, 'cached-loader', channel: MtnLauncherGameLoaderChannel.stable)]);
+    await first.loadMinecraftVersion('1.20.1');
+
+    final file = File('${directory.path}/invalid-channel.json');
+    final disk = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    ((disk['generated'] as List<dynamic>).single['items'] as List<dynamic>).single['channel'] = 'preview';
+    await file.writeAsString(jsonEncode(disk));
+
+    var catalogCalls = 0;
+    final second = create('invalid-channel.json', catalog: (list) async { catalogCalls++; return [g]; }, builds: (list, g) async => [build(g, 'fresh-loader')]);
+    await second.load();
+    expect(catalogCalls, 1);
+    expect(second.items, isEmpty);
+    expect(second.supportsMinecraftVersion('1.20.1'), true);
   });
 
   test('Reject cache filename containing a path', () {

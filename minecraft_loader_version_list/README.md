@@ -1,30 +1,75 @@
 # minecraft_loader_version_list
 
-Independent pure-Dart package for selecting Minecraft loader providers. Migrated
-from the v4 version-list prototype; no dependency on `mtn_launcher`.
+Independent pure-Dart support catalog, lazy build discovery and version resolver for Minecraft game loaders. The package has no dependency on `mtn_launcher` and keeps provider-specific metadata outside its core.
 
-## Contract
+## Shared models
 
-- `MtnLauncherGameLoaderVersionList.load()` obtains and caches the **complete supported Minecraft version catalog** for one loader.
-- `supportsMinecraftVersion(mcVersion, [types])` is synchronous and reads that catalog. Call `load()` first; if `hasMinecraftVersionCatalog` is false, support is unknown, not disproven.
-- `loadMinecraftVersion(mcVersion, [types])` fetches the compatible loader builds on demand.
-- `getFromMinecraftVersion(mcVersion, [types])` filters only already generated/cached loader builds.
-- `MtnLauncherGameLoaderVersion.url` is provided by the loader's callback and persisted verbatim.
-- A single JSON file per loader stores the support catalog and lazily generated builds, with independent one-hour timestamps. Expired data remains available if a refresh fails.
-- `downloadUrl()` sets `errorCode` / `errorMessage` and throws; callbacks need no catch. The list's load methods catch and retain prior data when possible.
+`MtnLauncherGameLoaderVersion`, `MtnLauncherGameLoaderMinecraftVersion`, `MtnLauncherGameVersionType` and `MtnLauncherGameLoaderChannel` come from `minecraft_models` and are re-exported by this package's public barrel. The dependency is pinned to commit `51aad868649d4c147f5a4645e2c92111a6cae44e`; this package does not define duplicate model identities.
 
-The supported version record `(mcVersion, versionId, type)` keeps the exact
-upstream version identifier for API requests, distinct from a grouped Minecraft
-version (e.g. `1.21.1-pre1` versus `1.21.1`).
+Minecraft version type and loader publication channel are independent. For example, a loader beta may target a Minecraft release. An `unknown` loader channel is not treated as `stable`.
 
-## Five loader examples
+## Public API
 
-`example/loader_versions.dart` demonstrates Vanilla, Fabric, Quilt, Forge and NeoForge
-using the same two core classes and provider-specific callbacks. Fabric/Quilt
-obtain compatibility from their game-version and version-specific loader APIs.
-Forge/NeoForge infer support from published Maven coordinates; published metadata
-does not by itself guarantee that every installer artifact exists or works.
-NeoForge historical `net.neoforged:forge` is not included in this example.
+Import the public barrel:
+
+```dart
+import 'package:minecraft_loader_version_list/minecraft_loader_version_list.dart';
+```
+
+`MtnLauncherGameLoaderVersionList` owns one provider's support catalog and lazily discovered builds:
+
+- `load()` obtains the complete supported-Minecraft catalog from a fresh cache or the provider callback.
+- `catalogState` reports `notLoaded`, `fresh`, `stale` or `unavailable` through `MtnLauncherGameLoaderCatalogState`.
+- `hasMinecraftVersionCatalog` distinguishes an available catalog, including a successfully loaded empty catalog, from no usable catalog.
+- `supportsMinecraftVersion(mcVersion, [types])` synchronously checks the currently available catalog. A negative result from stale or unavailable metadata is not authoritative.
+- `loadMinecraftVersion(mcVersion, [types])` lazily discovers compatible loader builds.
+- `getFromMinecraftVersion(mcVersion, [types])` returns only builds already generated or restored from cache.
+- `resolveVersion(...)` performs exact or automatic selection and triggers the required lazy discovery.
+
+```dart
+Future<MtnLauncherGameLoaderVersion?> selectLoader(
+  MtnLauncherGameLoaderVersionList versions,
+) async {
+  await versions.load();
+
+  if (versions.catalogState == MtnLauncherGameLoaderCatalogState.unavailable) {
+    throw StateError('Loader catalog is unavailable');
+  }
+
+  return versions.resolveVersion(mcVersion: '1.21.1');
+}
+```
+
+Provider callbacks return the supported record `(mcVersion, versionId, type)` and concrete `MtnLauncherGameLoaderVersion` instances. `versionId`, build `version` and `url` remain exact provider-owned values; core does not normalize IDs or reconstruct source URLs.
+
+## Resolution
+
+With `version` supplied, `resolveVersion()` accepts only exact, case-sensitive `candidate.version == version` matches. It does not compare display text, partial IDs or normalized values. An explicitly requested beta, alpha or experimental build is eligible. Conflicting models or URLs for the same exact ID raise `StateError`.
+
+Without `version`, automatic selection:
+
+1. chooses the highest build classified `stable` using deterministic best-effort natural ordering;
+2. falls back to the highest `unknown` build only when `allowUnknownChannelFallback` is true;
+3. never automatically selects `beta`, `alpha` or `experimental` builds.
+
+Natural ordering is not a provider-specific semantic-version parser and does not guarantee upstream publication chronology.
+
+## Cache and errors
+
+Each provider uses one schema-1 JSON file. Catalog and generated-build entries have independent timestamps and a one-hour default lifetime. Publication uses a temporary file and replacement step. Expired catalog/build data remains usable as a stale fallback if refresh fails.
+
+Successful empty metadata is different from a failed request. When no usable catalog or build metadata exists, `resolveVersion()` raises `StateError` instead of reporting an authoritative unsupported/no-build result. `errorCode` and `errorMessage` remain diagnostic fields; resolver decisions use operation/key-specific results rather than the global error fields.
+
+## Provider examples
+
+`example/loader_versions.dart` demonstrates Vanilla, Fabric, Quilt, Forge and NeoForge callbacks:
+
+- Vanilla build channels remain `unknown`.
+- Fabric uses official `stable == true` metadata; `stable == false` alone remains `unknown`.
+- Quilt, Forge and NeoForge only classify explicit beta, alpha or experimental markers; ordinary versions are not assumed stable.
+- Fabric and Quilt use their metadata APIs.
+- Forge and NeoForge infer compatibility from Maven coordinates. Maven metadata does not prove that an installer artifact exists or is runnable.
+- Legacy NeoForge `net.neoforged:forge` is outside the example.
 
 ```powershell
 cd minecraft_loader_version_list
@@ -32,6 +77,7 @@ dart pub get
 dart analyze
 dart test
 dart run example/loader_versions.dart 1.21.1
+dart run example/loader_versions.dart 1.8.9
 ```
 
-See `test/` for cache, filter, error-handling and provider-parser coverage.
+See `test/` for catalog state, resolver, cache, error handling and provider parsing coverage.

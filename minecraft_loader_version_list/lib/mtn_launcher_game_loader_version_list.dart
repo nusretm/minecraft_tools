@@ -4,15 +4,15 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:minecraft_models/minecraft_models.dart';
 
-import 'mtn_launcher_game_loader_version.dart';
-import 'mtn_launcher_game_version_type.dart';
-
-typedef MtnLauncherGameLoaderMinecraftVersion = ({
-  String mcVersion,
-  String versionId,
-  MtnLauncherGameVersionType type,
-});
+/// Availability and freshness of the Minecraft support catalog.
+enum MtnLauncherGameLoaderCatalogState {
+  notLoaded,
+  fresh,
+  stale,
+  unavailable,
+}
 
 class MtnLauncherGameLoaderVersionList {
   MtnLauncherGameLoaderVersionList({
@@ -41,9 +41,16 @@ class MtnLauncherGameLoaderVersionList {
   bool _hasMinecraftVersionCatalog = false;
   bool get hasMinecraftVersionCatalog => _hasMinecraftVersionCatalog;
   DateTime? _catalogUpdatedAt;
+  bool _catalogLoadCompleted = false;
+  /// Current catalog availability without triggering a load or refresh.
+  MtnLauncherGameLoaderCatalogState get catalogState {
+    if (!_catalogLoadCompleted) return MtnLauncherGameLoaderCatalogState.notLoaded;
+    if (!_hasMinecraftVersionCatalog) return MtnLauncherGameLoaderCatalogState.unavailable;
+    return _isFresh(_catalogUpdatedAt) ? MtnLauncherGameLoaderCatalogState.fresh : MtnLauncherGameLoaderCatalogState.stale;
+  }
   bool _cacheRead = false;
-  Future<List<MtnLauncherGameLoaderMinecraftVersion>>? _pendingLoad;
-  final Map<String, Future<List<MtnLauncherGameLoaderVersion>>> _pendingGenerated = {};
+  Future<_CatalogLoadResult>? _pendingLoad;
+  final Map<String, Future<_GeneratedLoadResult>> _pendingGenerated = {};
   Future<void> _pendingSave = Future<void>.value();
 
   int _errorCode = 0;
@@ -96,42 +103,51 @@ class MtnLauncherGameLoaderVersionList {
   }
 
   /// Load the complete supported-Minecraft catalog, not every loader build.
-  Future<List<MtnLauncherGameLoaderMinecraftVersion>> load() {
+  Future<List<MtnLauncherGameLoaderMinecraftVersion>> load() async {
+    await _load();
+    return minecraftVersions;
+  }
+
+  Future<_CatalogLoadResult> _load() {
     if (_pendingLoad != null) return _pendingLoad!;
     final future = _loadOnce();
     _pendingLoad = future.whenComplete(() { _pendingLoad = null; });
     return _pendingLoad!;
   }
 
-  Future<List<MtnLauncherGameLoaderMinecraftVersion>> _loadOnce() async {
-    await _readCacheOnce();
-    if (_hasMinecraftVersionCatalog && _isFresh(_catalogUpdatedAt)) return minecraftVersions;
-
-    _errorCode = 0;
-    _errorMessage = '';
+  Future<_CatalogLoadResult> _loadOnce() async {
     try {
-      final incoming = await onLoadFromWeb(this);
-      final unique = <String, MtnLauncherGameLoaderMinecraftVersion>{};
-      for (final game in incoming) {
-        if (game.mcVersion.isEmpty || game.versionId.isEmpty) throw const FormatException('Invalid Minecraft version support entry');
-        unique[_key(game)] = game;
+      await _readCacheOnce();
+      if (_hasMinecraftVersionCatalog && _isFresh(_catalogUpdatedAt)) return const _CatalogLoadResult(hasUsableData: true, authoritative: true);
+
+      _errorCode = 0;
+      _errorMessage = '';
+      try {
+        final incoming = await onLoadFromWeb(this);
+        final unique = <String, MtnLauncherGameLoaderMinecraftVersion>{};
+        for (final game in incoming) {
+          if (game.mcVersion.isEmpty || game.versionId.isEmpty) throw const FormatException('Invalid Minecraft version support entry');
+          unique[_key(game)] = game;
+        }
+        _minecraftVersions
+          ..clear()
+          ..addAll(unique.values);
+        _hasMinecraftVersionCatalog = true;
+        _catalogUpdatedAt = DateTime.now().toUtc();
+        _generated.removeWhere((key, value) => !unique.containsKey(key));
+        _rebuildItems();
+      } catch (error) {
+        if (_errorCode == 0) {
+          _errorCode = -4;
+          _errorMessage = 'Minecraft catalog load error: $error';
+        }
+        return _CatalogLoadResult(hasUsableData: _hasMinecraftVersionCatalog, authoritative: false, error: error);
       }
-      _minecraftVersions
-        ..clear()
-        ..addAll(unique.values);
-      _hasMinecraftVersionCatalog = true;
-      _catalogUpdatedAt = DateTime.now().toUtc();
-      _generated.removeWhere((key, value) => !unique.containsKey(key));
-      _rebuildItems();
-    } catch (error) {
-      if (_errorCode == 0) {
-        _errorCode = -4;
-        _errorMessage = 'Minecraft catalog load error: $error';
-      }
-      return minecraftVersions;
+      await _saveCache();
+      return const _CatalogLoadResult(hasUsableData: true, authoritative: true);
+    } finally {
+      _catalogLoadCompleted = true;
     }
-    await _saveCache();
-    return minecraftVersions;
   }
 
   /// Call load() first. If hasMinecraftVersionCatalog is false, compatibility
@@ -143,8 +159,8 @@ class MtnLauncherGameLoaderVersionList {
 
   /// Lazy loader-build discovery with a separate timestamp per upstream game ID.
   Future<List<MtnLauncherGameLoaderVersion>> loadMinecraftVersion(String mcVersion, [List<MtnLauncherGameVersionType> types = const []]) async {
-    await load();
-    if (!_hasMinecraftVersionCatalog) return getFromMinecraftVersion(mcVersion, types);
+    final catalog = await _load();
+    if (!catalog.hasUsableData) return getFromMinecraftVersion(mcVersion, types);
     final matches = _minecraftVersions.where((game) => game.mcVersion == mcVersion && (types.isEmpty || types.contains(game.type)));
     for (final game in matches) {
       await _generate(game);
@@ -152,7 +168,7 @@ class MtnLauncherGameLoaderVersionList {
     return getFromMinecraftVersion(mcVersion, types);
   }
 
-  Future<List<MtnLauncherGameLoaderVersion>> _generate(MtnLauncherGameLoaderMinecraftVersion game) {
+  Future<_GeneratedLoadResult> _generate(MtnLauncherGameLoaderMinecraftVersion game) {
     final key = _key(game);
     final existing = _pendingGenerated[key];
     if (existing != null) return existing;
@@ -161,9 +177,9 @@ class MtnLauncherGameLoaderVersionList {
     return _pendingGenerated[key]!;
   }
 
-  Future<List<MtnLauncherGameLoaderVersion>> _generateOnce(String key, MtnLauncherGameLoaderMinecraftVersion game) async {
+  Future<_GeneratedLoadResult> _generateOnce(String key, MtnLauncherGameLoaderMinecraftVersion game) async {
     final cached = _generated[key];
-    if (cached != null && _isFresh(cached.updatedAt)) return UnmodifiableListView(cached.versions);
+    if (cached != null && _isFresh(cached.updatedAt)) return _GeneratedLoadResult(versions: UnmodifiableListView(cached.versions), hasUsableData: true, authoritative: true);
 
     _errorCode = 0;
     _errorMessage = '';
@@ -181,13 +197,71 @@ class MtnLauncherGameLoaderVersionList {
         _errorCode = -4;
         _errorMessage = 'Loader version generation error: $error';
       }
-      return cached == null ? const [] : UnmodifiableListView(cached.versions);
+      return _GeneratedLoadResult(
+        versions: cached == null ? const [] : UnmodifiableListView(cached.versions),
+        hasUsableData: cached != null,
+        authoritative: false,
+        error: error,
+      );
     }
 
     _generated[key] = _GeneratedVersions(game: game, updatedAt: DateTime.now().toUtc(), versions: incoming);
     _rebuildItems();
     await _saveCache();
-    return UnmodifiableListView(incoming);
+    return _GeneratedLoadResult(versions: UnmodifiableListView(incoming), hasUsableData: true, authoritative: true);
+  }
+
+  /// Resolves an exact upstream build ID or the highest eligible automatic candidate.
+  Future<MtnLauncherGameLoaderVersion?> resolveVersion({
+    required String mcVersion,
+    String? version,
+    List<MtnLauncherGameVersionType> types = const [],
+    bool allowUnknownChannelFallback = true,
+  }) async {
+    if (mcVersion.trim().isEmpty) throw ArgumentError.value(mcVersion, 'mcVersion', 'Must not be empty');
+    if (version != null && version.trim().isEmpty) throw ArgumentError.value(version, 'version', 'Must not be empty');
+
+    final catalog = await _load();
+    if (!catalog.hasUsableData) throw StateError('Minecraft version catalog is unavailable: ${catalog.error}');
+
+    final games = _minecraftVersions.where((game) => game.mcVersion == mcVersion && (types.isEmpty || types.contains(game.type))).toList();
+    if (games.isEmpty) {
+      if (!catalog.authoritative) throw StateError('Minecraft version support could not be confirmed from the stale catalog: $mcVersion');
+      return null;
+    }
+
+    final results = await Future.wait(games.map(_generate));
+    for (int i = 0; i < results.length; i++) {
+      if (!results[i].hasUsableData) throw StateError('Loader version metadata is unavailable for ${games[i].versionId}: ${results[i].error}');
+    }
+    final candidates = results.expand((result) => result.versions).toList();
+
+    if (version != null) {
+      final exact = candidates.where((candidate) => candidate.version == version).toList();
+      if (exact.isEmpty) {
+        if (!catalog.authoritative || results.any((result) => !result.authoritative)) throw StateError('Exact loader version could not be confirmed from stale metadata: $version');
+        return null;
+      }
+      final first = exact.first;
+      for (final candidate in exact.skip(1)) {
+        if (candidate.mcVersion != first.mcVersion || candidate.type != first.type || candidate.channel != first.channel || candidate.url != first.url) {
+          throw StateError('Conflicting loader metadata for exact version $version');
+        }
+      }
+      exact.sort(_compareResolutionCandidates);
+      return exact.first;
+    }
+
+    var selectable = candidates.where((candidate) => candidate.channel == MtnLauncherGameLoaderChannel.stable).toList();
+    if (selectable.isEmpty && allowUnknownChannelFallback) {
+      selectable = candidates.where((candidate) => candidate.channel == MtnLauncherGameLoaderChannel.unknown).toList();
+    }
+    if (selectable.isEmpty) {
+      if (!catalog.authoritative || results.any((result) => !result.authoritative)) throw StateError('Loader version selection could not be confirmed from stale metadata for $mcVersion');
+      return null;
+    }
+    selectable.sort(_compareResolutionCandidates);
+    return selectable.first;
   }
 
   /// Synchronous lookup of builds already generated or restored from disk.
@@ -213,6 +287,18 @@ class MtnLauncherGameLoaderVersionList {
       if (order != 0) return order;
     }
     return aParts.length.compareTo(bParts.length);
+  }
+
+  int _compareResolutionCandidates(MtnLauncherGameLoaderVersion a, MtnLauncherGameLoaderVersion b) {
+    var order = _compareNatural(b.version, a.version);
+    if (order != 0) return order;
+    order = b.version.compareTo(a.version);
+    if (order != 0) return order;
+    order = a.type.name.compareTo(b.type.name);
+    if (order != 0) return order;
+    order = a.url.compareTo(b.url);
+    if (order != 0) return order;
+    return a.channel.name.compareTo(b.channel.name);
   }
 
   bool _isFresh(DateTime? timestamp) {
@@ -324,4 +410,19 @@ class _GeneratedVersions {
   final MtnLauncherGameLoaderMinecraftVersion game;
   final DateTime updatedAt;
   final List<MtnLauncherGameLoaderVersion> versions;
+}
+
+class _CatalogLoadResult {
+  const _CatalogLoadResult({required this.hasUsableData, required this.authoritative, this.error});
+  final bool hasUsableData;
+  final bool authoritative;
+  final Object? error;
+}
+
+class _GeneratedLoadResult {
+  const _GeneratedLoadResult({required this.versions, required this.hasUsableData, required this.authoritative, this.error});
+  final List<MtnLauncherGameLoaderVersion> versions;
+  final bool hasUsableData;
+  final bool authoritative;
+  final Object? error;
 }

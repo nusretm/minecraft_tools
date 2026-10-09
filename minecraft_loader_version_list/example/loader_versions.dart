@@ -36,6 +36,19 @@ List<String> readMavenVersions(String xml) {
   return versions;
 }
 
+MtnLauncherGameLoaderChannel loaderChannelFromVersion(String version) {
+  final normalized = version.toLowerCase();
+  if (RegExp(r'(?:^|[.+_-])experimental\d*(?=$|[.+_-])').hasMatch(normalized)) return MtnLauncherGameLoaderChannel.experimental;
+  if (RegExp(r'(?:^|[.+_-])alpha\d*(?=$|[.+_-])').hasMatch(normalized)) return MtnLauncherGameLoaderChannel.alpha;
+  if (RegExp(r'(?:^|[.+_-])beta\d*(?=$|[.+_-])').hasMatch(normalized)) return MtnLauncherGameLoaderChannel.beta;
+  return MtnLauncherGameLoaderChannel.unknown;
+}
+
+MtnLauncherGameLoaderChannel fabricLoaderChannel(Map<String, dynamic> loader) {
+  if (loader['stable'] == true) return MtnLauncherGameLoaderChannel.stable;
+  return loaderChannelFromVersion(loader['version'] as String);
+}
+
 /// Best-effort inference for net.neoforged:neoforge; not its legacy forge group.
 String? minecraftVersionFromNeoForge(String version) {
   final numeric = version.split('-').first.split('+').first.split('.');
@@ -55,6 +68,7 @@ String? minecraftVersionFromNeoForge(String version) {
 Future<void> printLoader(String title, MtnLauncherGameLoaderVersionList list, String mcVersion) async {
   await list.load();
   stdout.writeln('\n$title: ${list.minecraftVersions.length} supported Minecraft entries');
+  stdout.writeln('  Catalog state: ${list.catalogState.name}');
   stdout.writeln('  Supports $mcVersion: ${list.supportsMinecraftVersion(mcVersion)}');
   if (!list.hasMinecraftVersionCatalog) stdout.writeln('  Warning: catalog unavailable; support is UNKNOWN');
   if (list.errorCode != 0) stdout.writeln('  Warning [${list.errorCode}]: ${list.errorMessage}');
@@ -64,9 +78,20 @@ Future<void> printLoader(String title, MtnLauncherGameLoaderVersionList list, St
   final versions = await list.loadMinecraftVersion(mcVersion);
   stdout.writeln('  Compatible loader builds: ${versions.length}');
   if (list.errorCode != 0) stdout.writeln('  Warning [${list.errorCode}]: ${list.errorMessage}');
+  final channelCounts = <MtnLauncherGameLoaderChannel, int>{};
+  for (final version in versions) {
+    channelCounts[version.channel] = (channelCounts[version.channel] ?? 0) + 1;
+  }
+  stdout.writeln('  Channels: ${channelCounts.entries.map((entry) => '${entry.key.name}=${entry.value}').join(', ')}');
   for (final version in versions.take(3)) {
-    stdout.writeln('  [${version.type.name}] ${version.text} | ${version.version}');
+    stdout.writeln('  [${version.type.name}/${version.channel.name}] ${version.text} | ${version.version}');
     stdout.writeln('    ${version.url}');
+  }
+  try {
+    final selected = await list.resolveVersion(mcVersion: mcVersion);
+    stdout.writeln(selected == null ? '  Automatic resolver: no eligible build' : '  Automatic resolver: [${selected.channel.name}] ${selected.version} | ${selected.url}');
+  } on StateError catch (error) {
+    stdout.writeln('  Automatic resolver: unavailable ($error)');
   }
 }
 
@@ -106,6 +131,7 @@ Future<void> main(List<String> args) async {
         version: game.versionId,
         url: entry['url'] as String,
         type: game.type,
+        channel: MtnLauncherGameLoaderChannel.unknown,
       )];
     },
   );
@@ -128,12 +154,14 @@ Future<void> main(List<String> args) async {
       final base = 'https://meta.fabricmc.net/v2/versions/loader/${Uri.encodeComponent(game.versionId)}';
       final body = await list.downloadUrl(base);
       return (jsonDecode(body) as List<dynamic>).map((raw) {
-        final version = ((raw as Map<String, dynamic>)['loader'] as Map<String, dynamic>)['version'] as String;
+        final loader = (raw as Map<String, dynamic>)['loader'] as Map<String, dynamic>;
+        final version = loader['version'] as String;
         return MtnLauncherGameLoaderVersion(
           mcVersion: game.mcVersion,
           version: version,
           url: '$base/${Uri.encodeComponent(version)}/profile/json',
           type: game.type,
+          channel: fabricLoaderChannel(loader),
         );
       }).toList();
     },
@@ -163,6 +191,7 @@ Future<void> main(List<String> args) async {
           version: version,
           url: '$base/${Uri.encodeComponent(version)}/profile/json',
           type: game.type,
+          channel: loaderChannelFromVersion(version),
         );
       }).toList();
     },
@@ -200,6 +229,7 @@ Future<void> main(List<String> args) async {
           version: version,
           url: '$forgeBase/$escaped/forge-$escaped-installer.jar',
           type: game.type,
+          channel: loaderChannelFromVersion(version),
         );
       }).toList();
     },
@@ -238,6 +268,7 @@ Future<void> main(List<String> args) async {
           version: version,
           url: '$neoForgeBase/$escaped/neoforge-$escaped-installer.jar',
           type: game.type,
+          channel: loaderChannelFromVersion(version),
         ));
       }
       return result;
