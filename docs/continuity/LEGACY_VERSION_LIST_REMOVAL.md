@@ -4,7 +4,7 @@ Date: 2026-10-10
 Repository: `nusretm/minecraft_tools`
 Baseline `main`: `9c745dd86013d9cf4434d2571fa0ed65da4aadd4`
 Branch: `chore/remove-legacy-minecraft-loader-version-list`
-Status: **DELETION PREPARED — WINDOWS VALIDATION AND MERGE PENDING**
+Status: **DELETION IMPLEMENTED / WINDOWS VALIDATED (671 TESTS) / SQUASH MERGE EXPLICITLY APPROVED / POST-MERGE CLEANUP PENDING**
 
 ## Why remove it?
 
@@ -18,7 +18,7 @@ The new cross-project authority is `minecraft_models` [consumer guide](https://g
 - Update the root `AGENTS.md`, `docs/WORKING_RULES.md` and `docs/continuity/CURRENT_TARGET.md` so they do not treat the deleted package as active.
 - Keep historical `docs/continuity/HANDOFF_2026-10-09_MINECRAFT_LOADER_VERSION_LIST_FOUNDATION.md` and `docs/continuity/LVL_I3A2_VERSION_LIST_SHA1_CACHE_INTEGRATION.md` as **archived records** of the prior implementation and its validations. Their old contracts are not authoritative.
 - Do **not** modify `minecraft_info_provider/`, `minecraft_content_service/`, `hypixel_api/`, `mtn_launcher` or `minecraft_models` in this branch. They have independent approval and validation gates.
-- Sibling package `pubspec.yaml` files do **not** declare a dependency on the retired package. Post-delete analyzer/test runs are still necessary to detect hidden direct imports or other coupling.
+- Sibling package `pubspec.yaml` files do **not** declare a dependency on the retired package. Windows `git grep` across the three remaining sibling packages returned no old VersionList references; all three analyzer/test suites passed after deletion (details below).
 
 ## Replacement contract — consumers
 
@@ -63,7 +63,20 @@ Use the **same shared** `MtnMinecraftLoaderType`, `MtnMinecraftGameVersionType`,
 
 `MtnMinecraftGameLoaderVersion.url` can be Mojang/Fabric/Quilt JSON or a Forge/NeoForge installer JAR *candidate*. It does not install, verify or run Minecraft. Fabric and Quilt `load()` catalogs contain supported *Minecraft versions*, not loader build versions. Do not treat `versions.first` as a globally authoritative newest/stable or installable build: Quilt upstream ordering can be non-semantic.
 
-## Validation gates
+## Windows validation — user-executed on feature branch (2026-10-10)
+
+- `git grep -n -e "minecraft_loader_version_list" -e "MtnLauncherGameLoaderVersionList" -- minecraft_info_provider minecraft_content_service hypixel_api`: **no matches**.
+- `git diff --check origin/main...HEAD`: **clean**, both before and after local cleanup.
+- `minecraft_info_provider`: `dart pub get` succeeded, `dart analyze` **No issues found**, `dart test` **361/361** passed.
+- `minecraft_content_service`: `dart pub get` succeeded, `dart analyze` **No issues found**, `dart test` **257/257** passed.
+- `hypixel_api`: `dart pub get` succeeded, `dart analyze` **No issues found**, `dart test` **53/53** passed.
+- **Total: 671/671 passing tests.** All three checks were run on Windows with the old package removed from Git.
+- `dart pub get` mentioned available newer dependencies; these are nonblocking dependency constraint notices, not analyzer/test failures.
+- `dart test` changed a tracked generated file under `hypixel_api/.dart_tool/test/`, and the now-untracked old package directory remained locally. User restored that generated file and deleted the old directory; final `git status`: **clean**, branch synchronized with `origin/chore/remove-legacy-minecraft-loader-version-list`. `git diff --check origin/main...HEAD` remains clean.
+- GitHub compared PR #61 with `main`: **13 files deleted** under the legacy package; only root `AGENTS.md`, `docs/WORKING_RULES.md` and two continuity documents added/updated. Other three package implementation sources untouched.
+- User explicitly approved **squash merge and cleanup** of PR #61 after seeing the clean results. The separate merge result SHA and deletion of local/remote feature branches must be verified as **post-merge** steps; do not claim cleanup before those operations.
+
+## Validation commands (already executed successfully; for future reproducibility)
 
 From `D:\development\cross-platform\minecraft_tools` after switching to this feature branch:
 
@@ -89,4 +102,4 @@ git status
 
 Do not run `dart format`. Also inspect `git grep -n "minecraft_loader_version_list\|MtnLauncherGameLoaderVersionList" -- ':!docs/continuity/*'` for unexpected active references, and verify no Dart package still declares the deleted dependency.
 
-**No new Dart build/runtime tests were run by the authoring assistant for this deletion.** The 40 passing Windows tests and live five-provider metadata queries previously reported belong to the `minecraft_models` implementation, **not** the three untouched packages in this repository. Do not merge without source review, required Windows validation and the user's separate approval.
+**Evidence boundary:** Windows validation of the three surviving `minecraft_tools` packages was reported by the user and passed as recorded above. The separately reported 40 tests and live five-provider queries belong to `minecraft_models`, not to this deletion. This removal does not itself validate any `mtn_launcher` consumer integration. **PR #61 merge was explicitly approved; final merge/cleanup confirmation must reflect actual GitHub and local outcomes.**
