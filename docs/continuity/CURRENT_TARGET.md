@@ -1,6 +1,15 @@
 # Minecraft Tools — Current Target
 
-Last updated: 2026-10-08
+Last updated: 2026-10-10
+
+## LVL-I3A2 — VersionList shared-model dependency + SHA-1 cache (2026-10-10)
+
+- Repository: `nusretm/minecraft_tools`; package: `minecraft_loader_version_list/`.
+- Baseline main: `3d48fdd7981eb8b4b7739b915e4e84f53ff42c49`.
+- Approved bounded implementation: fixed `minecraft_models` dependency to merged SHA `a083d402a13ef742d4968a161d2893f4f50482ff`; model-driven source SHA-1 disk persistence and restore tests.
+- Status: **Windows validated (46/46 tests); commit, push, PR and merge pending separate approval.**
+- No VersionList production logic, schema version, cache I/O behavior, core resolver semantics, sibling package or launcher modifications.
+- Contract and handoff: `docs/continuity/LVL_I3A2_VERSION_LIST_SHA1_CACHE_INTEGRATION.md`.
 
 ## Repository
 

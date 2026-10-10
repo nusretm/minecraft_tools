@@ -4,7 +4,7 @@ Independent pure-Dart support catalog, lazy build discovery and version resolver
 
 ## Shared models
 
-`MtnLauncherGameLoaderVersion`, `MtnLauncherGameLoaderMinecraftVersion`, `MtnLauncherGameVersionType` and `MtnLauncherGameLoaderChannel` come from `minecraft_models` and are re-exported by this package's public barrel. The dependency is pinned to commit `51aad868649d4c147f5a4645e2c92111a6cae44e`; this package does not define duplicate model identities.
+`MtnLauncherGameLoaderVersion`, `MtnLauncherGameLoaderMinecraftVersion`, `MtnLauncherGameVersionType` and `MtnLauncherGameLoaderChannel` come from `minecraft_models` and are re-exported by this package's public barrel. The dependency is pinned to commit `a083d402a13ef742d4968a161d2893f4f50482ff`; this package does not define duplicate model identities. Optional loader-build `sha1` is preserved as exact source metadata through model JSON and schema-1 disk cache; this package does not verify downloaded bytes.
 
 Minecraft version type and loader publication channel are independent. For example, a loader beta may target a Minecraft release. An `unknown` loader channel is not treated as `stable`.
 

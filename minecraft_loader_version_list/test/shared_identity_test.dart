@@ -15,6 +15,7 @@ void main() {
       url: 'https://example.com/loader-build',
       type: loader.MtnLauncherGameVersionType.release,
       channel: loader.MtnLauncherGameLoaderChannel.stable,
+      sha1: 'A19f49d4b31af176d9699c7e8fdc4ea2d551aa09',
     );
 
     const shared.MtnLauncherGameLoaderMinecraftVersion sharedGame = game;
@@ -24,6 +25,8 @@ void main() {
 
     expect(sharedGame, game);
     expect(sharedVersion, same(version));
+    expect(sharedVersion.sha1, 'A19f49d4b31af176d9699c7e8fdc4ea2d551aa09');
+    expect(sharedVersion.toJson()['sha1'], version.sha1);
     expect(sharedType, shared.MtnLauncherGameVersionType.release);
     expect(sharedChannel, shared.MtnLauncherGameLoaderChannel.stable);
   });
