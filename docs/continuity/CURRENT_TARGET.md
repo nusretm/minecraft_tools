@@ -7,7 +7,11 @@ Last updated: 2026-10-10
 - Repository: `nusretm/minecraft_tools`; package: `minecraft_loader_version_list/`.
 - Baseline main: `3d48fdd7981eb8b4b7739b915e4e84f53ff42c49`.
 - Approved bounded implementation: fixed `minecraft_models` dependency to merged SHA `a083d402a13ef742d4968a161d2893f4f50482ff`; model-driven source SHA-1 disk persistence and restore tests.
-- Status: **Windows validated (46/46 tests); commit, push, PR and merge pending separate approval.**
+- Status: **IMPLEMENTED / WINDOWS VALIDATED / SQUASH MERGED / CLEANUP COMPLETE**.
+- PR: [#59](https://github.com/nusretm/minecraft_tools/pull/59) — squash merged into `main` at `2cf19060aa77d44c3ddf1b5d8c1443d4449c2a82` on 2026-10-10.
+- Feature branch: `feature/loader-version-source-sha1-cache`; worktree, local feature branch and remote branch removed after merge. Local `main` and `origin/main` both at `2cf1906`, working tree clean (user Windows output).
+- Windows evidence: `dart pub get` pinned `minecraft_models` at `a083d4`; analyzer clean; focused VersionList 15/15, shared identity 1/1, all package tests 46/46; staged diff check clean.
+- Next: separate design/approval for exact-version SHA-1 conflict policy, then MtnLauncher Vanilla VersionList integration (LVL-I3B). No consumer/launcher implementation claimed.
 - No VersionList production logic, schema version, cache I/O behavior, core resolver semantics, sibling package or launcher modifications.
 - Contract and handoff: `docs/continuity/LVL_I3A2_VERSION_LIST_SHA1_CACHE_INTEGRATION.md`.
 
