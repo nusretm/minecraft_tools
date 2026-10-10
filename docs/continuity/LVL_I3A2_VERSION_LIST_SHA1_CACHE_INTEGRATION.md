@@ -5,7 +5,10 @@ Repository: `nusretm/minecraft_tools`
 Package: `minecraft_loader_version_list/`
 Baseline main: `3d48fdd7981eb8b4b7739b915e4e84f53ff42c49`
 Upstream model: `nusretm/minecraft_models` squash merge `a083d402a13ef742d4968a161d2893f4f50482ff` (PR #5)
-Status: **Windows validation PASSED on 2026-10-10; commit, push, PR and merge pending separate approval.**
+Status: **IMPLEMENTED / WINDOWS VALIDATED / SQUASH MERGED / CLEANUP COMPLETE (2026-10-10).**
+PR: [minecraft_tools #59](https://github.com/nusretm/minecraft_tools/pull/59)
+Squash merge commit: `2cf19060aa77d44c3ddf1b5d8c1443d4449c2a82`
+Feature commit before squash: `4adf568d495acc7810781f4a54a206cf197bb496`
 
 ## Authority and scope
 
@@ -56,8 +59,13 @@ No `dart format` on pure Dart. Focused tests are synthetic/offline; no live Moja
 - Independent changed-file and architecture audit: passed.
 - Tests are offline/synthetic; no live Mojang verification claimed.
 - VersionList production cache logic unchanged.
-- Commit, push, PR and merge require separate approval.
+- Implementation commit and feature branch push completed with user approval; PR #59 created and independently reviewed as mergeable/clean.
+- PR #59 squash merge completed with explicit user approval; GitHub verified `merged=true` and `main` at `2cf19060aa77d44c3ddf1b5d8c1443d4449c2a82`.
+- User verified local `main` fast-forwarded and clean, feature worktree removed, local and remote feature branches deleted, and `git fetch --prune` completed.
+- Other pre-existing feature branches remained untouched.
 
-## Stop condition
+## Closed checkpoint and next design gate
 
-Record actual Windows analyzer/test results and independently audit the changed source diff. Do not commit, push, open PR, merge or start LVL-I3B without their own approval.
+LVL-I3A2 acceptance and cleanup are complete. No additional production work belongs to this checkpoint. The `minecraft_models` SHA-1 field is source metadata, not digest verification. Do not claim MtnLauncher Vanilla integration from these cache tests.
+
+**Next (separate approval required):** decide how `resolveVersion` handles multiple candidates with identical exact build IDs and matching URL/type/channel but differing source SHA-1; then design LVL-I3B Vanilla VersionList callback/state ownership and exact Mojang profile URL + SHA-1 propagation. Do not begin implementation, commit, PR or merge in those checkpoints without user approval.
