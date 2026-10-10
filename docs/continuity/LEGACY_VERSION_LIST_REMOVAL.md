@@ -3,11 +3,11 @@
 Date: 2026-10-10
 Repository: `nusretm/minecraft_tools`
 Baseline `main`: `9c745dd86013d9cf4434d2571fa0ed65da4aadd4`
-Branch (merged; deletion pending): `chore/remove-legacy-minecraft-loader-version-list`
+Former branch (merged and deleted): `chore/remove-legacy-minecraft-loader-version-list`
 PR: [#61](https://github.com/nusretm/minecraft_tools/pull/61) — **closed/merged**
 Merge SHA: `2f60a20235f2bcdcdaab01f05a7237a2e9bd0408`
-Docs-only closeout branch: `docs/legacy-version-list-removal-closure`
-Status: **DELETION COMPLETE ON MAIN / WINDOWS VALIDATED (671 TESTS) / PR #61 SQUASH MERGED / FEATURE BRANCH CLEANUP PENDING**
+Docs-only closeout: [PR #62](https://github.com/nusretm/minecraft_tools/pull/62), merge `48a6f9896847049e69a8d63bc696338d7f2d9de1`; branch deleted
+Status: **COMPLETE / WINDOWS VALIDATED (671/671 TESTS) / PR #61 + #62 SQUASH MERGED / REMOTE & LOCAL CLEANUP VERIFIED**
 
 ## Why remove it?
 
@@ -77,7 +77,7 @@ Use the **same shared** `MtnMinecraftLoaderType`, `MtnMinecraftGameVersionType`,
 - `dart pub get` mentioned available newer dependencies; these are nonblocking dependency constraint notices, not analyzer/test failures.
 - `dart test` changed a tracked generated file under `hypixel_api/.dart_tool/test/`, and the now-untracked old package directory remained locally. User restored that generated file and deleted the old directory; final `git status`: **clean**, branch synchronized with `origin/chore/remove-legacy-minecraft-loader-version-list`. `git diff --check origin/main...HEAD` remains clean.
 - GitHub compared PR #61 with `main`: **13 files deleted** under the legacy package; only root `AGENTS.md`, `docs/WORKING_RULES.md` and two continuity documents added/updated. Other three package implementation sources untouched.
-- User explicitly approved **squash merge and cleanup** of PR #61 after seeing the clean results. GitHub reports `merged=true` and `main` at `2f60a20235f2bcdcdaab01f05a7237a2e9bd0408`, with no old VersionList directory in the `main` tree. Feature remote branch deletion and local switch/pull/branch cleanup remain user-side post-merge steps; do not claim cleanup before those operations.
+- User explicitly approved **squash merge and cleanup** of PR #61 after seeing the clean results. GitHub reports `merged=true` at `2f60a20235f2bcdcdaab01f05a7237a2e9bd0408`; PR #62 continuity closeout merged at `48a6f9896847049e69a8d63bc696338d7f2d9de1`. User then deleted both remote branches, deleted the local legacy-removal branch, fetched with prune and verified `main` / `origin/main` synchronization with a clean working tree. GitHub independently confirmed both remote branch refs no longer exist.
 
 ## Validation commands (already executed successfully; for future reproducibility)
 
@@ -105,4 +105,4 @@ git status
 
 Do not run `dart format`. Also inspect `git grep -n "minecraft_loader_version_list\|MtnLauncherGameLoaderVersionList" -- ':!docs/continuity/*'` for unexpected active references, and verify no Dart package still declares the deleted dependency.
 
-**Evidence boundary:** Windows validation of the three surviving `minecraft_tools` packages was reported by the user and passed as recorded above. The separately reported 40 tests and live five-provider queries belong to `minecraft_models`, not to this deletion. This removal does not itself validate any `mtn_launcher` consumer integration. **PR #61 squash merge was verified on GitHub; both feature-branch cleanup operations remain unverified until the user's PowerShell output.**
+**Evidence boundary:** Windows validation of the three surviving `minecraft_tools` packages was reported by the user and passed as recorded above. The separately reported 40 tests and live five-provider queries belong to `minecraft_models`, not to this deletion. This removal does not itself validate any `mtn_launcher` consumer integration. **PR #61 and #62 merges and their feature-branch cleanups are confirmed; migration of `mtn_launcher` to the shared public VersionList remains a separate approval-gated project.**
