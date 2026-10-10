@@ -11,7 +11,7 @@ dependencies:
   minecraft_models:
     git:
       url: https://github.com/nusretm/minecraft_models.git
-      ref: 51aad868649d4c147f5a4645e2c92111a6cae44e
+      ref: a083d402a13ef742d4968a161d2893f4f50482ff
 
 dev_dependencies:
   lints: ^5.0.0

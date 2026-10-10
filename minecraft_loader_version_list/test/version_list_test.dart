@@ -13,8 +13,8 @@ void main() {
     return (mcVersion: mc, versionId: id ?? mc, type: type);
   }
 
-  MtnLauncherGameLoaderVersion build(MtnLauncherGameLoaderMinecraftVersion game, String version, {String url = 'https://example.com/installer.jar', MtnLauncherGameLoaderChannel channel = MtnLauncherGameLoaderChannel.unknown}) {
-    return MtnLauncherGameLoaderVersion(mcVersion: game.mcVersion, version: version, url: url, type: game.type, channel: channel);
+  MtnLauncherGameLoaderVersion build(MtnLauncherGameLoaderMinecraftVersion game, String version, {String url = 'https://example.com/installer.jar', MtnLauncherGameLoaderChannel channel = MtnLauncherGameLoaderChannel.unknown, String? sha1}) {
+    return MtnLauncherGameLoaderVersion(mcVersion: game.mcVersion, version: version, url: url, type: game.type, channel: channel, sha1: sha1);
   }
 
   MtnLauncherGameLoaderVersionList create(
@@ -237,6 +237,116 @@ void main() {
     expect(catalogCalls, 1);
     expect(second.items, isEmpty);
     expect(second.supportsMinecraftVersion('1.20.1'), true);
+  });
+
+
+  test('Source SHA-1 survives schema-1 cache publication and offline restore', () async {
+    final g = game('1.21.11');
+    const String sourceUrl = 'HTTPS://Example.invalid/Version/Profile.JSON?Exact=%2B';
+    const String sourceSha1 = 'A19f49d4b31af176d9699c7e8fdc4ea2d551aa09';
+    var catalogCalls = 0;
+    var buildCalls = 0;
+
+    final first = create('source-sha1.json', catalog: (list) async {
+      catalogCalls++;
+      return [g];
+    }, builds: (list, g) async {
+      buildCalls++;
+      return [build(g, '1.21.11', url: sourceUrl, channel: MtnLauncherGameLoaderChannel.stable, sha1: sourceSha1)];
+    });
+
+    final initial = await first.loadMinecraftVersion('1.21.11');
+    expect(initial.single.sha1, sourceSha1);
+    expect(initial.single.url, sourceUrl);
+    expect(catalogCalls, 1);
+    expect(buildCalls, 1);
+
+    final file = File('${directory.path}/source-sha1.json');
+    final disk = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    expect(disk['schemaVersion'], 1);
+    final Map<String, dynamic> serialized = Map<String, dynamic>.from(
+      ((disk['generated'] as List<dynamic>).single['items'] as List<dynamic>).single as Map<String, dynamic>,
+    );
+    expect(serialized['sha1'], sourceSha1);
+    expect(serialized['url'], sourceUrl);
+    expect(serialized['channel'], 'stable');
+
+    final second = create('source-sha1.json',
+      catalog: (list) async => throw StateError('catalog callback must not run with fresh cache'),
+      builds: (list, g) async => throw StateError('build callback must not run with fresh cache'),
+    );
+    final restored = await second.loadMinecraftVersion('1.21.11');
+    expect(second.catalogState, MtnLauncherGameLoaderCatalogState.fresh);
+    expect(restored.single, initial.single);
+    expect(restored.single.sha1, sourceSha1);
+    expect(restored.single.url, sourceUrl);
+    expect((await second.resolveVersion(mcVersion: '1.21.11', version: '1.21.11'))!.sha1, sourceSha1);
+    expect(second.errorCode, 0);
+    expect(catalogCalls, 1);
+    expect(buildCalls, 1);
+  });
+
+  test('Historical schema-1 cache without SHA-1 restores as null', () async {
+    final g = game('1.20.1');
+    final first = create('legacy-source-sha1.json',
+      catalog: (list) async => [g],
+      builds: (list, g) async => [build(g, '1.20.1-loader')],
+    );
+    await first.loadMinecraftVersion('1.20.1');
+
+    final file = File('${directory.path}/legacy-source-sha1.json');
+    final disk = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    final Map<String, dynamic> serialized = Map<String, dynamic>.from(
+      ((disk['generated'] as List<dynamic>).single['items'] as List<dynamic>).single as Map<String, dynamic>,
+    );
+    expect(disk['schemaVersion'], 1);
+    expect(serialized.containsKey('sha1'), isFalse);
+
+    final second = create('legacy-source-sha1.json',
+      catalog: (list) async => throw StateError('catalog callback must not run with fresh cache'),
+      builds: (list, g) async => throw StateError('build callback must not run with fresh cache'),
+    );
+    final result = await second.loadMinecraftVersion('1.20.1');
+    expect(result.single.sha1, isNull);
+    expect(result.single.toJson().containsKey('sha1'), isFalse);
+    expect(second.errorCode, 0);
+  });
+
+  test('Malformed explicitly present SHA-1 rejects the cache and reacquires the catalog', () async {
+    final g = game('1.21.11');
+    const String sourceSha1 = 'A19f49d4b31af176d9699c7e8fdc4ea2d551aa09';
+    final List<Object?> invalidValues = <Object?>[null, 42, false, '', ' \t\n'];
+
+    for (var index = 0; index < invalidValues.length; index++) {
+      final filename = 'invalid-source-sha1-$index.json';
+      final first = create(filename,
+        catalog: (list) async => [g],
+        builds: (list, g) async => [build(g, '1.21.11', sha1: sourceSha1)],
+      );
+      await first.loadMinecraftVersion('1.21.11');
+
+      final file = File('${directory.path}/$filename');
+      final disk = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+      ((disk['generated'] as List<dynamic>).single['items'] as List<dynamic>).single['sha1'] = invalidValues[index];
+      await file.writeAsString(jsonEncode(disk));
+
+      var catalogCalls = 0;
+      var buildCalls = 0;
+      final second = create(filename, catalog: (list) async {
+        catalogCalls++;
+        return [g];
+      }, builds: (list, g) async {
+        buildCalls++;
+        return [build(g, 'fresh-loader')];
+      });
+      await second.load();
+      expect(catalogCalls, 1, reason: 'Invalid sha1 ${invalidValues[index]}');
+      expect(buildCalls, 0);
+      expect(second.catalogState, MtnLauncherGameLoaderCatalogState.fresh);
+      expect(second.items, isEmpty);
+      expect(second.supportsMinecraftVersion('1.21.11'), isTrue);
+      expect(second.errorCode, 0);
+    }
   });
 
   test('Reject cache filename containing a path', () {

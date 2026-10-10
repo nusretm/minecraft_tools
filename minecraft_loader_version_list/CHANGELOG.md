@@ -1,3 +1,8 @@
+## Unreleased — LVL-I3A2 shared model pin and SHA-1 cache coverage
+- Pin `minecraft_models` to LVL-I3A squash merge `a083d402a13ef742d4968a161d2893f4f50482ff`.
+- Validate optional source SHA-1 preservation through schema-1 cache publication and offline restore, legacy SHA-less items, and rejection of malformed present values.
+- Confirm shared identity of the const source SHA-1 model; no VersionList production-cache algorithm change.
+
 ## 1.0.0-dev.1
 - Initial Minecraft loader support discovery package, migrated from the v4 standalone prototype.
 - Loader-independent catalog, lazy version-specific builds, and one-hour JSON caches.
