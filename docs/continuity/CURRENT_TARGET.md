@@ -2,6 +2,16 @@
 
 Last updated: 2026-10-10
 
+## Legacy VersionList retirement — implementation pending validation (2026-10-10)
+
+- **Target:** remove the entire legacy Dart package `minecraft_loader_version_list/`. The sole supported future loader metadata authority is `nusretm/minecraft_models`, whose consumer guide is at `docs/continuity/CONSUMER_INTEGRATION.md` in that repository.
+- **Feature branch:** `chore/remove-legacy-minecraft-loader-version-list`, baseline `main` `9c745dd86013d9cf4434d2571fa0ed65da4aadd4`. This branch deletes the old package's source, tests, example, manifests and package-specific rules. It does **not** change the other three Dart packages or `mtn_launcher`.
+- **Reason:** shared `MtnMinecraftGameLoaderVersionList(cacheDirectory: ..., loaderType: MtnMinecraftLoaderType.fabric)` and `MtnMinecraftGameLoaderVersion` now live in `minecraft_models`, verified at `1c4e346ed42bf9f15b0259c8efb2f7d3011758a3`; its documentation closure is `dc41e3caf88aaad5967dec1462a3c75a5d1cf5dc`.
+- **Dependency evidence:** sibling `minecraft_info_provider/pubspec.yaml`, `minecraft_content_service/pubspec.yaml` and `hypixel_api/pubspec.yaml` do not depend on `minecraft_loader_version_list`. Absence of dependencies is not by itself a successful consumer compile; verify on Windows after branch checkout.
+- **Important non-equivalence:** the retired package offered synchronous `getFromMinecraftVersion()`, `supportsMinecraftVersion()`, `catalogState`, `resolveVersion()`, schema-1 cache/backup behavior and model `sha1` persistence on its older `minecraft_models` pin. The new API has async `getFromMinecraftVersion()`, typed errors, a different cache contract and **no source SHA-1 field**. Those old features are **not silently migrated**; any required consumer equivalents must be separately designed and approved.
+- **Status:** removal branch prepared; **Dart analysis/tests, PR review and merge are not yet completed**. Historical LVL-I3A2 and PR #59 evidence below documents the *previous* implementation, not an active package after this removal.
+- Details and validation plan: [LEGACY_VERSION_LIST_REMOVAL.md](LEGACY_VERSION_LIST_REMOVAL.md).
+
 ## LVL-I3A2 — VersionList shared-model dependency + SHA-1 cache (2026-10-10)
 
 - Repository: `nusretm/minecraft_tools`; package: `minecraft_loader_version_list/`.
