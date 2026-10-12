@@ -223,7 +223,7 @@ void main() {
   test('locked artifact accepts portable SHA-1 and rejects invalid hash pairs', () {
     final version = MtnMinecraftContentPackageLockedVersion(
       itemKey: 'modrinth:a', versionId: 'v1', fileName: 'a.jar',
-      hashAlgorithm: 'sha1', hashValue: 'a' * 40,
+      hashAlgorithm: 'sha1', hashValue: List<String>.filled(40, 'a').join(),
     );
     expect(MtnMinecraftContentPackageLockedVersion.fromMap(version.toMap()).hashValue, 'a' * 40);
     expect(
