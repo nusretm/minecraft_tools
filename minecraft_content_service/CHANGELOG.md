@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Portable Content Package foundation (feature branch, validation pending)
+
+- Introduce metadata-only Content Package models with schema-versioned exact artifact/version lock, import/export and direct-root/dependency membership.
+- Add package mutation policies and item permission enums; dependency activity derives from active direct roots rather than manual toggles.
+- Add transient item hydration states and provider identity validation; do not serialize runtime state.
+- Provide immutable alphabetic direct/all snapshots and cycle-safe tree projection; add focused regression tests.
+- Cache, updates, orphan handling, installation integration and live validation remain separate checkpoints.
+
+
 ## 1.0.0-dev.28
 
 - Strengthen in-process coordinated installation recovery and cancellation boundary validation.
