@@ -192,7 +192,7 @@ class MtnMinecraftContentPackage {
   }
 
   bool get canAdd => mutationPolicy != MtnMinecraftContentPackageMutationPolicy.readOnly;
-  bool canRemove(MtnMinecraftContentPackageItem item) => mutationPolicy == MtnMinecraftContentPackageMutationPolicy.none && items.any((candidate) => identical(candidate, item)) && item.canRemove;
+  bool canRemove(MtnMinecraftContentPackageItem item) => mutationPolicy == MtnMinecraftContentPackageMutationPolicy.none && items.any((candidate) => identical(candidate, item)) && item.direct && item.canRemove;
   bool canUpdate(MtnMinecraftContentPackageItem item) => items.any((candidate) => identical(candidate, item)) && item.canUpdate;
 
   void setDirectEnabled(MtnMinecraftContentPackageItem item, bool enabled) {
