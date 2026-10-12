@@ -1,6 +1,15 @@
 # Minecraft Tools — Current Target
 
-Last updated: 2026-10-10
+Last updated: 2026-10-13
+
+## Active feature — Portable Content Package Foundation (2026-10-13)
+
+- Feature branch: `feature/minecraft-content-package-foundation` (not merged).
+- Approved architecture: metadata-only portable Content Packages containing exact locked version/file identities, direct and dependency members, package/item permissions, transient provider-hydration state, graph-derived dependency activity and direct/all/tree view snapshots.
+- Initial checkpoint implementation and tests are authored, but **Dart analysis/tests and live validation have not yet been executed** in this environment. Do not mark complete/validated or merge before checks and explicit approval.
+- Deferred: cache, authoritative existing-graph-to-lock mapping, update/revision planning, orphan reconciliation, RemVibe installation/recovery wiring and launcher UI.
+- Active handoff: `docs/continuity/PLANNED_2026-10-13_MINECRAFT_CONTENT_PACKAGE_FOUNDATION.md`.
+
 
 ## Legacy VersionList retirement — COMPLETE / MERGED / VALIDATED / CLEAN (2026-10-10)
 
