@@ -15,7 +15,7 @@ class MtnMinecraftContentPackageLockedVersion {
     if ((fileId == null || fileId!.isEmpty) && (hashValue == null || hashValue!.isEmpty)) throw ArgumentError('Exact artifact requires provider file ID or file hash.');
     if ((hashAlgorithm == null) != (hashValue == null)) throw ArgumentError('File hash algorithm and value must be supplied together.');
     if (hashAlgorithm != null && !const <String>{'md5', 'sha1', 'sha256', 'sha512'}.contains(hashAlgorithm)) throw ArgumentError.value(hashAlgorithm, 'hashAlgorithm', 'Unsupported portable integrity algorithm.');
-    if (hashValue != null && (hashValue!.isEmpty || !RegExp(r'^[a-fA-F0-9]+
+    if (hashValue != null && (hashValue!.isEmpty || !RegExp(r'^[a-fA-F0-9]+).hasMatch(hashValue!))) throw ArgumentError.value(hashValue, 'hashValue', 'File hash must be hexadecimal.');
     if (size != null && size! < 0) throw ArgumentError.value(size, 'size', 'File size cannot be negative.');
   }
 
@@ -138,20 +138,21 @@ class MtnMinecraftContentPackageLock {
 }
 ).hasMatch(hashValue!))) throw ArgumentError.value(hashValue, 'hashValue', 'File hash must be hexadecimal.');
     if (size != null && size! < 0) throw ArgumentError.value(size, 'size', 'File size cannot be negative.');
-    if (sha256 != null && !RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(sha256!)) throw ArgumentError.value(sha256, 'sha256', 'Expected 64 hexadecimal characters.');
   }
 
   factory MtnMinecraftContentPackageLockedVersion.fromMap(Map<String, dynamic> map) {
     if (map['itemKey'] is! String || map['versionId'] is! String || map['fileName'] is! String) throw const FormatException('Invalid locked version identity.');
     if (map['fileId'] != null && map['fileId'] is! String) throw const FormatException('Invalid locked fileId.');
-    if (map['sha256'] != null && map['sha256'] is! String) throw const FormatException('Invalid locked SHA-256.');
+    if (map['hashAlgorithm'] != null && map['hashAlgorithm'] is! String) throw const FormatException('Invalid locked hash algorithm.');
+    if (map['hashValue'] != null && map['hashValue'] is! String) throw const FormatException('Invalid locked hash value.');
     if (map['size'] != null && map['size'] is! int) throw const FormatException('Invalid locked file size.');
     return MtnMinecraftContentPackageLockedVersion(
       itemKey: map['itemKey'] as String,
       versionId: map['versionId'] as String,
       fileName: map['fileName'] as String,
       fileId: map['fileId'] as String?,
-      sha256: map['sha256'] as String?,
+      hashAlgorithm: map['hashAlgorithm'] as String?,
+      hashValue: map['hashValue'] as String?,
       size: map['size'] as int?,
     );
   }
@@ -160,7 +161,8 @@ class MtnMinecraftContentPackageLock {
   final String versionId;
   final String fileName;
   final String? fileId;
-  final String? sha256;
+  final String? hashAlgorithm;
+  final String? hashValue;
   final int? size;
 
   Map<String, dynamic> toMap() => <String, dynamic>{
@@ -168,7 +170,8 @@ class MtnMinecraftContentPackageLock {
     'versionId': versionId,
     'fileName': fileName,
     if (fileId != null) 'fileId': fileId,
-    if (sha256 != null) 'sha256': sha256,
+    if (hashAlgorithm != null) 'hashAlgorithm': hashAlgorithm,
+    if (hashValue != null) 'hashValue': hashValue,
     if (size != null) 'size': size,
   };
 }
@@ -245,7 +248,12 @@ class MtnMinecraftContentPackageLock {
   final List<MtnMinecraftContentPackageLockedEdge> edges;
 
   Map<String, dynamic> toMap() => <String, dynamic>{
-    'versions': versions.map((version) => version.toMap()).toList(growable: false),
-    'edges': edges.map((edge) => edge.toMap()).toList(growable: false),
+    'versions': (versions.toList()..sort((a, b) => a.itemKey.compareTo(b.itemKey))).map((version) => version.toMap()).toList(growable: false),
+    'edges': (edges.toList()..sort((a, b) {
+      final source = a.sourceKey.compareTo(b.sourceKey);
+      if (source != 0) return source;
+      final target = a.targetKey.compareTo(b.targetKey);
+      return target != 0 ? target : a.type.name.compareTo(b.type.name);
+    })).map((edge) => edge.toMap()).toList(growable: false),
   };
 }
