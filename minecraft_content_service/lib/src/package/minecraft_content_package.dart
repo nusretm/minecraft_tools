@@ -224,7 +224,7 @@ class MtnMinecraftContentPackage {
       'minecraftVersion': minecraftVersion,
       'modLoader': modLoader.name,
       'mutationPolicy': mutationPolicy.name,
-      'items': items.map((item) => item.toMap()).toList(growable: false),
+      'items': (items.toList()..sort((a, b) => a.key.compareTo(b.key))).map((item) => item.toMap()).toList(growable: false),
       'lock': graph.toMap(),
     };
   }
