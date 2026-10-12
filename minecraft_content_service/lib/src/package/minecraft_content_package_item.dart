@@ -24,7 +24,7 @@ class MtnMinecraftContentPackageItem {
     if (title.trim().isEmpty) throw ArgumentError.value(title, 'title', 'Item title cannot be empty.');
     if (this.permissions.toSet().length != this.permissions.length) throw ArgumentError.value(this.permissions, 'permissions', 'Duplicate permissions.');
     if (!direct && !enabled) throw ArgumentError.value(enabled, 'enabled', 'Dependency activity is derived from active direct roots.');
-    if (!direct && this.permissions.isNotEmpty) throw ArgumentError.value(this.permissions, 'permissions', 'Dependencies cannot have manual permissions.');
+    if (!direct && this.permissions.any((value) => value == MtnMinecraftContentItemPermission.enable || value == MtnMinecraftContentItemPermission.disable)) throw ArgumentError.value(this.permissions, 'permissions', 'Dependencies cannot have manual enable/disable permissions.');
   }
 
   factory MtnMinecraftContentPackageItem.fromMap(Map<String, dynamic> map) {
@@ -82,8 +82,8 @@ class MtnMinecraftContentPackageItem {
   bool get directEnabled => direct && _enabled;
   bool get canEnable => direct && permissions.contains(MtnMinecraftContentItemPermission.enable);
   bool get canDisable => direct && permissions.contains(MtnMinecraftContentItemPermission.disable);
-  bool get canRemove => direct && permissions.contains(MtnMinecraftContentItemPermission.remove);
-  bool get canUpdate => direct && permissions.contains(MtnMinecraftContentItemPermission.update);
+  bool get canRemove => permissions.contains(MtnMinecraftContentItemPermission.remove);
+  bool get canUpdate => permissions.contains(MtnMinecraftContentItemPermission.update);
 
   MtnMinecraftContentItemState _state = MtnMinecraftContentItemState.notLoaded;
   MtnMinecraftContent? _content;
