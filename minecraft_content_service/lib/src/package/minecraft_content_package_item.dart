@@ -123,7 +123,8 @@ class MtnMinecraftContentPackageItem {
     if (lock != null && lock.itemKey != key) throw ArgumentError.value(lock, 'lock', 'Lock does not belong to this item.');
     final pending = _pending;
     if (pending != null) {
-      if (lock != null && (_pendingLock == null || !_pendingLock!.sameSelection(lock))) throw StateError('A different lock is already hydrating for $key.');
+      if (lock != null && _pendingLock == null) return pending.then((_) => hydrate(service, cache: cache, lock: lock, refresh: refresh));
+      if (lock != null && !_pendingLock!.sameSelection(lock)) throw StateError('A different lock is already hydrating for $key.');
       return pending;
     }
     if (!refresh && _state == MtnMinecraftContentItemState.loaded && (lock == null || (_verifiedLock != null && _verifiedLock!.sameSelection(lock)))) return Future<void>.value();
@@ -148,6 +149,10 @@ class MtnMinecraftContentPackageItem {
   }) async {
     _state = MtnMinecraftContentItemState.loading;
     _loadError = null;
+    _content = null;
+    _version = null;
+    _file = null;
+    _verifiedLock = null;
     try {
       final resolved = await (cache == null ? service.getContent(provider, projectId) : cache.getContent(provider, projectId, refresh: refresh));
       if (resolved.type != type || !resolved.providers.any((metadata) => metadata.provider == provider && metadata.id == projectId)) {
