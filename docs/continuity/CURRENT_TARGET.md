@@ -3,11 +3,11 @@
 ## CP-06 — Encrypted Package Record & Portable Lock Builder (2026-10-14)
 
 - Active branch: `feature/minecraft-content-package-record-lock-integration`, starting from CP-05 merged main `70686577774cbde808fe25c533db7392e86eee81`.
-- **Implementation authored, not yet Dart-validated or live-validated.** Portable package schema remains unchanged; local draft serialization explicitly separated from published export.
+- **Windows targeted tests PASS (5/5 codec, 4/4 builder), full suite 283/283 PASS, AES-GCM example runtime PASS.** Initial `dart analyze` had 1 type error + 4 info lints and `git diff --check` found 1 trailing space; follow-up source and documentation fixes committed, **post-fix analyzer/diff rerun pending**. Portable package schema remains unchanged; local draft serialization explicitly separated from published export.
 - Device-local source `local/downloaded`, remote ID and published revision belong to `MtnMinecraftContentPackageRecord`; publisher may keep editing local draft after remote publication.
 - AES-256-GCM local record codec authenticates format+keyId, uses random nonces, requires external 32-byte key on encrypt/decrypt, and never embeds production keys or integrates Content Server directly.
 - Independent `MtnMinecraftContentPackageBuilder` adapts existing multi-root desired/install plans with explicit file choices for **all** versions (including retain) and preserves selected required/optional graph links; no second resolver or download engine.
-- Dedicated handoff: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_RECORD_LOCK_INTEGRATION.md`. Separate validation and merge approval required.
+- Dedicated handoff: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_RECORD_LOCK_INTEGRATION.md`; draft PR [#66](https://github.com/nusretm/minecraft_tools/pull/66). Merge requires explicit approval after successful post-fix validation.
 
 ## CP-05 — Hydration & Cache — MERGED / WINDOWS VALIDATED / CLEAN (2026-10-14)
 
