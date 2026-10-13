@@ -1,8 +1,24 @@
 # Minecraft Tools — Current Target
 
+## CP-06 — Encrypted Package Record & Portable Lock Builder (2026-10-14)
+
+- Active branch: `feature/minecraft-content-package-record-lock-integration`, starting from CP-05 merged main `70686577774cbde808fe25c533db7392e86eee81`.
+- **Implementation authored, not yet Dart-validated or live-validated.** Portable package schema remains unchanged; local draft serialization explicitly separated from published export.
+- Device-local source `local/downloaded`, remote ID and published revision belong to `MtnMinecraftContentPackageRecord`; publisher may keep editing local draft after remote publication.
+- AES-256-GCM local record codec authenticates format+keyId, uses random nonces, requires external 32-byte key on encrypt/decrypt, and never embeds production keys or integrates Content Server directly.
+- Independent `MtnMinecraftContentPackageBuilder` adapts existing multi-root desired/install plans with explicit file choices for **all** versions (including retain) and preserves selected required/optional graph links; no second resolver or download engine.
+- Dedicated handoff: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_RECORD_LOCK_INTEGRATION.md`. Separate validation and merge approval required.
+
+## CP-05 — Hydration & Cache — MERGED / WINDOWS VALIDATED / CLEAN (2026-10-14)
+
+- PR [#65](https://github.com/nusretm/minecraft_tools/pull/65) squash-merged to `main` at `70686577774cbde808fe25c533db7392e86eee81`.
+- User confirmed: `dart analyze` clean; targeted hydration 9/9, foundation 8/8, full suite 274/274; live Modrinth metadata-only Skyblocker project `y6DuFGwJ` exact version `7MTtY24j` PASS.
+- User fast-forwarded local `main`, deleted local and remote `feature/minecraft-content-package-hydration-cache`, pruned and confirmed `main == origin/main`, clean working tree.
+- Original handoff: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_HYDRATION_CACHE.md`. Live file download and CurseForge verification remain out of scope.
+
 Last updated: 2026-10-14
 
-## CP-05 — Content Package Hydration & Metadata Cache (2026-10-14)
+## CP-05 historical in-progress log (superseded by merge closure above)
 
 - **Ready for merge / Windows tests PASS / Modrinth metadata live PASS / analyzer clean.** Branch `feature/minecraft-content-package-hydration-cache`, based on merged PR #64; draft PR [#65](https://github.com/nusretm/minecraft_tools/pull/65) remains unmerged.
 - Provider-neutral, service-scoped in-memory metadata cache with in-flight request coalescing, explicit refresh/invalidation and error non-caching.
