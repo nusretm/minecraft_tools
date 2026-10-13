@@ -44,6 +44,40 @@ class MtnMinecraftContentPackageLockedVersion {
   final String? hashValue;
   final int? size;
 
+  /// Compares immutable lock identity without depending on object identity.
+  bool sameSelection(MtnMinecraftContentPackageLockedVersion other) =>
+      itemKey == other.itemKey && versionId == other.versionId && fileName == other.fileName &&
+      fileId == other.fileId && hashAlgorithm == other.hashAlgorithm &&
+      hashValue == other.hashValue && size == other.size;
+
+  /// Resolves the selected artifact only when its exact provider identity and
+  /// all recorded integrity attributes match the locked snapshot.
+  ///
+  /// This is metadata verification, not verification of downloaded bytes.
+  MtnMinecraftContentFile verify(String provider, String projectId, MtnMinecraftContentVersion version) {
+    if (itemKey != '$provider:$projectId') throw FormatException('Locked item identity $itemKey does not match $provider:$projectId.');
+
+    if (!version.providers.any((value) => value.provider == provider && value.id == versionId)) {
+      throw FormatException('Provider version does not match locked version $provider:$versionId.');
+    }
+    if (!version.content.providers.any((value) => value.provider == provider && value.id == projectId)) {
+      throw FormatException('Locked version $versionId belongs to another project instead of $provider:$projectId.');
+    }
+
+    final matching = version.files.where((file) {
+      if (file.fileName != fileName) return false;
+      if (fileId != null && !file.providers.any((value) => value.provider == provider && value.id == fileId)) return false;
+      if (hashAlgorithm != null && !file.hashes.any((value) => value.algorithm.toLowerCase().replaceAll('-', '') == hashAlgorithm && value.value.toLowerCase() == hashValue!.toLowerCase())) return false;
+      if (size != null && file.size != size) return false;
+      return true;
+    }).toList(growable: false);
+
+    if (matching.length != 1) throw FormatException('Locked artifact $fileName in version $versionId is absent or ambiguous.');
+    final file = matching.single;
+    if (file.available == false) throw FormatException('Locked artifact $fileName in version $versionId is unavailable.');
+    return file;
+  }
+
   Map<String, dynamic> toMap() => <String, dynamic>{
     'itemKey': itemKey,
     'versionId': versionId,

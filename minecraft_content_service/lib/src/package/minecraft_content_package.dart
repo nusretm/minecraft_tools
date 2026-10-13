@@ -5,6 +5,7 @@ import '../model/minecraft_content_models.dart';
 import '../service/minecraft_content_service.dart';
 import 'minecraft_content_package_item.dart';
 import 'minecraft_content_package_lock.dart';
+import 'minecraft_content_package_metadata_cache.dart';
 
 enum MtnMinecraftContentPackageMutationPolicy { none, readOnly, appendOnly }
 
@@ -200,13 +201,26 @@ class MtnMinecraftContentPackage {
     item.setDirectEnabled(enabled);
   }
 
-  /// Metadata hydration is sequential; one failed provider request does not hide other items.
-  Future<void> hydrateSequential(MtnMinecraftContentService service) async {
+  /// Hydrates each item sequentially, verifying the imported exact lock when
+  /// available. Failures stay on their item; remaining items still load.
+  ///
+  /// Callers may pass a shared service-scoped cache to reuse provider results
+  /// between packages. Without one, this call shares an ephemeral cache.
+  Future<void> hydrateSequential(
+    MtnMinecraftContentService service, {
+    MtnMinecraftContentPackageMetadataCache? cache,
+    bool refresh = false,
+  }) async {
+    final metadata = cache ?? MtnMinecraftContentPackageMetadataCache(service);
+    if (!identical(metadata.service, service)) throw ArgumentError.value(cache, 'cache', 'Cache belongs to another Content Service.');
+    final locks = <String, MtnMinecraftContentPackageLockedVersion>{
+      for (final version in lock?.versions ?? const <MtnMinecraftContentPackageLockedVersion>[]) version.itemKey: version,
+    };
     for (final item in items) {
       try {
-        await item.hydrate(service);
+        await item.hydrate(service, cache: metadata, lock: locks[item.key], refresh: refresh);
       } catch (_) {
-        // Item owns and exposes its own error state; continue loading remaining items.
+        // The item exposes the failure for UI/retry; unrelated items continue.
       }
     }
   }

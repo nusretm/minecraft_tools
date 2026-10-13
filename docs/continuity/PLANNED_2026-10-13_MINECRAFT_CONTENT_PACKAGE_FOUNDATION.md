@@ -4,7 +4,7 @@
 
 Feature branch: `feature/minecraft-content-package-foundation`.
 
-Foundation code and focused tests have been authored. The repository owner executed the focused and full local Dart validation successfully on 2026-10-13; **live provider/download/install validation remains deferred**. PR #64 is a draft and has not been merged. This document records the approved product contract and the deliberate limits of the initial checkpoint.
+Foundation code and focused tests were validated locally on Windows on 2026-10-13 and **PR #64 was squash-merged into main** at `d3ea29e180d6c8c78dfe19b903308e80e6318428`. The user updated local main and cleaned both feature branches. **Live provider/download/install validation remained deferred** for this foundation checkpoint. This document records the approved product contract and the deliberate limits of the initial checkpoint.
 
 ## User-approved product contract
 
@@ -58,7 +58,7 @@ Evidence supplied by repository owner for branch `feature/minecraft-content-pack
 - `git diff --check main...HEAD`: no errors.
 - `git status`: working tree clean; local feature branch up to date with origin.
 
-These results validate the Dart source and unit tests; they are **not** proof of live Modrinth/CurseForge hydration or an end-to-end installation. The checkpoint remains **merge pending explicit user approval**.
+These results validate the Dart source and unit tests; they are **not** proof of live Modrinth/CurseForge hydration or an end-to-end installation. The foundation checkpoint was **merged with explicit user approval**, and remote/local branch cleanup was confirmed.
 
 ## Repeatable local validation commands
 
