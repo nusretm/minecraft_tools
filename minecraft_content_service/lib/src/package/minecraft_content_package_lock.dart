@@ -44,6 +44,12 @@ class MtnMinecraftContentPackageLockedVersion {
   final String? hashValue;
   final int? size;
 
+  /// Compares immutable lock identity without depending on object identity.
+  bool sameSelection(MtnMinecraftContentPackageLockedVersion other) =>
+      itemKey == other.itemKey && versionId == other.versionId && fileName == other.fileName &&
+      fileId == other.fileId && hashAlgorithm == other.hashAlgorithm &&
+      hashValue == other.hashValue && size == other.size;
+
   /// Resolves the selected artifact only when its exact provider identity and
   /// all recorded integrity attributes match the locked snapshot.
   ///
