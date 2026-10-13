@@ -11,10 +11,10 @@ class MtnMinecraftContentPackageMetadataCache {
   MtnMinecraftContentPackageMetadataCache(this.service);
 
   final MtnMinecraftContentService service;
-  final Map<String, MtnMinecraftContent> _contents = <String, MtnMinecraftContent>{};
-  final Map<String, MtnMinecraftContentVersion> _versions = <String, MtnMinecraftContentVersion>{};
-  final Map<String, Future<MtnMinecraftContent>> _pendingContents = <String, Future<MtnMinecraftContent>>{};
-  final Map<String, Future<MtnMinecraftContentVersion>> _pendingVersions = <String, Future<MtnMinecraftContentVersion>>{};
+  final Map<(String, String), MtnMinecraftContent> _contents = <String, MtnMinecraftContent>{};
+  final Map<(String, String), MtnMinecraftContentVersion> _versions = <String, MtnMinecraftContentVersion>{};
+  final Map<(String, String), Future<MtnMinecraftContent>> _pendingContents = <String, Future<MtnMinecraftContent>>{};
+  final Map<(String, String), Future<MtnMinecraftContentVersion>> _pendingVersions = <String, Future<MtnMinecraftContentVersion>>{};
 
   int get cachedContentCount => _contents.length;
   int get cachedVersionCount => _versions.length;
@@ -73,9 +73,9 @@ class MtnMinecraftContentPackageMetadataCache {
   }
 
   Future<T> _load<T>({
-    required String key,
-    required Map<String, T> values,
-    required Map<String, Future<T>> pending,
+    required (String, String) key,
+    required Map<(String, String), T> values,
+    required Map<(String, String), Future<T>> pending,
     required Future<T> Function() fetch,
     required bool refresh,
   }) {
@@ -94,10 +94,10 @@ class MtnMinecraftContentPackageMetadataCache {
     return request;
   }
 
-  static String _key(String provider, String id) {
+  static (String, String) _key(String provider, String id) {
     if (provider.trim().isEmpty || provider.trim() != provider || id.trim().isEmpty || id.trim() != id) {
       throw ArgumentError('Provider and ID must be nonempty, canonical identities.');
     }
-    return '$provider:$id';
+    return (provider, id);
   }
 }
