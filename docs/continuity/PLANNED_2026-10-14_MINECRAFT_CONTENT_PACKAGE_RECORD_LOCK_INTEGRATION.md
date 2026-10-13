@@ -58,7 +58,7 @@ User-provided Windows PowerShell outputs for feature branch before follow-up fix
 - Initial `git diff --check main...HEAD`: **trailing whitespace at this continuity file line 70**. The trailing whitespace has since been removed.
 - Initial `git status`: clean/up-to-date at feature HEAD before those source/doc corrections.
 
-**Verification still pending:** user should pull the follow-up corrections and rerun `dart analyze`, `git diff --check main...HEAD`, and confirm clean `git status`. No test behavior or encryption protocol was intentionally changed by the source fixes. **Do not mark analyzer/diff checks PASS without new outputs.** This checkpoint and PR #66 remain unmerged.
+**Post-fix verification — PASS (2026-10-14, user-supplied Windows PowerShell):** user fast-forwarded the feature branch to `9daede7`, reran `dart analyze` (**No issues found!**), `git diff --check main...HEAD` (**clean**), and `git status` (**working tree clean**, local feature branch up to date with origin). The fixes adjusted only the map cast, declaration ordering, whitespace, and documentation; earlier test/runtime evidence remains recorded above. **User explicitly approved merging PR #66**; merge and branch cleanup are separately tracked.
 
 ## Validation gate
 
