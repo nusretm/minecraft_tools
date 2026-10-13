@@ -1,16 +1,22 @@
 # Minecraft Tools — Current Target
 
-Last updated: 2026-10-13
+Last updated: 2026-10-14
 
-## Active feature — Portable Content Package Foundation (2026-10-13)
+## CP-05 — Content Package Hydration & Metadata Cache (2026-10-14)
 
-- Feature branch: `feature/minecraft-content-package-foundation` (not merged).
-- Approved architecture: metadata-only portable Content Packages containing exact locked version/file identities, direct and dependency members, package/item permissions, transient provider-hydration state, graph-derived dependency activity and direct/all/tree view snapshots.
-- **Local Dart validation PASS (2026-10-13, user-supplied terminal evidence):** `dart pub get` successful; `dart analyze` 0 issues; focused `content_package_foundation_test.dart` **8/8**; full `dart test` **265/265**; `git diff --check main...HEAD` clean and Git working tree clean.
-- **PR #64 remains draft/unmerged.** Live provider hydration and end-to-end installation were **not** validated and are not part of this foundation checkpoint. Merge requires separate explicit user approval.
-- Deferred: cache, authoritative existing-graph-to-lock mapping, update/revision planning, orphan reconciliation, RemVibe installation/recovery wiring and launcher UI.
-- Active handoff: `docs/continuity/PLANNED_2026-10-13_MINECRAFT_CONTENT_PACKAGE_FOUNDATION.md`.
+- **Active / implementation authored / local validation pending.** Branch `feature/minecraft-content-package-hydration-cache`, based on merged PR #64.
+- Provider-neutral, service-scoped in-memory metadata cache with in-flight request coalescing, explicit refresh/invalidation and error non-caching.
+- Package hydration now checks pinned provider version and exact file identity/hash/size; mismatches become isolated item errors without changing the exported lock or selected version.
+- Real metadata-only Modrinth CLI smoke example provided; **not yet executed**. No live provider validation, no actual artifact download/install, and no Dev.28 executor changes.
+- New continuity: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_HYDRATION_CACHE.md`. Separate test/merge approval required.
 
+## Content Package Foundation — MERGED / WINDOWS VALIDATED / CLEAN (2026-10-13)
+
+- PR [#64](https://github.com/nusretm/minecraft_tools/pull/64) squash-merged to `main` at `d3ea29e180d6c8c78dfe19b903308e80e6318428`.
+- Windows evidence supplied by user: `dart pub get` success; `dart analyze` clean; focused foundation **8/8**; full package tests **265/265**; `git diff --check` clean.
+- User fast-forwarded `main` to merge commit, deleted remote/local `feature/minecraft-content-package-foundation`, pruned and confirmed `main == origin/main`, working tree clean.
+- Implemented foundation: metadata-only schema v1 export/import, exact version/file lock, item permissions, package policies, transient states, graph-derived dependency activity and direct/all/tree snapshots.
+- Foundation handoff remains `docs/continuity/PLANNED_2026-10-13_MINECRAFT_CONTENT_PACKAGE_FOUNDATION.md`.
 
 ## Legacy VersionList retirement — COMPLETE / MERGED / VALIDATED / CLEAN (2026-10-10)
 
