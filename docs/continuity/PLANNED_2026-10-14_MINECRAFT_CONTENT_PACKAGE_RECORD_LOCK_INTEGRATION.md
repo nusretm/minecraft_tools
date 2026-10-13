@@ -45,6 +45,21 @@ Magic, format and keyId are AES-GCM **additional authenticated data**; wrong key
 - No automatic selection of unknown retained artifact and no provider-specific switch inside the builder.
 - No automatic promotion of local draft to published revision: publication requires a separate explicit workflow and immutable server-side snapshot.
 
+## Windows validation evidence (2026-10-14)
+
+User-provided Windows PowerShell outputs for feature branch before follow-up fixes:
+
+- `dart pub get`: PASS; added `cryptography 2.9.0` and transitive `ffi 2.2.0`. Dependency update notices are non-blocking.
+- Focused AES-GCM local record codec tests: **5/5 PASS**.
+- Focused portable lock builder tests: **4/4 PASS**.
+- Full `dart test`: **283/283 PASS**.
+- Actual `dart run example/content_package_record.dart`: **PASS**; encrypted local draft envelope 456 bytes, `keyId=example-session`, `source=local`, `package=sample-local`, `publishedRevision=2`.
+- Initial `dart analyze`: **1 error** in `minecraft_content_package.dart:108` (nullable `dynamic` used as map) and **4 informational lint messages** (export ordering ×2, constructor ordering ×2). Changes made afterward to cast the validated map, move factories ahead of helper methods, and sort exports.
+- Initial `git diff --check main...HEAD`: **trailing whitespace at this continuity file line 70**. The trailing whitespace has since been removed.
+- Initial `git status`: clean/up-to-date at feature HEAD before those source/doc corrections.
+
+**Verification still pending:** user should pull the follow-up corrections and rerun `dart analyze`, `git diff --check main...HEAD`, and confirm clean `git status`. No test behavior or encryption protocol was intentionally changed by the source fixes. **Do not mark analyzer/diff checks PASS without new outputs.** This checkpoint and PR #66 remain unmerged.
+
 ## Validation gate
 
 ```powershell
@@ -67,4 +82,4 @@ git diff --check main...HEAD
 git status
 ```
 
-The fixed encryption key is deliberately confined to tests. The executable smoke uses a newly generated ephemeral key, not a hardcoded application key. Do not run `dart format`. Local commands have not been run yet in the agent environment; record the owner's PowerShell evidence separately. 
+The fixed encryption key is deliberately confined to tests. The executable smoke uses a newly generated ephemeral key, not a hardcoded application key. Do not run `dart format`.
