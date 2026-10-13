@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — CP-05 Package hydration and metadata cache (feature branch, validation pending)
+
+- Add opt-in service-scoped memory cache with provider/project and provider/version identities, request coalescing, explicit refresh, invalidation and failure isolation.
+- Verify imported locked version ownership and exact selected file ID/hash/size before marking package item metadata loaded.
+- Expose transient hydrated version/file metadata, preserve portable JSON, and keep dependency activity graph-derived.
+- Add targeted cache, retry, shared-request and exact lock tests, plus a live Modrinth metadata-only smoke example.
+- Defer persistent disk cache, update/reconciliation workflows and physical download/install integration.
+
 ## Unreleased — Portable Content Package foundation (feature branch, validation pending)
 
 - Introduce metadata-only Content Package models with schema-versioned exact artifact/version lock, import/export and direct-root/dependency membership.
