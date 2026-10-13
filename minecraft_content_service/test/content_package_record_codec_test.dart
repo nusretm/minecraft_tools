@@ -82,7 +82,9 @@ void main() {
     final codec = MtnMinecraftContentPackageRecordCodec();
     final original = await codec.encrypt(draftRecord(), key: testKey, keyId: 'key-1');
     expect(() => codec.readKeyId(Uint8List.fromList(<int>[0, 1, 2])), throwsFormatException);
-    expect(() => codec.readKeyId(Uint8List.fromList(<int>[...original]..[0] = 1)), throwsFormatException);
+    final wrongMagic = Uint8List.fromList(original);
+    wrongMagic[0] = 1;
+    expect(() => codec.readKeyId(wrongMagic), throwsFormatException);
     await expectLater(codec.decrypt(original, key: Uint8List(16)), throwsArgumentError);
     await expectLater(codec.encrypt(draftRecord(), key: Uint8List(16), keyId: 'key'), throwsArgumentError);
     await expectLater(codec.encrypt(draftRecord(), key: testKey, keyId: ''), throwsArgumentError);
@@ -111,7 +113,7 @@ void main() {
     final restored = await codec.decrypt(ciphertext, key: testKey);
     expect(restored.source, MtnMinecraftContentPackageSource.downloaded);
     expect(restored.package.toJson(), locked.toJson());
-    expect(locked.toJson(), isNot(contains('downloaded')));
+    expect(locked.toJson(), isNot(contains('"source"')));
     expect(locked.toJson(), isNot(contains('remoteId')));
   });
 }
