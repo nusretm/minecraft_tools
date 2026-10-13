@@ -11,10 +11,10 @@ class MtnMinecraftContentPackageMetadataCache {
   MtnMinecraftContentPackageMetadataCache(this.service);
 
   final MtnMinecraftContentService service;
-  final Map<(String, String), MtnMinecraftContent> _contents = <String, MtnMinecraftContent>{};
-  final Map<(String, String), MtnMinecraftContentVersion> _versions = <String, MtnMinecraftContentVersion>{};
-  final Map<(String, String), Future<MtnMinecraftContent>> _pendingContents = <String, Future<MtnMinecraftContent>>{};
-  final Map<(String, String), Future<MtnMinecraftContentVersion>> _pendingVersions = <String, Future<MtnMinecraftContentVersion>>{};
+  final Map<(String, String), MtnMinecraftContent> _contents = <(String, String), MtnMinecraftContent>{};
+  final Map<(String, String), MtnMinecraftContentVersion> _versions = <(String, String), MtnMinecraftContentVersion>{};
+  final Map<(String, String), Future<MtnMinecraftContent>> _pendingContents = <(String, String), Future<MtnMinecraftContent>>{};
+  final Map<(String, String), Future<MtnMinecraftContentVersion>> _pendingVersions = <(String, String), Future<MtnMinecraftContentVersion>>{};
 
   int get cachedContentCount => _contents.length;
   int get cachedVersionCount => _versions.length;
