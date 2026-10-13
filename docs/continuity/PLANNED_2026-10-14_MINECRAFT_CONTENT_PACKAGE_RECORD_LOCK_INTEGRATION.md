@@ -59,9 +59,12 @@ dart test test/content_package_record_codec_test.dart -r expanded
 dart test test/content_package_builder_test.dart -r expanded
 dart test
 
+# Executes the actual AES-GCM codec with a fresh in-memory example key.
+dart run example/content_package_record.dart
+
 cd ..
 git diff --check main...HEAD
 git status
 ```
 
-The fixed encryption key is deliberately confined to tests. Do not run `dart format`. Local commands have not been run yet in the agent environment; record the owner's PowerShell evidence separately. 
+The fixed encryption key is deliberately confined to tests. The executable smoke uses a newly generated ephemeral key, not a hardcoded application key. Do not run `dart format`. Local commands have not been run yet in the agent environment; record the owner's PowerShell evidence separately. 
