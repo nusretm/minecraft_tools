@@ -129,9 +129,10 @@ class MtnMinecraftContentPackageItem {
     }
     if (!refresh && _state == MtnMinecraftContentItemState.loaded && (lock == null || (_verifiedLock != null && _verifiedLock!.sameSelection(lock)))) return Future<void>.value();
 
+    final shouldRefresh = refresh || _state == MtnMinecraftContentItemState.error;
     _pendingLock = lock;
     late final Future<void> request;
-    request = _load(service, cache: cache, lock: lock, refresh: refresh).whenComplete(() {
+    request = _load(service, cache: cache, lock: lock, refresh: shouldRefresh).whenComplete(() {
       if (identical(_pending, request)) {
         _pending = null;
         _pendingLock = null;
