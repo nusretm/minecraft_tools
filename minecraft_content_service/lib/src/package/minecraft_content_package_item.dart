@@ -1,5 +1,7 @@
 import '../model/minecraft_content_models.dart';
 import '../service/minecraft_content_service.dart';
+import 'minecraft_content_package_lock.dart';
+import 'minecraft_content_package_metadata_cache.dart';
 
 enum MtnMinecraftContentItemPermission { enable, disable, remove, update }
 
@@ -87,11 +89,17 @@ class MtnMinecraftContentPackageItem {
 
   MtnMinecraftContentItemState _state = MtnMinecraftContentItemState.notLoaded;
   MtnMinecraftContent? _content;
+  MtnMinecraftContentVersion? _version;
+  MtnMinecraftContentFile? _file;
+  MtnMinecraftContentPackageLockedVersion? _verifiedLock;
+  MtnMinecraftContentPackageLockedVersion? _pendingLock;
   Object? _loadError;
   Future<void>? _pending;
 
   MtnMinecraftContentItemState get state => _state;
   MtnMinecraftContent? get content => _content;
+  MtnMinecraftContentVersion? get version => _version;
+  MtnMinecraftContentFile? get file => _file;
   Object? get loadError => _loadError;
 
   void setDirectEnabled(bool value) {
@@ -102,28 +110,68 @@ class MtnMinecraftContentPackageItem {
     _enabled = value;
   }
 
-  /// Fetches provider metadata only, never downloads the content artifact.
-  /// Failure is retained for the UI and can be retried on a later call.
-  Future<void> hydrate(MtnMinecraftContentService service) {
-    if (_state == MtnMinecraftContentItemState.loaded) return Future<void>.value();
-    if (_pending != null) return _pending!;
-    final request = _load(service);
+  /// Retrieves metadata and optionally validates the exact locked version/file.
+  /// Passing refresh=true bypasses successful cached metadata, but joins an
+  /// already running request for the same identity.
+  Future<void> hydrate(
+    MtnMinecraftContentService service, {
+    MtnMinecraftContentPackageMetadataCache? cache,
+    MtnMinecraftContentPackageLockedVersion? lock,
+    bool refresh = false,
+  }) {
+    if (cache != null && !identical(cache.service, service)) throw ArgumentError.value(cache, 'cache', 'Cache belongs to another Content Service.');
+    if (lock != null && lock.itemKey != key) throw ArgumentError.value(lock, 'lock', 'Lock does not belong to this item.');
+    final pending = _pending;
+    if (pending != null) {
+      if (lock != null && !identical(_pendingLock, lock)) throw StateError('A different lock is already hydrating for $key.');
+      return pending;
+    }
+    if (!refresh && _state == MtnMinecraftContentItemState.loaded && (lock == null || identical(_verifiedLock, lock))) return Future<void>.value();
+
+    _pendingLock = lock;
+    late final Future<void> request;
+    request = _load(service, cache: cache, lock: lock, refresh: refresh).whenComplete(() {
+      if (identical(_pending, request)) {
+        _pending = null;
+        _pendingLock = null;
+      }
+    });
     _pending = request;
-    return request.whenComplete(() => _pending = null);
+    return request;
   }
 
-  Future<void> _load(MtnMinecraftContentService service) async {
+  Future<void> _load(
+    MtnMinecraftContentService service, {
+    required MtnMinecraftContentPackageMetadataCache? cache,
+    required MtnMinecraftContentPackageLockedVersion? lock,
+    required bool refresh,
+  }) async {
     _state = MtnMinecraftContentItemState.loading;
     _loadError = null;
     try {
-      final resolved = await service.getContent(provider, projectId);
+      final resolved = await (cache == null ? service.getContent(provider, projectId) : cache.getContent(provider, projectId, refresh: refresh));
       if (resolved.type != type || !resolved.providers.any((metadata) => metadata.provider == provider && metadata.id == projectId)) {
         throw FormatException('Provider returned mismatched identity or type for $key.');
       }
+
+      MtnMinecraftContentVersion? exactVersion;
+      MtnMinecraftContentFile? selectedFile;
+      if (lock != null) {
+        exactVersion = await (cache == null ? service.getVersion(provider, lock.versionId) : cache.getVersion(provider, lock.versionId, refresh: refresh));
+        if (exactVersion.content.type != type) throw FormatException('Locked version content type does not match item $key.');
+        selectedFile = lock.verify(provider, projectId, exactVersion);
+      }
+
       _content = resolved;
+      _version = exactVersion;
+      _file = selectedFile;
+      _verifiedLock = lock;
       _state = MtnMinecraftContentItemState.loaded;
     } catch (error) {
       _content = null;
+      _version = null;
+      _file = null;
+      _verifiedLock = null;
       _loadError = error;
       _state = MtnMinecraftContentItemState.error;
       rethrow;
