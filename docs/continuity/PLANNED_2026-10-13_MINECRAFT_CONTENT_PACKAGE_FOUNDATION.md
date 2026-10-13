@@ -4,7 +4,7 @@
 
 Feature branch: `feature/minecraft-content-package-foundation`.
 
-Foundation code and focused tests have been authored; Dart analysis/tests and Windows live checks must be run by the repository owner before this checkpoint is considered validated or merged. This document records the approved product contract and the deliberate limits of the initial checkpoint.
+Foundation code and focused tests have been authored. The repository owner executed the focused and full local Dart validation successfully on 2026-10-13; **live provider/download/install validation remains deferred**. PR #64 is a draft and has not been merged. This document records the approved product contract and the deliberate limits of the initial checkpoint.
 
 ## User-approved product contract
 
@@ -47,9 +47,22 @@ A package can be drafted with no lock, but it **cannot be exported as a publishe
 
 `loaded` means provider metadata has been obtained and identity-checked, **not** a JAR/ZIP was downloaded or installed. `effectiveEnabled` projects the locked graph for UI/planning; it does not mutate managed files. Installed state remains authoritative for physical files. Dependency `canRemove`/ `canUpdate` metadata is reserved for subsequent planner validation; dependencies remain non-user-toggleable.
 
-## Validation gate
+## Local validation evidence — PASS (2026-10-13)
 
-Required once pulled to a Dart-equipped working tree:
+Evidence supplied by repository owner for branch `feature/minecraft-content-package-foundation` before this documentation-only update:
+
+- `dart pub get`: succeeded. Dependency update notices were non-blocking.
+- `dart analyze`: **No issues found!**
+- `dart test test/content_package_foundation_test.dart -r expanded`: **8/8 passed**.
+- `dart test`: **265/265 passed**.
+- `git diff --check main...HEAD`: no errors.
+- `git status`: working tree clean; local feature branch up to date with origin.
+
+These results validate the Dart source and unit tests; they are **not** proof of live Modrinth/CurseForge hydration or an end-to-end installation. The checkpoint remains **merge pending explicit user approval**.
+
+## Repeatable local validation commands
+
+
 
 ```powershell
 cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
