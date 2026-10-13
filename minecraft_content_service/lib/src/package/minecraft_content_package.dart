@@ -63,7 +63,20 @@ class MtnMinecraftContentPackage {
     }
   }
 
-  factory MtnMinecraftContentPackage.fromMap(Map<String, dynamic> map) {
+  /// Local draft persistence may omit the lock; portable import may not.
+  factory MtnMinecraftContentPackage.fromLocalMap(Map<String, dynamic> map) => MtnMinecraftContentPackage._fromMap(map, requireLock: false);
+
+  factory MtnMinecraftContentPackage.fromMap(Map<String, dynamic> map) => MtnMinecraftContentPackage._fromMap(map, requireLock: true);
+
+  factory MtnMinecraftContentPackage.fromJson(String value) {
+    final parsed = jsonDecode(value);
+    if (parsed is! Map) throw const FormatException('Content Package must be a JSON object.');
+    return MtnMinecraftContentPackage.fromMap(Map<String, dynamic>.from(parsed));
+  }
+
+  factory MtnMinecraftContentPackage.decode(Uint8List bytes) => MtnMinecraftContentPackage.fromJson(utf8.decode(bytes));
+
+  static MtnMinecraftContentPackage _fromMap(Map<String, dynamic> map, {required bool requireLock}) {
     if (map['schemaVersion'] != currentSchemaVersion) throw FormatException('Unsupported Content Package schema: ${map['schemaVersion']}');
     final id = map['id'];
     final title = map['title'];
@@ -82,7 +95,7 @@ class MtnMinecraftContentPackage {
     if (policy == null) throw FormatException('Unknown package mutation policy: ${map['mutationPolicy']}');
     final contents = map['items'];
     final locked = map['lock'];
-    if (contents is! List || locked is! Map) throw const FormatException('Published Content Package requires item metadata and locked graph.');
+    if (contents is! List || (requireLock ? locked is! Map : locked != null && locked is! Map)) throw const FormatException('Invalid Content Package item metadata or locked graph.');
     final description = map['description'];
     final iconUrl = map['iconUrl'];
     if (description != null && description is! String) throw const FormatException('Package description must be text.');
@@ -100,17 +113,9 @@ class MtnMinecraftContentPackage {
         if (value is! Map) throw const FormatException('Invalid package item.');
         return MtnMinecraftContentPackageItem.fromMap(Map<String, dynamic>.from(value));
       }),
-      lock: MtnMinecraftContentPackageLock.fromMap(Map<String, dynamic>.from(locked)),
+      lock: locked == null ? null : MtnMinecraftContentPackageLock.fromMap(Map<String, dynamic>.from(locked as Map)),
     );
   }
-
-  factory MtnMinecraftContentPackage.fromJson(String value) {
-    final parsed = jsonDecode(value);
-    if (parsed is! Map) throw const FormatException('Content Package must be a JSON object.');
-    return MtnMinecraftContentPackage.fromMap(Map<String, dynamic>.from(parsed));
-  }
-
-  factory MtnMinecraftContentPackage.decode(Uint8List bytes) => MtnMinecraftContentPackage.fromJson(utf8.decode(bytes));
 
   static const int currentSchemaVersion = 1;
 
@@ -225,9 +230,14 @@ class MtnMinecraftContentPackage {
     }
   }
 
-  Map<String, dynamic> toMap() {
+  /// Only encrypted local records may persist an unlocked draft.
+  Map<String, dynamic> toLocalMap() => _toMap(requireLock: false);
+
+  Map<String, dynamic> toMap() => _toMap(requireLock: true);
+
+  Map<String, dynamic> _toMap({required bool requireLock}) {
     final graph = lock;
-    if (graph == null) throw StateError('Cannot export a Content Package without a complete locked graph.');
+    if (requireLock && graph == null) throw StateError('Cannot export a Content Package without a complete locked graph.');
     return <String, dynamic>{
       'schemaVersion': currentSchemaVersion,
       'id': id,
@@ -239,7 +249,7 @@ class MtnMinecraftContentPackage {
       'modLoader': modLoader.name,
       'mutationPolicy': mutationPolicy.name,
       'items': (items.toList()..sort((a, b) => a.key.compareTo(b.key))).map((item) => item.toMap()).toList(growable: false),
-      'lock': graph.toMap(),
+      if (graph != null) 'lock': graph.toMap(),
     };
   }
 

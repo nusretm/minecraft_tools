@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — CP-06 Encrypted local record and portable lock builder (validation pending)
+
+- Split local `MtnMinecraftContentPackageRecord` origin/publication metadata from portable `MtnMinecraftContentPackage` data; encrypted local drafts can be persisted without allowing public unlocked exports.
+- Add external-key AES-256-GCM record codec with random nonces and authenticated key ID; no production key embedded.
+- Build exact multi-root portable locks from existing dependency desired state and explicitly selected files (including retained versions).
+- Preserve selected optional/shared dependency edges; reject unresolved conflicts, foreign files, unverifiable artifacts and ambiguous provider identities.
+- Add focused security and plan-to-lock integration tests plus an executable encrypted-draft smoke example; no downloads, remote publication, launcher UI, or provider changes.
+
 ## Unreleased — CP-05 Package hydration and metadata cache (feature branch, validation pending)
 
 - Add opt-in service-scoped memory cache with provider/project and provider/version identities, request coalescing, explicit refresh, invalidation and failure isolation.
