@@ -123,10 +123,10 @@ class MtnMinecraftContentPackageItem {
     if (lock != null && lock.itemKey != key) throw ArgumentError.value(lock, 'lock', 'Lock does not belong to this item.');
     final pending = _pending;
     if (pending != null) {
-      if (lock != null && !identical(_pendingLock, lock)) throw StateError('A different lock is already hydrating for $key.');
+      if (lock != null && (_pendingLock == null || !_pendingLock!.sameSelection(lock))) throw StateError('A different lock is already hydrating for $key.');
       return pending;
     }
-    if (!refresh && _state == MtnMinecraftContentItemState.loaded && (lock == null || identical(_verifiedLock, lock))) return Future<void>.value();
+    if (!refresh && _state == MtnMinecraftContentItemState.loaded && (lock == null || (_verifiedLock != null && _verifiedLock!.sameSelection(lock)))) return Future<void>.value();
 
     _pendingLock = lock;
     late final Future<void> request;
