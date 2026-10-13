@@ -29,7 +29,7 @@
 
 - All imported item runtime states start `notLoaded`; `version` and `file` are runtime-only and never enter portable JSON.
 - Hydration **never** substitutes a newer/latest version or chooses a different file when the lock no longer matches.
-- A failed lock verification leaves the item in `error` state with no published `content/version/file` data. `refresh: true` provides explicit retry after source metadata changes.
+- A failed lock verification leaves the item in `error` state with no published `content/version/file` data. Retrying an errored item automatically bypasses stale cached metadata; `refresh: true` also permits explicit reload of a successfully loaded item.
 - Dependency enabled/disabled is **derived from active direct roots**, not a manual per-dependency flag; this checkpoint does not alter that behavior.
 - Only provider metadata is checked here. Actual downloaded file byte integrity remains governed by the existing download/materialization integrity stack; no installed-state changes occur.
 
