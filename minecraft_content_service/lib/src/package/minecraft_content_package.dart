@@ -68,6 +68,14 @@ class MtnMinecraftContentPackage {
 
   factory MtnMinecraftContentPackage.fromMap(Map<String, dynamic> map) => MtnMinecraftContentPackage._fromMap(map, requireLock: true);
 
+  factory MtnMinecraftContentPackage.fromJson(String value) {
+    final parsed = jsonDecode(value);
+    if (parsed is! Map) throw const FormatException('Content Package must be a JSON object.');
+    return MtnMinecraftContentPackage.fromMap(Map<String, dynamic>.from(parsed));
+  }
+
+  factory MtnMinecraftContentPackage.decode(Uint8List bytes) => MtnMinecraftContentPackage.fromJson(utf8.decode(bytes));
+
   static MtnMinecraftContentPackage _fromMap(Map<String, dynamic> map, {required bool requireLock}) {
     if (map['schemaVersion'] != currentSchemaVersion) throw FormatException('Unsupported Content Package schema: ${map['schemaVersion']}');
     final id = map['id'];
@@ -105,17 +113,9 @@ class MtnMinecraftContentPackage {
         if (value is! Map) throw const FormatException('Invalid package item.');
         return MtnMinecraftContentPackageItem.fromMap(Map<String, dynamic>.from(value));
       }),
-      lock: locked == null ? null : MtnMinecraftContentPackageLock.fromMap(Map<String, dynamic>.from(locked)),
+      lock: locked == null ? null : MtnMinecraftContentPackageLock.fromMap(Map<String, dynamic>.from(locked as Map)),
     );
   }
-
-  factory MtnMinecraftContentPackage.fromJson(String value) {
-    final parsed = jsonDecode(value);
-    if (parsed is! Map) throw const FormatException('Content Package must be a JSON object.');
-    return MtnMinecraftContentPackage.fromMap(Map<String, dynamic>.from(parsed));
-  }
-
-  factory MtnMinecraftContentPackage.decode(Uint8List bytes) => MtnMinecraftContentPackage.fromJson(utf8.decode(bytes));
 
   static const int currentSchemaVersion = 1;
 
