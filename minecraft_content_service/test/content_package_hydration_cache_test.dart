@@ -211,6 +211,26 @@ void main() {
     expect(service.versionCalls['modrinth:ver-a'], 1);
   });
 
+  test('exact lock hydration can follow a concurrent metadata-only request', () async {
+    final service = PackageMetadataServiceFake();
+    final content = project('a');
+    final delayed = Completer<MtnMinecraftContent>();
+    service.delayedContent = delayed;
+    service.versions['modrinth:ver-a'] = version(content, 'ver-a');
+    final cache = MtnMinecraftContentPackageMetadataCache(service);
+    final item = packageItem('a');
+
+    final metadataOnly = item.hydrate(service, cache: cache);
+    final exact = item.hydrate(service, cache: cache, lock: locked('a'));
+    delayed.complete(content);
+    await Future.wait(<Future<void>>[metadataOnly, exact]);
+
+    expect(item.state, MtnMinecraftContentItemState.loaded);
+    expect(item.file!.fileName, 'mod.jar');
+    expect(service.contentCalls['modrinth:a'], 1);
+    expect(service.versionCalls['modrinth:ver-a'], 1);
+  });
+
   test('file mismatch errors remain isolated, explicit refresh can recover exact lock', () async {
     final service = PackageMetadataServiceFake();
     final content = project('a');
