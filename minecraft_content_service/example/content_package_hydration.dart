@@ -4,7 +4,7 @@ import 'package:minecraft_content_service/minecraft_content_service.dart';
 
 /// Live metadata-only round-trip smoke test for one exact Modrinth version.
 ///
-/// Run: dart run example/content_package_hydration.dart <project-id> <version-id> <minecraft-version>
+/// Run: `dart run example/content_package_hydration.dart PROJECT_ID VERSION_ID MINECRAFT_VERSION`
 ///
 /// No download, installation, revision change, or "latest" version selection.
 Future<void> main(List<String> args) async {
