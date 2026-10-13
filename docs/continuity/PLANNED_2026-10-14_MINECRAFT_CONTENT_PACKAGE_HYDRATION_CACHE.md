@@ -56,7 +56,7 @@ dart test test/content_package_foundation_test.dart -r expanded
 dart test
 
 # Real provider metadata-only smoke: use a canonical project ID and its exact version ID
-dart run example/content_package_hydration.dart <project-id> <exact-version-id> <minecraft-version>
+dart run example/content_package_hydration.dart 'YOUR_PROJECT_ID' 'YOUR_EXACT_VERSION_ID' '1.21.11'
 
 cd ..
 git diff --check main...HEAD
