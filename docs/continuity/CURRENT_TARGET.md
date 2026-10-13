@@ -4,10 +4,10 @@ Last updated: 2026-10-14
 
 ## CP-05 — Content Package Hydration & Metadata Cache (2026-10-14)
 
-- **Active / Windows tests PASS / Modrinth metadata live PASS / analyzer recheck pending.** Branch `feature/minecraft-content-package-hydration-cache`, based on merged PR #64; draft PR [#65](https://github.com/nusretm/minecraft_tools/pull/65) remains unmerged.
+- **Ready for merge / Windows tests PASS / Modrinth metadata live PASS / analyzer clean.** Branch `feature/minecraft-content-package-hydration-cache`, based on merged PR #64; draft PR [#65](https://github.com/nusretm/minecraft_tools/pull/65) remains unmerged.
 - Provider-neutral, service-scoped in-memory metadata cache with in-flight request coalescing, explicit refresh/invalidation and error non-caching.
 - Package hydration now checks pinned provider version and exact file identity/hash/size; mismatches become isolated item errors without changing the exported lock or selected version.
-- **Windows evidence (2026-10-14):** hydration tests **9/9**, foundation **8/8**, full suite **274/274**, `dart pub get` PASS, `git diff --check` clean, user working tree clean before follow-up commits. `dart analyze` reported three info-only doc-comment lint messages; source comment fixed afterward, clean rerun pending.
+- **Windows evidence (2026-10-14):** hydration tests **9/9**, foundation **8/8**, full suite **274/274**, `dart pub get` PASS, `git diff --check` clean, user working tree clean before follow-up commits. `dart analyze` reported three info-only doc-comment lint messages; source comment fixed afterward and a subsequent `dart analyze` rerun returned **No issues found!**. User also confirmed `git diff --check` and a clean working tree after pulling the fix.
 - **Live Modrinth metadata-only smoke PASS:** Skyblocker project `y6DuFGwJ`, exact version `7MTtY24j`, file `skyblocker-6.5.2+1.21.11.jar`, export 608 bytes, cache 1 content + 1 version, imported item `loaded`. No file download/install, CurseForge live verification, or Dev.28 executor changes.
 - New continuity: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_HYDRATION_CACHE.md`. Separate test/merge approval required.
 
