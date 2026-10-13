@@ -37,7 +37,7 @@ void main() {
 
     final ciphertext = await codec.encrypt(record, key: testKey, keyId: 'server-key-1');
     expect(codec.readKeyId(ciphertext), 'server-key-1');
-    expect(ciphertext, isNot(containsAll('Editable Draft'.codeUnits)));
+    expect(String.fromCharCodes(ciphertext), isNot(contains('Editable Draft')));
 
     final restored = await codec.decrypt(ciphertext, key: testKey, expectedKeyId: 'server-key-1');
     expect(restored.source, MtnMinecraftContentPackageSource.local);
