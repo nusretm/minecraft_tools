@@ -231,7 +231,7 @@ void main() {
     expect(service.versionCalls['modrinth:ver-a'], 1);
   });
 
-  test('file mismatch errors remain isolated, explicit refresh can recover exact lock', () async {
+  test('file mismatch errors remain isolated, retry refetches stale cache and recovers exact lock', () async {
     final service = PackageMetadataServiceFake();
     final content = project('a');
     service.contents['modrinth:a'] = content;
@@ -247,7 +247,7 @@ void main() {
     expect(item.loadError, isNotNull);
 
     service.versions['modrinth:ver-a'] = version(content, 'ver-a');
-    await item.hydrate(service, cache: cache, lock: exact, refresh: true);
+    await item.hydrate(service, cache: cache, lock: exact);
     expect(item.state, MtnMinecraftContentItemState.loaded);
     expect(item.file!.fileName, 'mod.jar');
     expect(service.versionCalls['modrinth:ver-a'], 2);
