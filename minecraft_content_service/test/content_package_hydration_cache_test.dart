@@ -150,6 +150,26 @@ void main() {
     expect(service.contentCalls['modrinth:a'], 2);
   });
 
+  test('distinct package items share the same cache keys and in-flight metadata fetch', () async {
+    final service = PackageMetadataServiceFake();
+    final content = project('a');
+    service.contents['modrinth:a'] = content;
+    service.versions['modrinth:ver-a'] = version(content, 'ver-a');
+    final cache = MtnMinecraftContentPackageMetadataCache(service);
+    final first = packageItem('a');
+    final second = packageItem('a', direct: false);
+
+    await Future.wait(<Future<void>>[
+      first.hydrate(service, cache: cache, lock: locked('a')),
+      second.hydrate(service, cache: cache, lock: locked('a')),
+    ]);
+
+    expect(first.state, MtnMinecraftContentItemState.loaded);
+    expect(second.state, MtnMinecraftContentItemState.loaded);
+    expect(service.contentCalls['modrinth:a'], 1);
+    expect(service.versionCalls['modrinth:ver-a'], 1);
+  });
+
   test('failed or mismatched content and version identities never enter cache', () async {
     final service = PackageMetadataServiceFake();
     final cache = MtnMinecraftContentPackageMetadataCache(service);
@@ -186,6 +206,8 @@ void main() {
     expect(item.toMap().containsKey('version'), isFalse);
     expect(item.toMap().containsKey('file'), isFalse);
     expect(item.toMap().containsKey('state'), isFalse);
+    expect(service.versionCalls['modrinth:ver-a'], 1);
+    await item.hydrate(service, cache: cache, lock: locked('a'));
     expect(service.versionCalls['modrinth:ver-a'], 1);
   });
 
