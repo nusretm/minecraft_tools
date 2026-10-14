@@ -123,9 +123,9 @@ void main() {
   });
 
   test('UUID validation prevents traversal and unexpected files block delete', () async {
-    await expectLater(storage.save('../escape', makeRecord(), key: key, keyId: 'key'), throwsArgumentError);
+    expect(() => storage.save('../escape', makeRecord(), key: key, keyId: 'key'), throwsArgumentError);
     await expectLater(storage.load(recordId.toUpperCase(), key: key), throwsArgumentError);
-    await expectLater(storage.delete('../../other'), throwsArgumentError);
+    expect(() => storage.delete('../../other'), throwsArgumentError);
     await storage.save(recordId, makeRecord(), key: key, keyId: 'key');
     final foreign = File(p.join(temp.path, 'storage', recordId, 'user-notes.txt'));
     await foreign.writeAsString('retain me');
