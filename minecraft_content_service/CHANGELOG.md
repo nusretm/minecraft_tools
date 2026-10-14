@@ -1,11 +1,11 @@
 # Changelog
 
-## Unreleased — CP-10 dependency resolution and lock rebuild (Windows validation pending)
+## Unreleased — CP-10 dependency resolution and lock rebuild (Windows validated, merge pending)
 
 - Wire provider-selected package roots to the existing dependency resolver and multi-root desired install planner, with explicit optional selection and checks against silent pinned-version replacement.
 - Add `package.rebuildLock(desired, selectedFilesByVersionKey: ...)` using existing strict Builder validation; preserve existing local/downloaded item source, enabled preferences, permissions and item references while assembling new exact-lock dependencies.
 - Add downloaded-package `revisionNum`, transient nullable `newRevisionNum` and calculated `updateAvail` without introducing a second stored revision, remote polling endpoint or persistence schema change.
-- Add focused dependency-lock/revision tests and real Modrinth exact-version metadata smoke example; Windows analyzer/tests/live run pending.
+- Add focused dependency-lock/revision tests (**4/4 PASS**) and real Modrinth exact-version metadata smoke (**PASS**, 1 root, 0 dependency edges); full suite **308/308 PASS** and post-fix `dart analyze` **No issues found** on Windows. `git diff --check` and working tree clean.
 
 ## Unreleased — CP-09 provider-selected package item lifecycle (Windows validation pending)
 
