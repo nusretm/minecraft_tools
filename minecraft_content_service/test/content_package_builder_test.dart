@@ -114,9 +114,9 @@ void main() {
     expect(package.lock!.versions.first.hashAlgorithm, 'sha1');
     expect(package.lock!.versions.first.hashValue, 'a' * 40);
 
-    package.setDirectEnabled(package.getItem('modrinth:a')!, false);
-    expect(package.effectiveEnabled(package.getItem('modrinth:shared')!), isTrue);
-    expect(package.effectiveEnabled(package.getItem('modrinth:optional')!), isFalse);
+    package.getItem('modrinth:a')!.enabled = false;
+    expect(package.getItem('modrinth:shared')!.effectiveEnabled, isTrue);
+    expect(package.getItem('modrinth:optional')!.effectiveEnabled, isFalse);
     expect(MtnMinecraftContentPackage.fromJson(package.toJson()).toJson(), package.toJson());
   });
 
