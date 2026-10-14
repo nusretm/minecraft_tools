@@ -1,6 +1,20 @@
 # Minecraft Tools — Current Target
 
-## CP-07 — Portable Package Metadata v2 & Encrypted Local Storage (2026-10-14)
+## CP-08 — Shared Package / Item Source — IN PROGRESS (2026-10-14)
+
+- **Implementation authored, Windows verification pending.** Active branch `feature/minecraft-content-package-item-source`, based on clean CP-07 main `6b5aed8`.
+- Reuse the **same existing** `MtnMinecraftContentPackageSource { local, downloaded }` enum for both `MtnMinecraftContentPackageRecord.source` and `MtnMinecraftContentPackageItem.source`. New items default `local`; portable imports mark received items `downloaded`.
+- Portable package schema stays **v2**, with no item source export. AES-GCM encrypted *local record schema v2* stores each item's source; no editor/override/protected class, no new enum, no new service.
+- UI handles read-only/append-only and item permissions using record and item source; no additional mutation enforcement engine.
+- Handoff: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_ITEM_SOURCE.md`. Windows analyzer, focused tests, full suite and real disk sample required before separate merge approval.
+
+## CP-07 — Portable Package Metadata v2 & Encrypted Local Storage — MERGED / WINDOWS VALIDATED / CLEAN (2026-10-14)
+
+- PR [#67](https://github.com/nusretm/minecraft_tools/pull/67) squash-merged to `main` at `6b5aed8cc7b6cd8a6f9af0c0bae3dbe303b49a66`.
+- User confirmed: `dart analyze` clean, **293/293** full tests, storage tests **7/7**, real Windows encrypted-disk smoke PASS, `git diff --check` clean; local/remote feature branch deleted, `main == origin/main` and clean working tree.
+- Handoff: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_LOCAL_STORAGE_METADATA.md`.
+
+## CP-07 historical in-progress checkpoint (superseded by merge closure above)
 
 - **READY FOR MERGE REVIEW — user-verified Windows: schema v2 3/3, storage 7/7, full suite 293/293 PASS; `dart analyze` clean, `git diff --check` clean, working tree clean; real disk smoke PASS.** Branch `feature/minecraft-content-package-local-storage-metadata`, based on merged CP-06 `main` at `db5d6f6`. Merge remains subject to separate explicit user approval.
 - Portable package schema v2: loader version, RAM MiB, optional server address, owner display name, UTC created/updated dates; existing Minecraft version, mod loader, title, Markdown description, revision, lock, item permissions remain. The schema 1 wire format is intentionally not imported during pre-release.
