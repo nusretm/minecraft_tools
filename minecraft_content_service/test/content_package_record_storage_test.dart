@@ -130,7 +130,7 @@ void main() {
     await storage.save(recordId, makeRecord(), key: key, keyId: 'key');
     final foreign = File(p.join(temp.path, 'storage', recordId, 'user-notes.txt'));
     await foreign.writeAsString('retain me');
-    await expectLater(storage.delete(recordId), throwsFileSystemException);
+    await expectLater(storage.delete(recordId), throwsA(isA<FileSystemException>()));
     expect(await foreign.readAsString(), 'retain me');
     expect(await storage.listRecordIds(), <String>[recordId]);
   });
