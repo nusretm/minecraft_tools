@@ -100,7 +100,7 @@ void main() {
     expect(restored.package.lock, isNull);
     expect(restored.package.getItem('modrinth:original-mod')!.source, MtnMinecraftContentPackageSource.downloaded);
     expect(restored.package.getItem('modrinth:user-addon')!.source, MtnMinecraftContentPackageSource.local);
-    expect(restored.package.toLocalMap()['items'], isA<List>());
+    expect(restored.package.toLocalMap()['items'], isA<List<Object?>>());
     expect(() => restored.package.encode(), throwsStateError);
   });
 
