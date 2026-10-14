@@ -4,7 +4,7 @@
 
 - Authorized in conversation after CP-09 was squash-merged and local/remote branches cleaned; user's Windows main up to date and clean.
 - Implementation branch `feature/minecraft-content-package-dependency-lock-rebuild`; no merge requested or performed.
-- Windows Dart SDK validation, focused/full `dart test` and real Modrinth dependency smoke still **PENDING**. Do not claim PASS until user runs commands.
+- Initial Windows run: `dart pub get` PASS, CP-10 focused **4/4 PASS**, full `dart test` **308/308 PASS**, live Modrinth exact-version lock smoke **PASS**. Initial `dart analyze` reported a single info-level interpolation lint in `minecraft_content_package.dart:446`; fixed by commit `2badf18`, post-fix analyzer **PENDING**. `git diff --check main...HEAD` and working tree clean on the tested branch revision.
 - Pure Dart: do not run `dart format`; respect `docs/WORKING_RULES.md`.
 
 ## Authorized API, ownership and invariants
@@ -55,4 +55,4 @@ git diff --check main...HEAD
 git status
 ```
 
-The live smoke fetches the exact Modrinth Fabric API version previously verified during CP-09 and resolves its graph; if a required dependency cannot be resolved or any artifact cannot be chosen unambiguously, it reports the blocker rather than inventing a file. Its live pass is not yet verified.
+The live smoke fetched exact Modrinth Fabric API version `0.141.6+1.21.11` (version ID `6qAuTtLR`) and passed: `roots=1 items=1 exactLockVersions=1 dependencyEdges=0 portableBytes=1006`. This establishes **live provider → exact lock → portable round-trip**, not a live multi-dependency resolution case. Shared dependency and optional-edge behaviors were separately covered by passing focused tests. After the lint-only interpolation change, rerun `dart analyze`; no additional functionality was changed.
