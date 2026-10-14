@@ -4,7 +4,7 @@
 
 - Branch: `feature/minecraft-content-package-local-storage-metadata` based on clean merged CP-06 main `db5d6f69485c2612d1c682f341f02437f8d2a37c`.
 - User explicitly approved implementation of the **expanded GamePackage metadata** and encrypted local record persistence.
-- **Initial Windows run: metadata tests 3/3 PASS, disk smoke PASS, storage tests 6/7, full suite 292 passed and 1 failed, analyzer 2 info notices. Targeted corrections committed; post-fix rerun pending. Merge is NOT authorized.**
+- **Ready for merge review — Windows post-fix validation PASS:** metadata v2 3/3, storage 7/7, full suite 293/293, analyzer clean, real Windows disk smoke PASS, Git diff and working tree clean. Merge still requires separate user approval.
 - Scope only `minecraft_content_service/` and `docs/continuity/`. Do not run `dart format`.
 
 ## Public portable package metadata
@@ -45,7 +45,22 @@ Disk layout:
 - No UI toggle rules; no network key provisioning, Content Server API, signing, publisher authentication, remote publication, server revision creation or package install/download.
 - No write-back on every read, auto-modifying timestamps, local date-driven revision increments, schema 1 compatibility, automatic snapshot pruning or multi-process file locks.
 
-## Windows verification gate — pending
+## Post-fix Windows verification evidence (2026-10-14)
+
+User fast-forwarded feature branch from `dbb273f` to `1b98a81` using `git pull --ff-only` and confirmed:
+
+- `dart analyze` — **No issues found!**
+- `dart test test/content_package_record_storage_test.dart -r expanded` — **7/7 PASS**, including invalid UUID/path traversal and unknown-file deletion protection.
+- `dart test` — **293/293 PASS**.
+- `git diff --check main...HEAD` — **clean**.
+- `git status` — clean working tree; feature branch current with origin.
+- Earlier on this feature branch: schema v2 metadata tests **3/3 PASS** and actual Windows `dart run example/content_package_storage.dart` **PASS** (two encrypted generations, restored metadata, wrong key rejected, delete successful).
+
+The initial failure was a test matcher treating synchronous UUID validation as an asynchronous error, fixed without relaxing validation. Both initial info-only analyzer findings were corrected and the clean rerun confirmed them resolved. Validation and runtime evidence are user-provided Windows PowerShell results, not claims of locally executed agent tests.
+
+**Checkpoint result:** implementation and Windows checks complete; PR #67 is ready for review. Merge not yet authorized.
+
+## Windows verification gate — completed
 
 ```powershell
 cd D:\development\cross-platform\minecraft_tools
