@@ -14,6 +14,7 @@ class MtnMinecraftContentPackageRecord {
   }) {
     if (remoteId != null && remoteId!.trim().isEmpty) throw ArgumentError.value(remoteId, 'remoteId', 'Remote ID cannot be blank.');
     if (publishedRevision != null && publishedRevision! < 1) throw ArgumentError.value(publishedRevision, 'publishedRevision', 'Published revision must be positive.');
+    package.attachRecord(this);
   }
 
   factory MtnMinecraftContentPackageRecord.fromMap(Map<String, dynamic> map) {
