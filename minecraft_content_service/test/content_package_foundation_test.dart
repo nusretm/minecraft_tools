@@ -97,7 +97,7 @@ void main() {
     expect(imported.lock!.edges.length, 3);
     expect(imported.items.every((value) => value.state == MtnMinecraftContentItemState.notLoaded), isTrue);
     expect(imported.getItem('modrinth:a')!.directEnabled, isFalse);
-    expect(imported.getItem('modrinth:a')!.canUpdate, isTrue);
+    expect(imported.getItem('modrinth:a')!.canUpdate, isFalse);
     expect(imported.getItem('modrinth:b')!.canEnable, isFalse);
   });
 
@@ -125,18 +125,18 @@ void main() {
     final b = package.getItem('modrinth:b')!;
     final c = package.getItem('modrinth:c')!;
 
-    expect(package.effectiveEnabled(b), isTrue);
-    package.setDirectEnabled(a, false);
-    expect(package.effectiveEnabled(b), isTrue);
-    expect(package.effectiveEnabled(c), isTrue);
-    package.setDirectEnabled(x, false);
-    expect(package.effectiveEnabled(b), isFalse);
-    expect(package.effectiveEnabled(c), isFalse);
-    package.setDirectEnabled(a, true);
-    expect(package.effectiveEnabled(b), isTrue);
-    expect(package.effectiveEnabled(c), isTrue);
-    expect(() => package.setDirectEnabled(b, false), throwsStateError);
-    expect(() => b.setDirectEnabled(false), throwsStateError);
+    expect(b.effectiveEnabled, isTrue);
+    a.enabled = false;
+    expect(b.effectiveEnabled, isTrue);
+    expect(c.effectiveEnabled, isTrue);
+    x.enabled = false;
+    expect(b.effectiveEnabled, isFalse);
+    expect(c.effectiveEnabled, isFalse);
+    a.enabled = true;
+    expect(b.effectiveEnabled, isTrue);
+    expect(c.effectiveEnabled, isTrue);
+    b.enabled = false;
+    expect(b.enabled, isTrue);
   });
 
   test('cyclic dependency tree terminates without losing the cycle marker', () {
@@ -154,13 +154,13 @@ void main() {
     final appendOnly = contentPackage(policy: MtnMinecraftContentPackageMutationPolicy.appendOnly);
     expect(normal.canAdd, isTrue);
     expect(normal.canRemove(normal.getItem('modrinth:a')!), isTrue);
-    expect(normal.canUpdate(normal.getItem('modrinth:a')!), isTrue);
+    expect(normal.getItem('modrinth:a')!.canUpdate, isFalse);
     expect(normal.canRemove(normal.getItem('modrinth:b')!), isFalse);
     expect(readOnly.canAdd, isFalse);
     expect(readOnly.canRemove(readOnly.getItem('modrinth:a')!), isFalse);
-    expect(readOnly.canUpdate(readOnly.getItem('modrinth:a')!), isTrue);
+    expect(readOnly.getItem('modrinth:a')!.canUpdate, isFalse);
     expect(appendOnly.canAdd, isTrue);
-    expect(appendOnly.canRemove(appendOnly.getItem('modrinth:a')!), isFalse);
+    expect(appendOnly.canRemove(appendOnly.getItem('modrinth:a')!), isTrue);
   });
 
   test('unlocked draft export and incomplete graphs are rejected', () {

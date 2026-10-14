@@ -89,7 +89,7 @@ Future<void> main(List<String> args) async {
 
     stdout.writeln('PASS project=$projectId version=$versionId file=${hydrated.file!.fileName}');
     stdout.writeln('Export bytes=${portable.length}; cache content=${cache.cachedContentCount}, versions=${cache.cachedVersionCount}');
-    stdout.writeln('State=${hydrated.state.name}; direct=${hydrated.direct}; effectiveEnabled=${imported.effectiveEnabled(hydrated)}');
+    stdout.writeln('State=${hydrated.state.name}; direct=${hydrated.direct}; effectiveEnabled=${hydrated.effectiveEnabled}');
   } finally {
     provider.close();
   }

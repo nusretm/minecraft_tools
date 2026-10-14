@@ -1,5 +1,6 @@
 import '../model/minecraft_content_models.dart';
 import '../service/minecraft_content_service.dart';
+import 'minecraft_content_package.dart';
 import 'minecraft_content_package_lock.dart';
 import 'minecraft_content_package_metadata_cache.dart';
 import 'minecraft_content_package_source.dart';
@@ -17,18 +18,21 @@ class MtnMinecraftContentPackageItem {
     required this.title,
     this.description,
     this.iconUrl,
-    this.direct = false,
+    bool direct = false,
+    String? selectedVersionId,
     this.source = MtnMinecraftContentPackageSource.local,
     bool enabled = true,
     Iterable<MtnMinecraftContentItemPermission> permissions = const <MtnMinecraftContentItemPermission>[],
-  }) : permissions = List<MtnMinecraftContentItemPermission>.unmodifiable(permissions),
+  }) : _permissions = List<MtnMinecraftContentItemPermission>.unmodifiable(permissions),
+       _direct = direct,
+       _selectedVersionId = selectedVersionId,
        _enabled = enabled {
     if (provider.isEmpty || provider.contains(':') || provider.trim() != provider) throw ArgumentError.value(provider, 'provider', 'Provider identity must be nonempty, trimmed and contain no colon.');
     if (projectId.isEmpty || projectId.trim() != projectId) throw ArgumentError.value(projectId, 'projectId', 'Project identity must be nonempty and trimmed.');
     if (title.trim().isEmpty) throw ArgumentError.value(title, 'title', 'Item title cannot be empty.');
-    if (this.permissions.toSet().length != this.permissions.length) throw ArgumentError.value(this.permissions, 'permissions', 'Duplicate permissions.');
+    if (_permissions.toSet().length != _permissions.length) throw ArgumentError.value(_permissions, 'permissions', 'Duplicate permissions.');
     if (!direct && !enabled) throw ArgumentError.value(enabled, 'enabled', 'Dependency activity is derived from active direct roots.');
-    if (!direct && this.permissions.any((value) => value == MtnMinecraftContentItemPermission.enable || value == MtnMinecraftContentItemPermission.disable)) throw ArgumentError.value(this.permissions, 'permissions', 'Dependencies cannot have manual enable/disable permissions.');
+    if (!direct && _permissions.any((value) => value == MtnMinecraftContentItemPermission.enable || value == MtnMinecraftContentItemPermission.disable)) throw ArgumentError.value(_permissions, 'permissions', 'Dependencies cannot have manual enable/disable permissions.');
   }
 
   /// Portable imports always represent downloaded content on this device.
@@ -70,6 +74,9 @@ class MtnMinecraftContentPackageItem {
     final title = map['title'];
     if (provider is! String || projectId is! String || title is! String) throw const FormatException('Invalid portable item identity or title.');
     if (map['direct'] is! bool) throw const FormatException('Item direct must be boolean.');
+    final selectedVersionId = local ? map['selectedVersionId'] : null;
+    if (selectedVersionId != null && (selectedVersionId is! String || selectedVersionId.isEmpty)) throw const FormatException('Invalid local selected item version ID.');
+    if (!local && map.containsKey('selectedVersionId')) throw const FormatException('Portable item cannot declare a local selected version.');
     final description = map['description'];
     final iconUrl = map['iconUrl'];
     if (description != null && description is! String) throw const FormatException('Item description must be text.');
@@ -82,6 +89,7 @@ class MtnMinecraftContentPackageItem {
       description: description as String?,
       iconUrl: iconUrl as String?,
       direct: direct,
+      selectedVersionId: selectedVersionId as String?,
       source: source,
       enabled: enabled,
       permissions: permissions,
@@ -94,17 +102,92 @@ class MtnMinecraftContentPackageItem {
   final String title;
   final String? description;
   final String? iconUrl;
-  final bool direct;
+  bool _direct;
+  bool get direct => _direct;
   final MtnMinecraftContentPackageSource source;
-  final List<MtnMinecraftContentItemPermission> permissions;
+  MtnMinecraftContentPackage? _package;
+  MtnMinecraftContentPackage get package => _package ?? (throw StateError('Item is not attached to a package.'));
+  String? _selectedVersionId;
+  String? get selectedVersionId => _selectedVersionId;
+  List<MtnMinecraftContentItemPermission> _permissions;
+  List<MtnMinecraftContentItemPermission> get permissions => direct
+      ? _permissions
+      : List<MtnMinecraftContentItemPermission>.unmodifiable(
+          _permissions.where((value) => value != MtnMinecraftContentItemPermission.enable && value != MtnMinecraftContentItemPermission.disable),
+        );
   bool _enabled;
 
+  /// A Package owns its Items. Reusing an Item creates an independent local copy
+  /// rather than moving the original and corrupting its Package relation.
+  MtnMinecraftContentPackageItem attachToPackage(MtnMinecraftContentPackage owner) {
+    if (_package != null && !identical(_package, owner)) {
+      return MtnMinecraftContentPackageItem.fromLocalMap(toLocalMap())..attachToPackage(owner);
+    }
+    _package = owner;
+    return this;
+  }
+
+  void detachFromPackage(MtnMinecraftContentPackage owner) {
+    if (identical(_package, owner)) _package = null;
+  }
+
+  /// An explicit selection retains its provider identity in local drafts.
+  void selectVersion(MtnMinecraftContentVersion value, String versionId) {
+    if (versionId.isEmpty) throw ArgumentError.value(versionId, 'versionId');
+    _selectedVersionId = versionId;
+    _version = value;
+    _content = value.content;
+    _file = null;
+    _verifiedLock = null;
+    _state = MtnMinecraftContentItemState.loaded;
+  }
+
+  void preserveVersionId(String versionId) {
+    _selectedVersionId ??= versionId;
+  }
+
+  void setDirect(bool value) {
+    _direct = value;
+    if (!value) {
+      _enabled = true;
+    } else if (source == MtnMinecraftContentPackageSource.local && !_permissions.contains(MtnMinecraftContentItemPermission.enable)) {
+      _permissions = List<MtnMinecraftContentItemPermission>.unmodifiable(<MtnMinecraftContentItemPermission>{..._permissions, MtnMinecraftContentItemPermission.enable, MtnMinecraftContentItemPermission.disable, MtnMinecraftContentItemPermission.remove, MtnMinecraftContentItemPermission.update});
+    }
+  }
+
   String get key => '$provider:$projectId';
+  bool get enabled => _enabled;
+  set enabled(bool value) {
+    if (_enabled != value && direct && _package != null && package.canSetEnabled(this, value)) {
+      _enabled = value;
+    }
+  }
   bool get directEnabled => direct && _enabled;
+
+  /// Walks package dependency edges from enabled direct roots; cycles are safe.
+  bool get effectiveEnabled {
+    final owner = _package;
+    if (owner == null) return directEnabled;
+    if (directEnabled) return true;
+    final visited = <String>{};
+    final outgoing = <String, List<String>>{};
+    for (final edge in owner.dependencyEdges) {
+      outgoing.putIfAbsent(edge.sourceKey, () => <String>[]).add(edge.targetKey);
+    }
+    final queue = <String>[for (final item in owner.items) if (item.directEnabled) item.key];
+    for (var index = 0; index < queue.length; index++) {
+      final key = queue[index];
+      if (!visited.add(key)) continue;
+      if (key == this.key) return true;
+      queue.addAll(outgoing[key] ?? const <String>[]);
+    }
+    return false;
+  }
+
   bool get canEnable => direct && permissions.contains(MtnMinecraftContentItemPermission.enable);
   bool get canDisable => direct && permissions.contains(MtnMinecraftContentItemPermission.disable);
   bool get canRemove => permissions.contains(MtnMinecraftContentItemPermission.remove);
-  bool get canUpdate => permissions.contains(MtnMinecraftContentItemPermission.update);
+  bool get canUpdate => _package != null && package.updateList.containsKey(this);
 
   MtnMinecraftContentItemState _state = MtnMinecraftContentItemState.notLoaded;
   MtnMinecraftContent? _content;
@@ -120,14 +203,6 @@ class MtnMinecraftContentPackageItem {
   MtnMinecraftContentVersion? get version => _version;
   MtnMinecraftContentFile? get file => _file;
   Object? get loadError => _loadError;
-
-  void setDirectEnabled(bool value) {
-    if (!direct) throw StateError('Dependency state is derived; it cannot be changed manually.');
-    if (_enabled == value) return;
-    if (value && !canEnable) throw StateError('Item cannot be enabled.');
-    if (!value && !canDisable) throw StateError('Item cannot be disabled.');
-    _enabled = value;
-  }
 
   /// Retrieves metadata and optionally validates the exact locked version/file.
   /// Passing refresh=true bypasses successful cached metadata, but joins an
@@ -185,6 +260,13 @@ class MtnMinecraftContentPackageItem {
         exactVersion = await (cache == null ? service.getVersion(provider, lock.versionId) : cache.getVersion(provider, lock.versionId, refresh: refresh));
         if (exactVersion.content.type != type) throw FormatException('Locked version content type does not match item $key.');
         selectedFile = lock.verify(provider, projectId, exactVersion);
+      } else if (_selectedVersionId != null) {
+        exactVersion = await (cache == null ? service.getVersion(provider, _selectedVersionId!) : cache.getVersion(provider, _selectedVersionId!, refresh: refresh));
+        if (exactVersion.content.type != type ||
+            !exactVersion.providers.any((metadata) => metadata.provider == provider && metadata.id == _selectedVersionId) ||
+            !exactVersion.content.providers.any((metadata) => metadata.provider == provider && metadata.id == projectId)) {
+          throw FormatException('Selected local version does not belong to item $key.');
+        }
       }
 
       _content = resolved;
@@ -203,7 +285,7 @@ class MtnMinecraftContentPackageItem {
     }
   }
 
-  Map<String, dynamic> toLocalMap() => <String, dynamic>{...toMap(), 'source': source.name};
+  Map<String, dynamic> toLocalMap() => <String, dynamic>{...toMap(), 'source': source.name, if (_selectedVersionId != null) 'selectedVersionId': _selectedVersionId};
 
   /// Portable metadata excludes device-local item source.
   Map<String, dynamic> toMap() => <String, dynamic>{

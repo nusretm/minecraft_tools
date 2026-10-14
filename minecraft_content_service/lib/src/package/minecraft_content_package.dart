@@ -2,10 +2,13 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import '../model/minecraft_content_models.dart';
+import '../provider/minecraft_content_provider_models.dart';
 import '../service/minecraft_content_service.dart';
 import 'minecraft_content_package_item.dart';
 import 'minecraft_content_package_lock.dart';
 import 'minecraft_content_package_metadata_cache.dart';
+import 'minecraft_content_package_record.dart';
+import 'minecraft_content_package_source.dart';
 
 enum MtnMinecraftContentPackageMutationPolicy { none, readOnly, appendOnly }
 
@@ -41,8 +44,11 @@ class MtnMinecraftContentPackage {
     this.iconUrl,
     this.revision = 1,
     this.mutationPolicy = MtnMinecraftContentPackageMutationPolicy.none,
-    this.lock,
-  }) : items = List<MtnMinecraftContentPackageItem>.unmodifiable(items) {
+    MtnMinecraftContentPackageLock? lock,
+    Iterable<MtnMinecraftContentPackageLockedEdge>? dependencyEdges,
+  }) : _items = List<MtnMinecraftContentPackageItem>.of(items),
+       _lock = lock,
+       _dependencyEdges = List<MtnMinecraftContentPackageLockedEdge>.of(dependencyEdges ?? lock?.edges ?? const <MtnMinecraftContentPackageLockedEdge>[]) {
     if (id.trim().isEmpty || title.trim().isEmpty || minecraftVersion.trim().isEmpty) throw ArgumentError('Package ID, title and Minecraft version cannot be empty.');
     if (revision < 1) throw ArgumentError.value(revision, 'revision', 'Revision must be positive.');
     if (ramMiB < 1) throw ArgumentError.value(ramMiB, 'ramMiB', 'RAM must be positive MiB.');
@@ -62,6 +68,10 @@ class MtnMinecraftContentPackage {
       if (byKey.containsKey(item.key)) throw ArgumentError.value(item.key, 'items', 'Duplicate provider/project identity.');
       byKey[item.key] = item;
     }
+    final keys = byKey.keys.toSet();
+    if (_dependencyEdges.any((edge) => !keys.contains(edge.sourceKey) || !keys.contains(edge.targetKey))) {
+      throw ArgumentError('Dependency edges must refer to package items.');
+    }
     final graph = lock;
     if (graph != null) {
       final lockedKeys = graph.versions.map((version) => version.itemKey).toSet();
@@ -78,6 +88,11 @@ class MtnMinecraftContentPackage {
         }
       }
       if (!byKey.keys.every(active.contains)) throw ArgumentError('Locked dependencies must be reachable from a direct root.');
+    }
+    // Bind only after validating the complete graph. An Item already used by
+    // another Package is copied rather than reassigned to this Package.
+    for (var index = 0; index < _items.length; index++) {
+      _items[index] = _items[index].attachToPackage(this);
     }
   }
 
@@ -124,6 +139,9 @@ class MtnMinecraftContentPackage {
     if (policy == null) throw FormatException('Unknown package mutation policy: ${map['mutationPolicy']}');
     final contents = map['items'];
     final locked = map['lock'];
+    final draftEdges = map['dependencyEdges'];
+    if (requireLock && map.containsKey('dependencyEdges')) throw const FormatException('Portable package cannot contain local dependency edges.');
+    if (draftEdges != null && (draftEdges is! List || locked != null)) throw const FormatException('Draft edges require an unlocked local package.');
     if (contents is! List || (requireLock ? locked is! Map : locked != null && locked is! Map)) throw const FormatException('Invalid Content Package item metadata or locked graph.');
     final description = map['description'];
     final iconUrl = map['iconUrl'];
@@ -149,6 +167,10 @@ class MtnMinecraftContentPackage {
         return requireLock ? MtnMinecraftContentPackageItem.fromMap(Map<String, dynamic>.from(value)) : MtnMinecraftContentPackageItem.fromLocalMap(Map<String, dynamic>.from(value));
       }),
       lock: locked == null ? null : MtnMinecraftContentPackageLock.fromMap(Map<String, dynamic>.from(locked as Map)),
+      dependencyEdges: draftEdges == null ? null : (draftEdges as List).map((value) {
+        if (value is! Map) throw const FormatException('Invalid local dependency edge.');
+        return MtnMinecraftContentPackageLockedEdge.fromMap(Map<String, dynamic>.from(value));
+      }),
     );
   }
 
@@ -168,8 +190,23 @@ class MtnMinecraftContentPackage {
   final DateTime updatedAt;
   final int revision;
   final MtnMinecraftContentPackageMutationPolicy mutationPolicy;
-  final List<MtnMinecraftContentPackageItem> items;
-  final MtnMinecraftContentPackageLock? lock;
+  final List<MtnMinecraftContentPackageItem> _items;
+  List<MtnMinecraftContentPackageItem> get items => List<MtnMinecraftContentPackageItem>.unmodifiable(_items);
+  MtnMinecraftContentPackageLock? _lock;
+  MtnMinecraftContentPackageLock? get lock => _lock;
+  final List<MtnMinecraftContentPackageLockedEdge> _dependencyEdges;
+  List<MtnMinecraftContentPackageLockedEdge> get dependencyEdges => List<MtnMinecraftContentPackageLockedEdge>.unmodifiable(_dependencyEdges);
+  MtnMinecraftContentPackageRecord? _record;
+  MtnMinecraftContentPackageRecord? get record => _record;
+
+  void attachRecord(MtnMinecraftContentPackageRecord value) {
+    if (_record != null && !identical(_record, value)) throw StateError('Package is already attached to a different record.');
+    _record = value;
+  }
+
+  final Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion> _updateList = <MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>{};
+  Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion> get updateList => Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>.unmodifiable(_updateList);
+
 
   MtnMinecraftContentPackageItem? getItem(String key) {
     for (final item in items) {
@@ -195,35 +232,11 @@ class MtnMinecraftContentPackage {
 
   List<MtnMinecraftContentPackageItem> get sortedItems => allItems;
 
-  /// Activity is a graph projection, not an independently mutable dependency flag.
-  Set<String> get effectiveEnabledKeys {
-    final active = <String>{for (final item in items) if (item.directEnabled) item.key};
-    final graph = lock;
-    if (graph == null) return Set<String>.unmodifiable(active);
-    final edgesBySource = <String, List<String>>{};
-    for (final edge in graph.edges) {
-      edgesBySource.putIfAbsent(edge.sourceKey, () => <String>[]).add(edge.targetKey);
-    }
-    final queue = active.toList();
-    for (var index = 0; index < queue.length; index++) {
-      for (final target in edgesBySource[queue[index]] ?? const <String>[]) {
-        if (active.add(target)) queue.add(target);
-      }
-    }
-    return Set<String>.unmodifiable(active);
-  }
-
-  bool effectiveEnabled(MtnMinecraftContentPackageItem item) {
-    if (!items.any((candidate) => identical(candidate, item))) throw ArgumentError.value(item, 'item', 'Item does not belong to this package.');
-    return effectiveEnabledKeys.contains(item.key);
-  }
-
   List<MtnMinecraftContentPackageTreeNode> get treeItems {
-    final graph = lock;
-    if (graph == null) return List<MtnMinecraftContentPackageTreeNode>.unmodifiable(directItems.map((item) => MtnMinecraftContentPackageTreeNode(item: item, children: const [])));
+    if (_dependencyEdges.isEmpty) return List<MtnMinecraftContentPackageTreeNode>.unmodifiable(directItems.map((item) => MtnMinecraftContentPackageTreeNode(item: item, children: const [])));
     final byKey = <String, MtnMinecraftContentPackageItem>{for (final item in items) item.key: item};
     final children = <String, Set<String>>{};
-    for (final edge in graph.edges) {
+    for (final edge in _dependencyEdges) {
       children.putIfAbsent(edge.sourceKey, () => <String>{}).add(edge.targetKey);
     }
 
@@ -239,12 +252,148 @@ class MtnMinecraftContentPackage {
   }
 
   bool get canAdd => mutationPolicy != MtnMinecraftContentPackageMutationPolicy.readOnly;
-  bool canRemove(MtnMinecraftContentPackageItem item) => mutationPolicy == MtnMinecraftContentPackageMutationPolicy.none && items.any((candidate) => identical(candidate, item)) && item.direct && item.canRemove;
-  bool canUpdate(MtnMinecraftContentPackageItem item) => items.any((candidate) => identical(candidate, item)) && item.canUpdate;
 
-  void setDirectEnabled(MtnMinecraftContentPackageItem item, bool enabled) {
-    if (!items.any((candidate) => identical(candidate, item))) throw ArgumentError.value(item, 'item', 'Item does not belong to this package.');
-    item.setDirectEnabled(enabled);
+  bool _protectedItem(MtnMinecraftContentPackageItem item) =>
+      _record?.source == MtnMinecraftContentPackageSource.downloaded &&
+      item.source == MtnMinecraftContentPackageSource.downloaded &&
+      mutationPolicy == MtnMinecraftContentPackageMutationPolicy.appendOnly;
+
+  bool canSetEnabled(MtnMinecraftContentPackageItem item, bool value) =>
+      mutationPolicy != MtnMinecraftContentPackageMutationPolicy.readOnly &&
+      !_protectedItem(item) &&
+      _items.any((candidate) => identical(candidate, item)) &&
+      (value ? item.canEnable : item.canDisable);
+
+  bool canRemove(MtnMinecraftContentPackageItem item) =>
+      _items.any((candidate) => identical(candidate, item)) && item.direct &&
+      mutationPolicy != MtnMinecraftContentPackageMutationPolicy.readOnly &&
+      !_protectedItem(item) && item.canRemove &&
+      (mutationPolicy == MtnMinecraftContentPackageMutationPolicy.none || item.source == MtnMinecraftContentPackageSource.local);
+
+  bool _mayUpdate(MtnMinecraftContentPackageItem item) =>
+      mutationPolicy != MtnMinecraftContentPackageMutationPolicy.readOnly &&
+      !_protectedItem(item) &&
+      _items.any((candidate) => identical(candidate, item)) &&
+      item.permissions.contains(MtnMinecraftContentItemPermission.update);
+
+  bool _compatible(MtnMinecraftContentVersion version) =>
+      version.gameVersions.contains(minecraftVersion) &&
+      (version.content.type != MtnMinecraftContentType.mod || version.modLoaders.contains(modLoader));
+
+  (String, String)? _providerIdentity(MtnMinecraftContentVersion version) {
+    final matches = <(String, String)>[];
+    for (final candidate in version.providers) {
+      if (candidate.id == null || candidate.id!.isEmpty) continue;
+      for (final content in version.content.providers) {
+        if (candidate.provider == content.provider && content.id != null && content.id!.isNotEmpty) {
+          matches.add((candidate.provider, content.id!));
+        }
+      }
+    }
+    return matches.length == 1 ? matches.single : null;
+  }
+
+  void _invalidateLock() {
+    final old = _lock;
+    if (old != null) {
+      for (final entry in old.versions) {
+        getItem(entry.itemKey)?.preserveVersionId(entry.versionId);
+      }
+      _lock = null;
+    }
+    _updateList.clear();
+  }
+
+  /// Adds one provider-selected version, or promotes an existing dependency.
+  /// Unknown dependencies are not invented; the draft must be resolved and
+  /// rebuilt with a complete lock before portable publication.
+  bool add(MtnMinecraftContentVersion version) {
+    if (!canAdd || !_compatible(version)) return false;
+    final identity = _providerIdentity(version);
+    if (identity == null) return false;
+    final provider = identity.$1, projectId = identity.$2;
+    final key = '$provider:$projectId';
+    final existing = getItem(key);
+    final versionId = version.providers.firstWhere((metadata) => metadata.provider == provider).id!;
+    if (existing != null) {
+      if (existing.direct || _protectedItem(existing) ||
+          (existing.selectedVersionId != null && existing.selectedVersionId != versionId) ||
+          (_lock != null && _lock!.versions.any((entry) => entry.itemKey == key && entry.versionId != versionId))) {
+        return false;
+      }
+      _invalidateLock();
+      existing.setDirect(true);
+      existing.selectVersion(version, versionId);
+      return true;
+    }
+    final item = MtnMinecraftContentPackageItem(
+      provider: provider, projectId: projectId, type: version.content.type, title: version.content.name,
+      description: version.content.summary ?? version.content.description, iconUrl: version.content.icon?.url,
+      direct: true, source: MtnMinecraftContentPackageSource.local,
+      permissions: MtnMinecraftContentItemPermission.values, selectedVersionId: versionId,
+    );
+    _invalidateLock();
+    _items.add(item);
+    item.attachToPackage(this);
+    item.selectVersion(version, versionId);
+    for (final dependency in version.dependencies) {
+      if (dependency.type != MtnMinecraftContentDependencyType.required &&
+          dependency.type != MtnMinecraftContentDependencyType.embeddedLibrary) {
+        continue;
+      }
+      final depProvider = dependency.provider;
+      final depProject = dependency.providerContentId;
+      if (depProvider == null || depProject == null || getItem('$depProvider:$depProject') == null) continue;
+      if (!_dependencyEdges.any((edge) => edge.sourceKey == key && edge.targetKey == '$depProvider:$depProject')) {
+        _dependencyEdges.add(MtnMinecraftContentPackageLockedEdge(sourceKey: key, targetKey: '$depProvider:$depProject', type: dependency.type));
+      }
+    }
+    return true;
+  }
+
+  /// Removes a direct root; a dependency still used by another item stays.
+  bool remove(MtnMinecraftContentPackageItem item) {
+    if (!canRemove(item)) return false;
+    _invalidateLock();
+    if (_dependencyEdges.any((edge) => edge.targetKey == item.key && edge.sourceKey != item.key)) {
+      item.setDirect(false);
+    } else {
+      _items.remove(item);
+      _dependencyEdges.removeWhere((edge) => edge.sourceKey == item.key || edge.targetKey == item.key);
+      item.detachFromPackage(this);
+    }
+    return true;
+  }
+
+  /// Checks provider updates without changing the selected version or lock.
+  /// Missing provider data or unorderable releases are left out of the result.
+  Future<void> checkUpdates(MtnMinecraftContentService service) async {
+    _updateList.clear();
+    for (final item in items) {
+      if (!_mayUpdate(item)) continue;
+      try {
+        final selectedLock = _lock?.versions.where((entry) => entry.itemKey == item.key).firstOrNull;
+        await item.hydrate(service, lock: selectedLock);
+        final current = item.version;
+        final published = current?.publishedAt;
+        final content = item.content;
+        if (current == null || published == null || content == null) continue;
+        final candidates = await service.getVersions(item.provider, content, MtnMinecraftContentVersionListRequest(
+          gameVersions: <String>[minecraftVersion],
+          modLoaders: item.type == MtnMinecraftContentType.mod ? <MtnMinecraftModLoaderType>[modLoader] : const <MtnMinecraftModLoaderType>[],
+        ));
+        MtnMinecraftContentVersion? next;
+        for (final version in candidates.versions) {
+          if (!_compatible(version) || version.publishedAt == null || !version.publishedAt!.isAfter(published)) continue;
+          final identity = _providerIdentity(version);
+          if (identity == null || '${identity.$1}:${identity.$2}' != item.key) continue;
+          if (next == null || version.publishedAt!.isAfter(next.publishedAt!)) next = version;
+        }
+        if (next != null) _updateList[item] = next;
+      } catch (_) {
+        // An unavailable provider does not block checking other items.
+      }
+    }
   }
 
   /// Hydrates each item sequentially, verifying the imported exact lock when
@@ -296,6 +445,7 @@ class MtnMinecraftContentPackage {
       'updatedAt': updatedAt.toIso8601String(),
       'mutationPolicy': mutationPolicy.name,
       'items': (items.toList()..sort((a, b) => a.key.compareTo(b.key))).map((item) => requireLock ? item.toMap() : item.toLocalMap()).toList(growable: false),
+      if (!requireLock && graph == null && _dependencyEdges.isNotEmpty) 'dependencyEdges': _dependencyEdges.map((edge) => edge.toMap()).toList(growable: false),
       if (graph != null) 'lock': graph.toMap(),
     };
   }
