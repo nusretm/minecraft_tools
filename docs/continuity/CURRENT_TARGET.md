@@ -2,11 +2,11 @@
 
 ## CP-08 — Shared Package / Item Source — IN PROGRESS (2026-10-14)
 
-- **Implementation authored, Windows verification pending.** Active branch `feature/minecraft-content-package-item-source`, based on clean CP-07 main `6b5aed8`.
+- **Windows tests and disk smoke PASS; initial analyzer 1 test-only raw-generic warning fixed in feature branch, post-fix analyzer rerun pending.** Active branch `feature/minecraft-content-package-item-source`, based on clean CP-07 main `6b5aed8`.
 - Reuse the **same existing** `MtnMinecraftContentPackageSource { local, downloaded }` enum for both `MtnMinecraftContentPackageRecord.source` and `MtnMinecraftContentPackageItem.source`. New items default `local`; portable imports mark received items `downloaded`.
 - Portable package schema stays **v2**, with no item source export. AES-GCM encrypted *local record schema v2* stores each item's source; no editor/override/protected class, no new enum, no new service.
 - UI handles read-only/append-only and item permissions using record and item source; no additional mutation enforcement engine.
-- Handoff: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_ITEM_SOURCE.md`; draft PR [#68](https://github.com/nusretm/minecraft_tools/pull/68). Windows analyzer, focused tests, full suite and real disk sample required before separate merge approval.
+- Handoff: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_ITEM_SOURCE.md`; draft PR [#68](https://github.com/nusretm/minecraft_tools/pull/68). Windows focused source 4/4, codec 5/5, storage 7/7 and full suite 297/297 PASS; real disk sample PASS, initial diff/status clean. Only analyzer post-fix rerun, final diff/status and separate merge approval remain.
 
 ## CP-07 — Portable Package Metadata v2 & Encrypted Local Storage — MERGED / WINDOWS VALIDATED / CLEAN (2026-10-14)
 
