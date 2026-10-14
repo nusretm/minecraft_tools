@@ -117,10 +117,14 @@ class MtnMinecraftContentPackageItem {
         );
   bool _enabled;
 
-  /// Package ownership is wired by the package, never serialized.
-  void attachToPackage(MtnMinecraftContentPackage owner) {
-    if (_package != null && !identical(_package, owner)) throw StateError('Item is already attached to another package.');
+  /// A Package owns its Items. Reusing an Item creates an independent local copy
+  /// rather than moving the original and corrupting its Package relation.
+  MtnMinecraftContentPackageItem attachToPackage(MtnMinecraftContentPackage owner) {
+    if (_package != null && !identical(_package, owner)) {
+      return MtnMinecraftContentPackageItem.fromLocalMap(toLocalMap())..attachToPackage(owner);
+    }
     _package = owner;
+    return this;
   }
 
   void detachFromPackage(MtnMinecraftContentPackage owner) {
