@@ -1,6 +1,20 @@
 # Minecraft Tools — Current Target
 
-## CP-06 — Encrypted Package Record & Portable Lock Builder (2026-10-14)
+## CP-07 — Portable Package Metadata v2 & Encrypted Local Storage (2026-10-14)
+
+- **Active — implementation authored, Windows analyzer/tests and real disk smoke pending.** Branch `feature/minecraft-content-package-local-storage-metadata`, based on merged CP-06 `main` at `db5d6f6`.
+- Portable package schema v2: loader version, RAM MiB, optional server address, owner display name, UTC created/updated dates; existing Minecraft version, mod loader, title, Markdown description, revision, lock, item permissions remain. The schema 1 wire format is intentionally not imported during pre-release.
+- Existing AES-GCM record codec remains unchanged; new filesystem storage uses per-record canonical UUID directories, flushed temporary writes and append-only completed generation files, verified exact keyId selection, no silent fallback on tampered newest generation.
+- Storage never fetches an encryption key, mutates publish revisions or grants publisher rights. No external key provider, UI or download integration.
+- Continuity: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_LOCAL_STORAGE_METADATA.md`. Requires Windows evidence and separate merge approval.
+
+## CP-06 — Encrypted Record & Portable Lock Builder — MERGED / CLEAN (2026-10-14)
+
+- PR [#66](https://github.com/nusretm/minecraft_tools/pull/66) squash merged to `main` at `db5d6f69485c2612d1c682f341f02437f8d2a37c`.
+- Windows evidence: `dart analyze` clean, 283/283 tests passed, real AES-GCM codec example PASS. User fast-forwarded local `main`, deleted remote/local feature branch, pruned, verified `main == origin/main` and clean working tree.
+- Archived design and evidence: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_RECORD_LOCK_INTEGRATION.md`.
+
+## CP-06 historical in-progress checkpoint (superseded by merge closure above)
 
 - Active branch: `feature/minecraft-content-package-record-lock-integration`, starting from CP-05 merged main `70686577774cbde808fe25c533db7392e86eee81`.
 - **Windows targeted tests PASS (5/5 codec, 4/4 builder), full suite 283/283 PASS, AES-GCM example runtime PASS.** Initial `dart analyze` had 1 type error + 4 info lints and `git diff --check` found 1 trailing space; follow-up source and documentation fixes committed, **post-fix `dart analyze` No issues found, `git diff --check` clean, and tracked working tree clean (user-confirmed after pull to `9daede7`)**. Portable package schema remains unchanged; local draft serialization explicitly separated from published export.
