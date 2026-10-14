@@ -4,7 +4,7 @@
 
 - User explicitly rejected an editor service, override object, item-origin enum, and protected boolean. Approved reusing the existing `MtnMinecraftContentPackageSource { local, downloaded }` for `MtnMinecraftContentPackageRecord.source` and `MtnMinecraftContentPackageItem.source`.
 - Branch: `feature/minecraft-content-package-item-source`, based on merged/clean CP-07 main `6b5aed8cc7b6cd8a6f9af0c0bae3dbe303b49a66`.
-- **Windows runtime/tests PASS: focused item-source 4/4, AES-GCM codec 5/5, storage 7/7, complete suite 297/297, live encrypted disk smoke PASS, diff and working tree clean. Initial analyzer reported one strict raw-type warning in a test; follow-up fix committed, clean analyzer rerun pending. Not merged.**
+- **Windows runtime/tests PASS: focused item-source 4/4, AES-GCM codec 5/5, storage 7/7, complete suite 297/297, live encrypted disk smoke PASS, diff and working tree clean. Initial analyzer reported one strict raw-type warning in a test; follow-up fix committed, post-fix `dart analyze` clean, `git diff --check` clean, working tree clean. User explicitly approved merge of PR #68.**
 - No extra editor/override/protected classes, no new enum, no UI implementation and no Content Server key/publishing integration.
 
 ## Contract
@@ -37,7 +37,7 @@ User-provided PowerShell run at feature branch before the follow-up test lint fi
 - `git diff --check main...HEAD`: **clean**.
 - `git status`: up to date with remote, clean working tree before follow-up commit.
 
-**Follow-up:** Only the test's raw generic type warning was corrected. User must pull the fix and rerun analyzer/diff/status before calling the branch completely validated. PR #68 remains draft, and merging requires separate approval.
+**Post-fix confirmation (user-provided Windows PowerShell):** user fast-forwarded feature branch to `71e77bf`; `dart analyze` returned **No issues found!**, `git diff --check main...HEAD` returned no errors and `git status` showed a clean tracking branch. Earlier full suite **297/297**, focused source **4/4**, codec **5/5**, storage **7/7**, and real disk smoke **PASS** remain valid because the intervening source change fixed only a test matcher generic type. User explicitly approved squash merge; PR #68 merge pending.
 
 ## Validation gate (Windows PowerShell)
 
