@@ -4,8 +4,8 @@
 
 - User approved implementation in conversation following explicit API design review.
 - Branch `feature/minecraft-content-package-item-lifecycle` from CP-08 merged, clean `main` at `4df323c56b17f76730734c9d0335bc56f05cfa76`.
-- **READY FOR MERGE REVIEW — Windows post-fix `dart analyze`: No issues found; `dart test`: 304/304 PASS. Earlier real Modrinth + encrypted local draft smoke PASS; `git diff --check`: clean; feature tracking origin and working tree clean. Not merged; separate explicit merge approval required.**
-- Draft PR [#69](https://github.com/nusretm/minecraft_tools/pull/69). Merge requires a separate explicit approval after real Windows verification.
+- **MERGED — User authorized squash merge + cleanup. PR #69 merged into `main` as `74faec1e9a13ddd7cd06958b1fcb758b667ab2c5`. Windows post-fix `dart analyze`: No issues found; `dart test`: 304/304 PASS. Earlier real Modrinth + encrypted draft smoke PASS; `git diff --check`: clean. Local and remote feature branch deletion remains to be completed from Windows PowerShell.**
+- Merged PR [#69](https://github.com/nusretm/minecraft_tools/pull/69). Squash commit `74faec1e9a13ddd7cd06958b1fcb758b667ab2c5`. User explicitly approved merge and cleanup.
 - Respect `docs/WORKING_RULES.md`: no `dart format` for pure Dart, few focused tests, real Windows smoke, separate merge approval.
 
 ## Exact API direction
@@ -44,7 +44,7 @@ Corrections implemented without new service/class or a deprecated-API compatibil
 3. Correct all five reported analyzer lint sites (import order, control-flow braces, interpolation).
 4. Add a focused regression proving reuse of one Item in two Packages preserves both packages' ownership and separate enabled values.
 
-**Post-fix Windows proof received:** user ran `git pull --ff-only origin feature/minecraft-content-package-item-lifecycle` (`13bde44` → `af58fd2`), `dart analyze` (**No issues found**), `dart test` (**304/304 All tests passed**), `git diff --check main...HEAD` (no output), and `git status` (up to date and clean). Earlier real Modrinth + encrypted disk smoke already PASS; no need to rerun for this correction. PR #69 remains draft until separate merge approval.
+**Post-fix Windows proof received:** user ran `git pull --ff-only origin feature/minecraft-content-package-item-lifecycle` (`13bde44` → `af58fd2`), `dart analyze` (**No issues found**), `dart test` (**304/304 All tests passed**), `git diff --check main...HEAD` (no output), and `git status` (up to date and clean). Earlier real Modrinth + encrypted disk smoke already PASS; no need to rerun for this correction. PR #69 squash-merged following explicit user approval. Remaining remote/local branch deletion must be verified by Windows Git commands.
 
 ## Focused verification (Windows PowerShell)
 
