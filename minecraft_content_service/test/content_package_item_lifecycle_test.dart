@@ -87,6 +87,28 @@ void main() {
     expect(item2.version?.version, 'fabric-0.130.0');
   });
 
+  test('an item reused in another package is copied without stealing its original owner', () {
+    final item = MtnMinecraftContentPackageItem(
+      provider: 'modrinth', projectId: 'reused', title: 'Reused Mod',
+      type: MtnMinecraftContentType.mod, direct: true,
+      source: MtnMinecraftContentPackageSource.downloaded,
+      permissions: MtnMinecraftContentItemPermission.values,
+    );
+    final first = pack(items: <MtnMinecraftContentPackageItem>[item]);
+    final second = pack(items: <MtnMinecraftContentPackageItem>[...first.items]);
+    final firstItem = first.items.single;
+    final secondItem = second.items.single;
+    expect(identical(firstItem, item), isTrue);
+    expect(identical(secondItem, firstItem), isFalse);
+    expect(identical(firstItem.package, first), isTrue);
+    expect(identical(secondItem.package, second), isTrue);
+    expect(secondItem.source, MtnMinecraftContentPackageSource.downloaded);
+    firstItem.enabled = false;
+    expect(firstItem.effectiveEnabled, isFalse);
+    expect(secondItem.effectiveEnabled, isTrue);
+    expect(MtnMinecraftContentPackage.fromLocalMap(second.toLocalMap()).items.single.source, MtnMinecraftContentPackageSource.downloaded);
+  });
+
   test('type and loader compatibility comes from the selected provider version', () {
     final package = pack();
     final fabric = project('fabric-api');
