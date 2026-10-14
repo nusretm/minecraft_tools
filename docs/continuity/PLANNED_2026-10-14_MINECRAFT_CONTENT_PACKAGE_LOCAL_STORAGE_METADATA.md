@@ -4,7 +4,7 @@
 
 - Branch: `feature/minecraft-content-package-local-storage-metadata` based on clean merged CP-06 main `db5d6f69485c2612d1c682f341f02437f8d2a37c`.
 - User explicitly approved implementation of the **expanded GamePackage metadata** and encrypted local record persistence.
-- **Implementation prepared. Dart analyzer, Dart tests and Windows file-system live smoke not yet run; merge is NOT authorized.**
+- **Initial Windows run: metadata tests 3/3 PASS, disk smoke PASS, storage tests 6/7, full suite 292 passed and 1 failed, analyzer 2 info notices. Targeted corrections committed; post-fix rerun pending. Merge is NOT authorized.**
 - Scope only `minecraft_content_service/` and `docs/continuity/`. Do not run `dart format`.
 
 ## Public portable package metadata
