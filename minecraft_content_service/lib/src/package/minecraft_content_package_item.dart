@@ -118,6 +118,10 @@ class MtnMinecraftContentPackageItem {
     _package = owner;
   }
 
+  void detachFromPackage(MtnMinecraftContentPackage owner) {
+    if (identical(_package, owner)) _package = null;
+  }
+
   /// An explicit selection retains its provider identity in local drafts.
   void selectVersion(MtnMinecraftContentVersion value, String versionId) {
     if (versionId.isEmpty) throw ArgumentError.value(versionId, 'versionId');
