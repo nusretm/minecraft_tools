@@ -6,7 +6,7 @@
 - Reuse the **same existing** `MtnMinecraftContentPackageSource { local, downloaded }` enum for both `MtnMinecraftContentPackageRecord.source` and `MtnMinecraftContentPackageItem.source`. New items default `local`; portable imports mark received items `downloaded`.
 - Portable package schema stays **v2**, with no item source export. AES-GCM encrypted *local record schema v2* stores each item's source; no editor/override/protected class, no new enum, no new service.
 - UI handles read-only/append-only and item permissions using record and item source; no additional mutation enforcement engine.
-- Handoff: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_ITEM_SOURCE.md`. Windows analyzer, focused tests, full suite and real disk sample required before separate merge approval.
+- Handoff: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_ITEM_SOURCE.md`; draft PR [#68](https://github.com/nusretm/minecraft_tools/pull/68). Windows analyzer, focused tests, full suite and real disk sample required before separate merge approval.
 
 ## CP-07 — Portable Package Metadata v2 & Encrypted Local Storage — MERGED / WINDOWS VALIDATED / CLEAN (2026-10-14)
 
