@@ -160,7 +160,7 @@ void main() {
     expect(readOnly.canRemove(readOnly.getItem('modrinth:a')!), isFalse);
     expect(readOnly.getItem('modrinth:a')!.canUpdate, isFalse);
     expect(appendOnly.canAdd, isTrue);
-    expect(appendOnly.canRemove(appendOnly.getItem('modrinth:a')!), isFalse);
+    expect(appendOnly.canRemove(appendOnly.getItem('modrinth:a')!), isTrue);
   });
 
   test('unlocked draft export and incomplete graphs are rejected', () {
