@@ -10,7 +10,7 @@ import 'minecraft_content_package_record_codec.dart';
 
 /// Filesystem persistence for AES-GCM encrypted records, with no key provider.
 ///
-/// Layout: directory/<canonical-uuid>/000000000001.mtncr and later generations.
+/// Layout: `directory/UUID/000000000001.mtncr` and later generations.
 /// A new generation is staged and flushed under a temporary name and renamed
 /// to a previously unused name. Older completed generations are preserved.
 /// Interrupted temporary files are ignored on reads.
@@ -190,7 +190,7 @@ class MtnMinecraftContentPackageRecordStorage {
     try {
       return await action();
     } finally {
-      if (identical(_writeTails[recordId], tail)) _writeTails.remove(recordId);
+      if (identical(_writeTails[recordId], tail)) unawaited(_writeTails.remove(recordId));
       ready.complete();
     }
   }
