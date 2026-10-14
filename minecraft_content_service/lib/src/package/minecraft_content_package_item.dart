@@ -23,16 +23,16 @@ class MtnMinecraftContentPackageItem {
     this.source = MtnMinecraftContentPackageSource.local,
     bool enabled = true,
     Iterable<MtnMinecraftContentItemPermission> permissions = const <MtnMinecraftContentItemPermission>[],
-  }) : permissions = List<MtnMinecraftContentItemPermission>.unmodifiable(permissions),
+  }) : _permissions = List<MtnMinecraftContentItemPermission>.unmodifiable(permissions),
        _direct = direct,
        _selectedVersionId = selectedVersionId,
        _enabled = enabled {
     if (provider.isEmpty || provider.contains(':') || provider.trim() != provider) throw ArgumentError.value(provider, 'provider', 'Provider identity must be nonempty, trimmed and contain no colon.');
     if (projectId.isEmpty || projectId.trim() != projectId) throw ArgumentError.value(projectId, 'projectId', 'Project identity must be nonempty and trimmed.');
     if (title.trim().isEmpty) throw ArgumentError.value(title, 'title', 'Item title cannot be empty.');
-    if (this.permissions.toSet().length != this.permissions.length) throw ArgumentError.value(this.permissions, 'permissions', 'Duplicate permissions.');
+    if (_permissions.toSet().length != _permissions.length) throw ArgumentError.value(_permissions, 'permissions', 'Duplicate permissions.');
     if (!direct && !enabled) throw ArgumentError.value(enabled, 'enabled', 'Dependency activity is derived from active direct roots.');
-    if (!direct && this.permissions.any((value) => value == MtnMinecraftContentItemPermission.enable || value == MtnMinecraftContentItemPermission.disable)) throw ArgumentError.value(this.permissions, 'permissions', 'Dependencies cannot have manual enable/disable permissions.');
+    if (!direct && _permissions.any((value) => value == MtnMinecraftContentItemPermission.enable || value == MtnMinecraftContentItemPermission.disable)) throw ArgumentError.value(_permissions, 'permissions', 'Dependencies cannot have manual enable/disable permissions.');
   }
 
   /// Portable imports always represent downloaded content on this device.
@@ -109,7 +109,12 @@ class MtnMinecraftContentPackageItem {
   MtnMinecraftContentPackage get package => _package ?? (throw StateError('Item is not attached to a package.'));
   String? _selectedVersionId;
   String? get selectedVersionId => _selectedVersionId;
-  final List<MtnMinecraftContentItemPermission> permissions;
+  final List<MtnMinecraftContentItemPermission> _permissions;
+  List<MtnMinecraftContentItemPermission> get permissions => direct
+      ? _permissions
+      : List<MtnMinecraftContentItemPermission>.unmodifiable(
+          _permissions.where((value) => value != MtnMinecraftContentItemPermission.enable && value != MtnMinecraftContentItemPermission.disable),
+        );
   bool _enabled;
 
   /// Package ownership is wired by the package, never serialized.
