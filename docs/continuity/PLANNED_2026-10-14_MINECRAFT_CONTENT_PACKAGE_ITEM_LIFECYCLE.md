@@ -4,7 +4,7 @@
 
 - User approved implementation in conversation following explicit API design review.
 - Branch `feature/minecraft-content-package-item-lifecycle` from CP-08 merged, clean `main` at `4df323c56b17f76730734c9d0335bc56f05cfa76`.
-- **INITIAL WINDOWS RUN: live Modrinth + encrypted local draft PASS; CP-09 focused tests 6/6 PASS. Analyzer and full suite FAILED on stale API tests and reused-item package ownership. Corrections committed afterward; post-fix Windows rerun PENDING. Not merged.**
+- **READY FOR MERGE REVIEW — Windows post-fix `dart analyze`: No issues found; `dart test`: 304/304 PASS. Earlier real Modrinth + encrypted local draft smoke PASS; `git diff --check`: clean; feature tracking origin and working tree clean. Not merged; separate explicit merge approval required.**
 - Draft PR [#69](https://github.com/nusretm/minecraft_tools/pull/69). Merge requires a separate explicit approval after real Windows verification.
 - Respect `docs/WORKING_RULES.md`: no `dart format` for pure Dart, few focused tests, real Windows smoke, separate merge approval.
 
@@ -44,7 +44,7 @@ Corrections implemented without new service/class or a deprecated-API compatibil
 3. Correct all five reported analyzer lint sites (import order, control-flow braces, interpolation).
 4. Add a focused regression proving reuse of one Item in two Packages preserves both packages' ownership and separate enabled values.
 
-**Post-fix tests and analyzer are not yet run by the owner.** PR #69 remains draft; no merge approval has been given.
+**Post-fix Windows proof received:** user ran `git pull --ff-only origin feature/minecraft-content-package-item-lifecycle` (`13bde44` → `af58fd2`), `dart analyze` (**No issues found**), `dart test` (**304/304 All tests passed**), `git diff --check main...HEAD` (no output), and `git status` (up to date and clean). Earlier real Modrinth + encrypted disk smoke already PASS; no need to rerun for this correction. PR #69 remains draft until separate merge approval.
 
 ## Focused verification (Windows PowerShell)
 
