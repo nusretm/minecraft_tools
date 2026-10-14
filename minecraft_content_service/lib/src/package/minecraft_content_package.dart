@@ -468,6 +468,10 @@ class MtnMinecraftContentPackage {
     if (previousRoots.length != candidateRoots.length || !previousRoots.containsAll(candidateRoots)) return false;
 
     final previous = <String, MtnMinecraftContentPackageItem>{for (final item in _items) item.key: item};
+    final desiredItemKeys = <String>{
+      for (final entry in desired.versions)
+        if (_providerIdentity(entry.version) case final identity?) '${identity.$1}:${identity.$2}',
+    };
     final currentLocks = <String, MtnMinecraftContentPackageLockedVersion>{
       for (final entry in _lock?.versions ?? const <MtnMinecraftContentPackageLockedVersion>[]) entry.itemKey: entry,
     };
@@ -493,17 +497,15 @@ class MtnMinecraftContentPackage {
       createdAt: createdAt, updatedAt: updatedAt, revision: revision, mutationPolicy: mutationPolicy,
       desired: desired, selectedFilesByVersionKey: selectedFilesByVersionKey,
       permissionsByItemKey: <String, List<MtnMinecraftContentItemPermission>>{
-        for (final item in _items) item.key: item.permissions,
+        for (final item in _items)
+          if (desiredItemKeys.contains(item.key)) item.key: item.permissions,
       },
     );
 
     final nextItems = <MtnMinecraftContentPackageItem>[];
     for (final item in built.items) {
       final retained = previous[item.key];
-      final next = retained ?? item;
-      if (retained == null) {
-        next.attachToPackage(this);
-      }
+      final next = retained ?? item.attachToPackage(this);
       nextItems.add(next);
     }
     for (final item in _items) {
