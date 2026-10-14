@@ -54,7 +54,7 @@ class MtnMinecraftContentPackage {
     } else if (loaderVersion == null || loaderVersion!.trim().isEmpty || loaderVersion!.trim() != loaderVersion) {
       throw ArgumentError.value(loaderVersion, 'loaderVersion', 'Modded packages require a nonempty, trimmed loader version.');
     }
-    if (serverAddress != null && (serverAddress!.trim().isEmpty || serverAddress!.trim() != serverAddress || serverAddress!.contains(RegExp(r'\\s')))) {
+    if (serverAddress != null && (serverAddress!.trim().isEmpty || serverAddress!.trim() != serverAddress || serverAddress!.contains(RegExp(r'\s')))) {
       throw ArgumentError.value(serverAddress, 'serverAddress', 'Server address must be nonempty and contain no whitespace.');
     }
     final byKey = <String, MtnMinecraftContentPackageItem>{};
