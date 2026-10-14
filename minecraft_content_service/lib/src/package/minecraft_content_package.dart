@@ -2,13 +2,13 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import '../model/minecraft_content_models.dart';
+import '../provider/minecraft_content_provider_models.dart';
 import '../service/minecraft_content_service.dart';
 import 'minecraft_content_package_item.dart';
 import 'minecraft_content_package_lock.dart';
 import 'minecraft_content_package_metadata_cache.dart';
 import 'minecraft_content_package_record.dart';
 import 'minecraft_content_package_source.dart';
-import '../provider/minecraft_content_provider_models.dart';
 
 enum MtnMinecraftContentPackageMutationPolicy { none, readOnly, appendOnly }
 
@@ -68,9 +68,6 @@ class MtnMinecraftContentPackage {
       if (byKey.containsKey(item.key)) throw ArgumentError.value(item.key, 'items', 'Duplicate provider/project identity.');
       byKey[item.key] = item;
     }
-    for (final item in this.items) {
-      item.attachToPackage(this);
-    }
     final keys = byKey.keys.toSet();
     if (_dependencyEdges.any((edge) => !keys.contains(edge.sourceKey) || !keys.contains(edge.targetKey))) {
       throw ArgumentError('Dependency edges must refer to package items.');
@@ -91,6 +88,11 @@ class MtnMinecraftContentPackage {
         }
       }
       if (!byKey.keys.every(active.contains)) throw ArgumentError('Locked dependencies must be reachable from a direct root.');
+    }
+    // Bind only after validating the complete graph. An Item already used by
+    // another Package is copied rather than reassigned to this Package.
+    for (var index = 0; index < _items.length; index++) {
+      _items[index] = _items[index].attachToPackage(this);
     }
   }
 
@@ -316,7 +318,9 @@ class MtnMinecraftContentPackage {
     if (existing != null) {
       if (existing.direct || _protectedItem(existing) ||
           (existing.selectedVersionId != null && existing.selectedVersionId != versionId) ||
-          (_lock != null && _lock!.versions.any((entry) => entry.itemKey == key && entry.versionId != versionId))) return false;
+          (_lock != null && _lock!.versions.any((entry) => entry.itemKey == key && entry.versionId != versionId))) {
+        return false;
+      }
       _invalidateLock();
       existing.setDirect(true);
       existing.selectVersion(version, versionId);
@@ -334,7 +338,9 @@ class MtnMinecraftContentPackage {
     item.selectVersion(version, versionId);
     for (final dependency in version.dependencies) {
       if (dependency.type != MtnMinecraftContentDependencyType.required &&
-          dependency.type != MtnMinecraftContentDependencyType.embeddedLibrary) continue;
+          dependency.type != MtnMinecraftContentDependencyType.embeddedLibrary) {
+        continue;
+      }
       final depProvider = dependency.provider;
       final depProject = dependency.providerContentId;
       if (depProvider == null || depProject == null || getItem('$depProvider:$depProject') == null) continue;
@@ -380,7 +386,7 @@ class MtnMinecraftContentPackage {
         for (final version in candidates.versions) {
           if (!_compatible(version) || version.publishedAt == null || !version.publishedAt!.isAfter(published)) continue;
           final identity = _providerIdentity(version);
-          if (identity == null || (identity.$1 + ':' + identity.$2) != item.key) continue;
+          if (identity == null || '${identity.$1}:${identity.$2}' != item.key) continue;
           if (next == null || version.publishedAt!.isAfter(next.publishedAt!)) next = version;
         }
         if (next != null) _updateList[item] = next;
