@@ -88,7 +88,7 @@ void main() {
     final folder = Directory(p.join(temp.path, 'storage', recordId));
     expect(await File(p.join(folder.path, '000000000001.mtncr')).exists(), isTrue);
     expect(await File(p.join(folder.path, '000000000002.mtncr')).exists(), isTrue);
-    await File(p.join(folder.path, '.000000000003.mtncr.abandoned.tmp')).writeAsString('incomplete');
+    await File(p.join(folder.path, '.000000000003.mtncr.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.tmp')).writeAsString('incomplete');
 
     final restored = await storage.load(recordId, key: key);
     expect(restored!.package.title, 'Draft 2');
