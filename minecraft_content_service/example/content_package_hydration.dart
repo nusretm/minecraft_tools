@@ -8,8 +8,8 @@ import 'package:minecraft_content_service/minecraft_content_service.dart';
 ///
 /// No download, installation, revision change, or "latest" version selection.
 Future<void> main(List<String> args) async {
-  if (args.length != 3 || args.any((value) => value.trim().isEmpty)) {
-    stderr.writeln('Usage: dart run example/content_package_hydration.dart <project-id> <exact-version-id> <minecraft-version>');
+  if ((args.length != 3 && args.length != 4) || args.any((value) => value.trim().isEmpty)) {
+    stderr.writeln('Usage: dart run example/content_package_hydration.dart PROJECT_ID EXACT_VERSION_ID MINECRAFT_VERSION [LOADER_VERSION]');
     exitCode = 64;
     return;
   }
@@ -17,6 +17,7 @@ Future<void> main(List<String> args) async {
   final projectId = args[0];
   final versionId = args[1];
   final minecraftVersion = args[2];
+  final loaderVersion = args.length == 4 ? args[3] : null;
   final provider = MtnMinecraftContentProviderModrinth(userAgent: 'MinecraftTools-ContentPackageHydration/1.0');
   final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]);
 
@@ -52,11 +53,24 @@ Future<void> main(List<String> args) async {
       hashValue: selectedHash?.value,
       size: selected.size,
     );
+    final selectedLoader = providerVersion.modLoaders.first;
+    if (selectedLoader != MtnMinecraftModLoaderType.vanilla && loaderVersion == null) {
+      throw StateError('Provide the exact Minecraft loader build as a fourth argument for a modded package.');
+    }
+    if (selectedLoader == MtnMinecraftModLoaderType.vanilla && loaderVersion != null) {
+      throw StateError('Vanilla packages do not accept a loader version.');
+    }
+    final now = DateTime.now().toUtc();
     final original = MtnMinecraftContentPackage(
       id: 'smoke-$projectId',
       title: '${providerVersion.content.name} exact-version smoke',
       minecraftVersion: minecraftVersion,
-      modLoader: providerVersion.modLoaders.first,
+      modLoader: selectedLoader,
+      loaderVersion: loaderVersion,
+      ramMiB: 4096,
+      ownerName: 'Metadata Smoke Example',
+      createdAt: now,
+      updatedAt: now,
       items: <MtnMinecraftContentPackageItem>[item],
       lock: MtnMinecraftContentPackageLock(
         versions: <MtnMinecraftContentPackageLockedVersion>[locked],
