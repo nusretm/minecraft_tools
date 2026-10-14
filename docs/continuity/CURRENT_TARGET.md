@@ -1,11 +1,11 @@
 # Minecraft Tools — Current Target
 
-## CP-10 — Package Dependency Lock Rebuild & Remote Revision Candidate — IMPLEMENTED / WINDOWS VALIDATION PENDING (2026-10-14)
+## CP-10 — Package Dependency Lock Rebuild & Remote Revision Candidate — WINDOWS VALIDATED / ANALYZER FIX RECHECK PENDING (2026-10-14)
 
-- User approved linking the existing dependency resolver / multi-root install planner / Package Builder into `MtnMinecraftContentPackage`. Feature branch: `feature/minecraft-content-package-dependency-lock-rebuild`. Not yet merged. Windows analyzer/tests/live smoke pending.
+- User approved linking the existing dependency resolver / multi-root install planner / Package Builder into `MtnMinecraftContentPackage`. Feature branch: `feature/minecraft-content-package-dependency-lock-rebuild`. Not yet merged. User ran Windows validation: focused CP-10 4/4 PASS; full Dart suite **308/308 PASS**; live Modrinth exact-version portable lock smoke PASS. Initial analyzer returned one info-only `unnecessary_brace_in_string_interps` warning; corrected in commit `2badf18`, **post-fix analyzer pending**.
 - `await package.resolveDependencies(service)` preserves exact selected roots and returns existing desired state, including unresolved/conflicting edges and optional selection. `package.rebuildLock(desired, selectedFilesByVersionKey: ...)` validates a complete exact lock before changing Package, keeps prior item identity/origin/enable/permissions and removes orphan dependencies.
 - `package.revisionNum` is an alias of current `revision`; transient downloaded-only `package.newRevisionNum` and `package.updateAvail` expose a remote publisher's *newer* revision. Existing Package Record is origin/remoteId authority. Content Server polling, intervals, and applying a published package revision are deferred until an actual server API exists; no fake endpoint/timer or schema change.
-- Tests added for shared required dependency, optional selection, atomic file failure, downloaded revision candidate; live Modrinth Fabric API exact version + portable lock example added, **not yet run**.
+- Tests: 4/4 focused PASS; full suite 308/308 PASS. Live Modrinth Fabric API `0.141.6+1.21.11` portable lock smoke PASS, with 1 root, 1 item, **0 dependency edges**; multi-root/shared dependency behavior is covered by focused tests, not by this live example. Diff check and working tree clean before lint-only correction.
 - CP-10 handoff: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_DEPENDENCY_LOCK_REBUILD.md`. No merge without explicit approval.
 
 ## CP-09 — Provider-Selected Package Item Lifecycle — MERGED / WINDOWS VALIDATED (2026-10-14)
