@@ -1,6 +1,20 @@
 # Minecraft Tools — Current Target
 
-## CP-08 — Shared Package / Item Source — IN PROGRESS (2026-10-14)
+## CP-09 — Provider-Selected Package Item Lifecycle — FEATURE / WINDOWS VALIDATION PENDING (2026-10-14)
+
+- Feature branch `feature/minecraft-content-package-item-lifecycle` based on merged clean CP-08 `main` at `4df323c`. Implementation authored; **not Windows-validated, not merged**.
+- `package.add(version)` consumes a provider-returned `MtnMinecraftContentVersion`; `package.remove(item)` manages direct roots without discarding still-required dependencies.
+- Item owns `enabled` preference and graph-computed `effectiveEnabled`; Package owns transient `updateList` and provider update checks. Attached Package/Record relation supplies origin-aware permission checks.
+- Local drafts preserve selected version IDs and existing locked dependency edges across edits; unresolved dependencies and exact artifact choices still require existing planning before portable export. No new editor, policy manager, download service or Content Server.
+- Handoff: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_ITEM_LIFECYCLE.md`. Pending Windows `dart analyze`, focused/full tests, live Modrinth Fabric API add + encrypted disk smoke, clean `git diff --check`/status. Merge separately approved.
+
+## CP-08 — Shared Package / Item Source — MERGED / WINDOWS VALIDATED / CLEAN (2026-10-14)
+
+- PR [#68](https://github.com/nusretm/minecraft_tools/pull/68) squash merged to `main` as `4df323c56b17f76730734c9d0335bc56f05cfa76`.
+- User confirmed item-source focused 4/4, codec 5/5, storage 7/7, full suite **297/297** PASS, real encrypted local source disk smoke PASS, post-fix analyzer clean; deleted local and remote feature branches and confirmed clean `main == origin/main`.
+- CP-08 continuity: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_ITEM_SOURCE.md`.
+
+## CP-08 historical in-progress checkpoint (superseded by merge closure above)
 
 - **READY FOR MERGE — Windows focused tests and real encrypted disk smoke PASS; full suite 297/297 PASS; post-fix `dart analyze` No issues found, `git diff --check` clean, working tree clean. User explicitly approved PR #68 squash merge.** Active branch `feature/minecraft-content-package-item-source`, based on clean CP-07 main `6b5aed8`.
 - Reuse the **same existing** `MtnMinecraftContentPackageSource { local, downloaded }` enum for both `MtnMinecraftContentPackageRecord.source` and `MtnMinecraftContentPackageItem.source`. New items default `local`; portable imports mark received items `downloaded`.
