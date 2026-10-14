@@ -4,7 +4,7 @@
 
 - User explicitly rejected an editor service, override object, item-origin enum, and protected boolean. Approved reusing the existing `MtnMinecraftContentPackageSource { local, downloaded }` for `MtnMinecraftContentPackageRecord.source` and `MtnMinecraftContentPackageItem.source`.
 - Branch: `feature/minecraft-content-package-item-source`, based on merged/clean CP-07 main `6b5aed8cc7b6cd8a6f9af0c0bae3dbe303b49a66`.
-- **Implementation authored; Windows Dart analyzer, tests and real disk example not yet run. Not merged.**
+- **Windows runtime/tests PASS: focused item-source 4/4, AES-GCM codec 5/5, storage 7/7, complete suite 297/297, live encrypted disk smoke PASS, diff and working tree clean. Initial analyzer reported one strict raw-type warning in a test; follow-up fix committed, clean analyzer rerun pending. Not merged.**
 - No extra editor/override/protected classes, no new enum, no UI implementation and no Content Server key/publishing integration.
 
 ## Contract
@@ -22,6 +22,22 @@
 - `MtnMinecraftContentPackageItem.toLocalMap()/fromLocalMap()` and `MtnMinecraftContentPackage.toLocalMap()/fromLocalMap()` persist each item's source. Encryption remains exclusively the existing AES-256-GCM `MtnMinecraftContentPackageRecordCodec` and `MtnMinecraftContentPackageRecordStorage`; no new persistence layer.
 - Local `MtnMinecraftContentPackageRecord` schema incremented **v1 → v2** because encrypted records now require explicit item sources. Earlier local record schema is intentionally not auto-migrated before release. **This does not change** the AES-GCM envelope format, package portable schema or content server protocol.
 - UI remains responsible for combining record source + item source + `mutationPolicy` + existing `permissions`. No new automatic mutation or policy engine; no overrides/snapshots. Existing `MtnMinecraftContentPackageItemState` remains the unrelated hydration state.
+
+## Initial Windows validation evidence (2026-10-14)
+
+User-provided PowerShell run at feature branch before the follow-up test lint fix:
+
+- `dart pub get`: **PASS**; dependency update notices only.
+- `dart analyze`: **1 strict_raw_type warning** at `test/content_package_item_source_test.dart:103`: `isA<List>()` omitted type arguments. Corrected to `isA<List<Object?>>()` in subsequent commit; **post-fix analyzer rerun pending**.
+- Focused item-source tests: **4/4 PASS**.
+- Existing AES-GCM record codec tests: **5/5 PASS**.
+- Existing encrypted record storage tests: **7/7 PASS**.
+- Full `dart test`: **297/297 PASS**.
+- `dart run example/content_package_item_source.dart`: **live Windows filesystem PASS** — downloaded item and locally added item retained distinct sources after encrypted disk reload.
+- `git diff --check main...HEAD`: **clean**.
+- `git status`: up to date with remote, clean working tree before follow-up commit.
+
+**Follow-up:** Only the test's raw generic type warning was corrected. User must pull the fix and rerun analyzer/diff/status before calling the branch completely validated. PR #68 remains draft, and merging requires separate approval.
 
 ## Validation gate (Windows PowerShell)
 
