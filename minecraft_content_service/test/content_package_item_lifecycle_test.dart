@@ -192,4 +192,36 @@ void main() {
     expect(package.remove(item), isTrue);
     expect(package.updateList, isEmpty);
   });
+  test('local dependency promotion and demotion preserves one item and valid serialization', () {
+    final root = MtnMinecraftContentPackageItem(
+      provider: 'modrinth', projectId: 'root', title: 'Root', type: MtnMinecraftContentType.mod,
+      direct: true, permissions: MtnMinecraftContentItemPermission.values,
+    );
+    final dep = MtnMinecraftContentPackageItem(
+      provider: 'modrinth', projectId: 'shared', title: 'Shared', type: MtnMinecraftContentType.mod,
+      direct: false,
+    );
+    final locked = MtnMinecraftContentPackageLock(
+      versions: <MtnMinecraftContentPackageLockedVersion>[
+        MtnMinecraftContentPackageLockedVersion(itemKey: 'modrinth:root', versionId: 'root-v1', fileName: 'root.jar', fileId: 'root-file'),
+        MtnMinecraftContentPackageLockedVersion(itemKey: 'modrinth:shared', versionId: 'shared-v1', fileName: 'shared.jar', fileId: 'shared-file'),
+      ],
+      edges: <MtnMinecraftContentPackageLockedEdge>[
+        MtnMinecraftContentPackageLockedEdge(sourceKey: 'modrinth:root', targetKey: 'modrinth:shared', type: MtnMinecraftContentDependencyType.required),
+      ],
+    );
+    final package = pack(items: <MtnMinecraftContentPackageItem>[root, dep], lock: locked);
+    expect(package.add(release(project('shared'), 'shared-v1')), isTrue);
+    expect(package.items.length, 2);
+    expect(dep.direct, isTrue);
+    expect(dep.canDisable, isTrue);
+    expect(package.remove(dep), isTrue);
+    expect(dep.direct, isFalse);
+    expect(dep.effectiveEnabled, isTrue);
+    expect(dep.toLocalMap()['direct'], isFalse);
+    expect(MtnMinecraftContentPackage.fromLocalMap(package.toLocalMap()).getItem(dep.key)!.direct, isFalse);
+    root.enabled = false;
+    expect(dep.effectiveEnabled, isFalse);
+  });
+
 }
