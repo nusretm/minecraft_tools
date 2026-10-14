@@ -54,7 +54,8 @@ Future<void> main(List<String> args) async {
 
     final local = MtnMinecraftContentPackageRecord(package: package, source: MtnMinecraftContentPackageSource.local);
     final storage = MtnMinecraftContentPackageRecordStorage(directory: Directory('${root.path}${Platform.pathSeparator}records'));
-    final key = Uint8List.fromList(List<int>.generate(32, (_) => Random.secure().nextInt(256)));
+    final random = Random.secure();
+    final key = Uint8List.fromList(List<int>.generate(32, (_) => random.nextInt(256)));
     const recordId = '06d12a88-c7af-4de5-aed4-4828451d05b7';
     await storage.save(recordId, local, key: key, keyId: 'smoke-only');
     final reopened = await storage.load(recordId, key: key);
