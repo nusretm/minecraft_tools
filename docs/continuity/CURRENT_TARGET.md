@@ -1,12 +1,12 @@
 # Minecraft Tools — Current Target
 
-## CP-09 — Provider-Selected Package Item Lifecycle — FEATURE / WINDOWS VALIDATION PENDING (2026-10-14)
+## CP-09 — Provider-Selected Package Item Lifecycle — WINDOWS FIXES / RECHECK PENDING (2026-10-14)
 
-- Feature branch `feature/minecraft-content-package-item-lifecycle` based on merged clean CP-08 `main` at `4df323c`. Implementation authored; **not Windows-validated, not merged**.
+- Feature branch `feature/minecraft-content-package-item-lifecycle` based on merged clean CP-08 `main` at `4df323c`. Initial Windows run completed: **CP-09 focused 6/6 PASS and real Modrinth Fabric API + encrypted disk smoke PASS**. Analyzer had 9 findings and full suite failed at 288 passing / 4 failures; corrective commits pushed to feature. **Post-fix analyzer/full suite pending, not merged**.
 - `package.add(version)` consumes a provider-returned `MtnMinecraftContentVersion`; `package.remove(item)` manages direct roots without discarding still-required dependencies.
 - Item owns `enabled` preference and graph-computed `effectiveEnabled`; Package owns transient `updateList` and provider update checks. Attached Package/Record relation supplies origin-aware permission checks.
 - Local drafts preserve selected version IDs and existing locked dependency edges across edits; unresolved dependencies and exact artifact choices still require existing planning before portable export. No new editor, policy manager, download service or Content Server.
-- Handoff: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_ITEM_LIFECYCLE.md`, draft PR [#69](https://github.com/nusretm/minecraft_tools/pull/69). Pending Windows `dart analyze`, focused/full tests, live Modrinth Fabric API add + encrypted disk smoke, clean `git diff --check`/status. Merge separately approved.
+- Handoff: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_ITEM_LIFECYCLE.md`, draft PR [#69](https://github.com/nusretm/minecraft_tools/pull/69). Initial live Modrinth and encrypted disk checks PASS. Fixed four stale test API calls, two cross-package ownership failures and five lint warnings. A post-fix Windows `dart analyze`, focused/full tests, `git diff --check` and clean status are still required. Merge requires separate explicit approval.
 
 ## CP-08 — Shared Package / Item Source — MERGED / WINDOWS VALIDATED / CLEAN (2026-10-14)
 
