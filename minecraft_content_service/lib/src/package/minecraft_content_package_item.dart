@@ -109,7 +109,7 @@ class MtnMinecraftContentPackageItem {
   MtnMinecraftContentPackage get package => _package ?? (throw StateError('Item is not attached to a package.'));
   String? _selectedVersionId;
   String? get selectedVersionId => _selectedVersionId;
-  final List<MtnMinecraftContentItemPermission> _permissions;
+  List<MtnMinecraftContentItemPermission> _permissions;
   List<MtnMinecraftContentItemPermission> get permissions => direct
       ? _permissions
       : List<MtnMinecraftContentItemPermission>.unmodifiable(
@@ -144,7 +144,11 @@ class MtnMinecraftContentPackageItem {
 
   void setDirect(bool value) {
     _direct = value;
-    if (!value) _enabled = true;
+    if (!value) {
+      _enabled = true;
+    } else if (source == MtnMinecraftContentPackageSource.local && !_permissions.contains(MtnMinecraftContentItemPermission.enable)) {
+      _permissions = List<MtnMinecraftContentItemPermission>.unmodifiable(<MtnMinecraftContentItemPermission>{..._permissions, MtnMinecraftContentItemPermission.enable, MtnMinecraftContentItemPermission.disable, MtnMinecraftContentItemPermission.remove, MtnMinecraftContentItemPermission.update});
+    }
   }
 
   String get key => '$provider:$projectId';
@@ -162,14 +166,16 @@ class MtnMinecraftContentPackageItem {
     if (owner == null) return directEnabled;
     if (directEnabled) return true;
     final visited = <String>{};
+    final outgoing = <String, List<String>>{};
+    for (final edge in owner.dependencyEdges) {
+      outgoing.putIfAbsent(edge.sourceKey, () => <String>[]).add(edge.targetKey);
+    }
     final queue = <String>[for (final item in owner.items) if (item.directEnabled) item.key];
     for (var index = 0; index < queue.length; index++) {
       final key = queue[index];
       if (!visited.add(key)) continue;
       if (key == this.key) return true;
-      for (final edge in owner.dependencyEdges) {
-        if (edge.sourceKey == key) queue.add(edge.targetKey);
-      }
+      queue.addAll(outgoing[key] ?? const <String>[]);
     }
     return false;
   }
