@@ -2,11 +2,11 @@
 
 ## CP-07 — Portable Package Metadata v2 & Encrypted Local Storage (2026-10-14)
 
-- **Active — implementation authored, Windows analyzer/tests and real disk smoke pending.** Branch `feature/minecraft-content-package-local-storage-metadata`, based on merged CP-06 `main` at `db5d6f6`.
+- **Active — metadata v2 tests 3/3 PASS, real Windows disk smoke PASS; first storage suite 6/7, full suite 292 PASS + 1 FAIL, analyzer 2 info notices; narrow fixes committed, post-fix rerun pending.** Branch `feature/minecraft-content-package-local-storage-metadata`, based on merged CP-06 `main` at `db5d6f6`.
 - Portable package schema v2: loader version, RAM MiB, optional server address, owner display name, UTC created/updated dates; existing Minecraft version, mod loader, title, Markdown description, revision, lock, item permissions remain. The schema 1 wire format is intentionally not imported during pre-release.
 - Existing AES-GCM record codec remains unchanged; new filesystem storage uses per-record canonical UUID directories, flushed temporary writes and append-only completed generation files, verified exact keyId selection, no silent fallback on tampered newest generation.
 - Storage never fetches an encryption key, mutates publish revisions or grants publisher rights. No external key provider, UI or download integration.
-- Continuity: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_LOCAL_STORAGE_METADATA.md`. Requires Windows evidence and separate merge approval.
+- Continuity: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_LOCAL_STORAGE_METADATA.md`. Draft PR [#67](https://github.com/nusretm/minecraft_tools/pull/67). The remaining UUID failure was caused by asserting an asynchronous rather than synchronous throw; the assertion and analyzer info notices were fixed. Requires clean post-fix Windows evidence and separate merge approval.
 
 ## CP-06 — Encrypted Record & Portable Lock Builder — MERGED / CLEAN (2026-10-14)
 
