@@ -30,7 +30,13 @@ class MtnMinecraftContentPackage {
     required this.title,
     required this.minecraftVersion,
     required this.modLoader,
+    required this.ramMiB,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.ownerName,
     required Iterable<MtnMinecraftContentPackageItem> items,
+    this.loaderVersion,
+    this.serverAddress,
     this.description,
     this.iconUrl,
     this.revision = 1,
@@ -39,6 +45,18 @@ class MtnMinecraftContentPackage {
   }) : items = List<MtnMinecraftContentPackageItem>.unmodifiable(items) {
     if (id.trim().isEmpty || title.trim().isEmpty || minecraftVersion.trim().isEmpty) throw ArgumentError('Package ID, title and Minecraft version cannot be empty.');
     if (revision < 1) throw ArgumentError.value(revision, 'revision', 'Revision must be positive.');
+    if (ramMiB < 1) throw ArgumentError.value(ramMiB, 'ramMiB', 'RAM must be positive MiB.');
+    if (ownerName.trim().isEmpty) throw ArgumentError.value(ownerName, 'ownerName', 'Owner name cannot be blank.');
+    if (!createdAt.isUtc || !updatedAt.isUtc) throw ArgumentError('Package timestamps must be UTC.');
+    if (updatedAt.isBefore(createdAt)) throw ArgumentError('updatedAt cannot be earlier than createdAt.');
+    if (modLoader == MtnMinecraftModLoaderType.vanilla) {
+      if (loaderVersion != null) throw ArgumentError.value(loaderVersion, 'loaderVersion', 'Vanilla must not have a loader version.');
+    } else if (loaderVersion == null || loaderVersion!.trim().isEmpty || loaderVersion!.trim() != loaderVersion) {
+      throw ArgumentError.value(loaderVersion, 'loaderVersion', 'Modded packages require a nonempty, trimmed loader version.');
+    }
+    if (serverAddress != null && (serverAddress!.trim().isEmpty || serverAddress!.trim() != serverAddress || serverAddress!.contains(RegExp(r'\\s')))) {
+      throw ArgumentError.value(serverAddress, 'serverAddress', 'Server address must be nonempty and contain no whitespace.');
+    }
     final byKey = <String, MtnMinecraftContentPackageItem>{};
     for (final item in this.items) {
       if (byKey.containsKey(item.key)) throw ArgumentError.value(item.key, 'items', 'Duplicate provider/project identity.');
@@ -83,6 +101,17 @@ class MtnMinecraftContentPackage {
     final minecraftVersion = map['minecraftVersion'];
     if (id is! String || title is! String || minecraftVersion is! String) throw const FormatException('Invalid Content Package identity or Minecraft version.');
     if (map['revision'] is! int) throw const FormatException('Package revision must be an integer.');
+    if (map['ramMiB'] is! int || map['ownerName'] is! String || map['createdAt'] is! String || map['updatedAt'] is! String) {
+      throw const FormatException('Package owner, RAM and UTC lifecycle timestamps are required.');
+    }
+    if (map['loaderVersion'] != null && map['loaderVersion'] is! String) throw const FormatException('Invalid loader version.');
+    if (map['serverAddress'] != null && map['serverAddress'] is! String) throw const FormatException('Invalid server address.');
+    DateTime parseUtc(String key) {
+      final raw = map[key] as String;
+      final value = DateTime.tryParse(raw);
+      if (value == null || !value.isUtc || !raw.endsWith('Z')) throw FormatException('Package $key must be an ISO-8601 UTC date ending in Z.');
+      return value.toUtc();
+    }
     MtnMinecraftModLoaderType? modLoader;
     for (final candidate in MtnMinecraftModLoaderType.values) {
       if (candidate.name == map['modLoader']) modLoader = candidate;
@@ -107,6 +136,12 @@ class MtnMinecraftContentPackage {
       iconUrl: iconUrl as String?,
       minecraftVersion: minecraftVersion,
       modLoader: modLoader,
+      loaderVersion: map['loaderVersion'] as String?,
+      ramMiB: map['ramMiB'] as int,
+      serverAddress: map['serverAddress'] as String?,
+      ownerName: map['ownerName'] as String,
+      createdAt: parseUtc('createdAt'),
+      updatedAt: parseUtc('updatedAt'),
       revision: map['revision'] as int,
       mutationPolicy: policy,
       items: contents.map((value) {
@@ -117,7 +152,7 @@ class MtnMinecraftContentPackage {
     );
   }
 
-  static const int currentSchemaVersion = 1;
+  static const int currentSchemaVersion = 2;
 
   final String id;
   final String title;
@@ -125,6 +160,12 @@ class MtnMinecraftContentPackage {
   final String? iconUrl;
   final String minecraftVersion;
   final MtnMinecraftModLoaderType modLoader;
+  final String? loaderVersion;
+  final int ramMiB;
+  final String? serverAddress;
+  final String ownerName;
+  final DateTime createdAt;
+  final DateTime updatedAt;
   final int revision;
   final MtnMinecraftContentPackageMutationPolicy mutationPolicy;
   final List<MtnMinecraftContentPackageItem> items;
@@ -247,6 +288,12 @@ class MtnMinecraftContentPackage {
       'revision': revision,
       'minecraftVersion': minecraftVersion,
       'modLoader': modLoader.name,
+      if (loaderVersion != null) 'loaderVersion': loaderVersion,
+      'ramMiB': ramMiB,
+      if (serverAddress != null) 'serverAddress': serverAddress,
+      'ownerName': ownerName,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
       'mutationPolicy': mutationPolicy.name,
       'items': (items.toList()..sort((a, b) => a.key.compareTo(b.key))).map((item) => item.toMap()).toList(growable: false),
       if (graph != null) 'lock': graph.toMap(),
