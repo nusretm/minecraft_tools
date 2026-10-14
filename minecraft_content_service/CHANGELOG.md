@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — CP-09 provider-selected package item lifecycle (Windows validation pending)
+
+- Add selected provider content versions directly using `package.add(version)`; retain the exact selected provider version ID in encrypted local drafts and validate game/mod-loader compatibility.
+- Add package-aware `item.enabled` silent permission-checked setter and item-owned graph-derived `effectiveEnabled`, including shared/cyclic dependencies.
+- Add `package.remove(item)`, local direct/dependency promotion/demotion, read-only/append-only item-source policy handling, and read-only runtime `package.updateList` populated by `checkUpdates(service)`.
+- Preserve prior locked provider version IDs and installed dependency edges after graph-changing edits; new draft content remains unpublishable until dependency resolution and exact-lock rebuilding.
+- Keep portable schema v2, encrypted record schema v2 and AES envelope unchanged; no new edit manager, overrides, content download or publication code.
+- Focused tests and real Modrinth + encrypted local record smoke added; Windows analyzer/runtime evidence pending.
+
 ## Unreleased — CP-08 shared package/item source (Windows validation pending)
 
 - Reuse existing `MtnMinecraftContentPackageSource { local, downloaded }` for both encrypted local Package Record and Content Package Item, without introducing editor/override/protected models.
