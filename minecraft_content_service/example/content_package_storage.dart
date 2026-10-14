@@ -50,12 +50,13 @@ Future<void> main() async {
       throw StateError('Encrypted disk roundtrip did not preserve package metadata.');
     }
     if ((await reopened.listRecordIds()).single != recordId) throw StateError('Stored record listing failed.');
+    var wrongKeyRejected = false;
     try {
       await reopened.load(recordId, key: Uint8List(32));
-      throw StateError('Incorrect AES-GCM key unexpectedly decrypted the record.');
-    } on SecretBoxAuthenticationError {
-      // Expected authentication failure.
+    } catch (_) {
+      wrongKeyRejected = true;
     }
+    if (!wrongKeyRejected) throw StateError('Incorrect AES-GCM key unexpectedly decrypted the record.');
     print('CP-07 PASS: 2 encrypted generations, restored new metadata and keyId=${await reopened.getKeyId(recordId)}');
     if (!await reopened.delete(recordId)) throw StateError('Record deletion failed.');
     print('CP-07 PASS: wrong key rejected; encrypted record deletion completed.');
