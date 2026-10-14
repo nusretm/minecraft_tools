@@ -59,9 +59,8 @@ void main() {
     final ids = await storage.listRecordIds();
     expect(ids, <String>[recordId]);
     expect(await storage.getKeyId(recordId), 'content-key-v1');
-    final restored = await storage.load(recordId, key: key);
-    expect(restored, isNotNull);
-    expect(restored!.source, MtnMinecraftContentPackageSource.local);
+    final restored = (await storage.load(recordId, key: key))!;
+    expect(restored.source, MtnMinecraftContentPackageSource.local);
     expect(restored.package.title, 'Hypixel Skyblock');
     expect(restored.package.ownerName, 'Server Admin');
     expect(restored.package.ramMiB, 6144);
