@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — CP-07 portable game metadata and encrypted local storage (Windows validation pending)
+
+- Bump portable package schema to v2 with required owner display name, configured RAM, UTC creation/update timestamps, optional server address, and pinned non-Vanilla loader version; preserve Minecraft version, Markdown description, title, revision and exact lock.
+- Enforce explicit metadata in constructors, locked package builder, codec-backed local draft serialization and examples; reject unsupported v1 files instead of adding legacy migration layers.
+- Add `MtnMinecraftContentPackageRecordStorage` for AES-256-GCM encrypted multi-generation local file persistence; caller supplies key and keyId, with per-record writes, key ID lookup, listing, and bounded delete.
+- Preserve previous completed records on new saves, ignore incomplete temporary files, fail closed on corrupted latest generation, reject traversal and symlink identity directories.
+- Add schema v2 tests, real disk storage tests and executable CLI smoke under OS temp; no Content Server, UI, download/install or publish implementation.
+
 ## Unreleased — CP-06 Encrypted local record and portable lock builder (validation pending)
 
 - Split local `MtnMinecraftContentPackageRecord` origin/publication metadata from portable `MtnMinecraftContentPackage` data; encrypted local drafts can be persisted without allowing public unlocked exports.

@@ -279,6 +279,7 @@ void main() {
       title: 'Example',
       minecraftVersion: '1.21.11',
       modLoader: MtnMinecraftModLoaderType.fabric,
+    loaderVersion: '0.16.14', ramMiB: 4096, ownerName: 'Test Publisher', createdAt: DateTime.utc(2026, 10, 13), updatedAt: DateTime.utc(2026, 10, 14),
       items: <MtnMinecraftContentPackageItem>[
         packageItem('b'),
         packageItem('lib', direct: false),

@@ -46,6 +46,7 @@ MtnMinecraftContentPackage contentPackage({
     title: 'Test pack',
     minecraftVersion: '1.21.11',
     modLoader: MtnMinecraftModLoaderType.fabric,
+    loaderVersion: '0.16.14', ramMiB: 4096, ownerName: 'Test Publisher', createdAt: DateTime.utc(2026, 10, 13), updatedAt: DateTime.utc(2026, 10, 14),
     mutationPolicy: policy,
     revision: 3,
     items: <MtnMinecraftContentPackageItem>[
@@ -164,12 +165,14 @@ void main() {
 
   test('unlocked draft export and incomplete graphs are rejected', () {
     final a = item('a', direct: true);
-    final draft = MtnMinecraftContentPackage(id: 'draft', title: 'Draft', minecraftVersion: '1.21.11', modLoader: MtnMinecraftModLoaderType.fabric, items: <MtnMinecraftContentPackageItem>[a]);
+    final draft = MtnMinecraftContentPackage(id: 'draft', title: 'Draft', minecraftVersion: '1.21.11', modLoader: MtnMinecraftModLoaderType.fabric,
+    loaderVersion: '0.16.14', ramMiB: 4096, ownerName: 'Test Publisher', createdAt: DateTime.utc(2026, 10, 13), updatedAt: DateTime.utc(2026, 10, 14), items: <MtnMinecraftContentPackageItem>[a]);
     expect(() => draft.encode(), throwsStateError);
 
     expect(
       () => MtnMinecraftContentPackage(
         id: 'broken', title: 'Broken', minecraftVersion: '1.21.11', modLoader: MtnMinecraftModLoaderType.fabric,
+    loaderVersion: '0.16.14', ramMiB: 4096, ownerName: 'Test Publisher', createdAt: DateTime.utc(2026, 10, 13), updatedAt: DateTime.utc(2026, 10, 14),
         items: <MtnMinecraftContentPackageItem>[a, item('b')],
         lock: MtnMinecraftContentPackageLock(
           versions: <MtnMinecraftContentPackageLockedVersion>[
