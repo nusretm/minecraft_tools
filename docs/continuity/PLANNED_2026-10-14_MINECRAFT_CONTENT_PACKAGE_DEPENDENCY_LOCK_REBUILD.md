@@ -3,8 +3,8 @@
 ## Status (2026-10-14)
 
 - Authorized in conversation after CP-09 was squash-merged and local/remote branches cleaned; user's Windows main up to date and clean.
-- Implementation branch `feature/minecraft-content-package-dependency-lock-rebuild`; no merge requested or performed.
-- Initial Windows run: `dart pub get` PASS, CP-10 focused **4/4 PASS**, full `dart test` **308/308 PASS**, live Modrinth exact-version lock smoke **PASS**. Initial `dart analyze` reported a single info-level interpolation lint in `minecraft_content_package.dart:446`; fixed by commit `2badf18`. User pulled branch through `6dc68b8`, reran `dart analyze` (**No issues found!**), `git diff --check main...HEAD` (clean), and `git status` (tracking origin and working tree clean). CP-10 is **ready for merge review**, not merged; separate explicit merge approval required.
+- Implementation branch `feature/minecraft-content-package-dependency-lock-rebuild`; **PR [#70](https://github.com/nusretm/minecraft_tools/pull/70) squash-merged to `main` at `8cf8bac0e24a025be0eb3f343f78492202ff25a6` with explicit user approval. Feature branch local/remote cleanup is still pending.**
+- Initial Windows run: `dart pub get` PASS, CP-10 focused **4/4 PASS**, full `dart test` **308/308 PASS**, live Modrinth exact-version lock smoke **PASS**. Initial `dart analyze` reported a single info-level interpolation lint in `minecraft_content_package.dart:446`; fixed by commit `2badf18`. User pulled branch through `6dc68b8`, reran `dart analyze` (**No issues found!**), `git diff --check main...HEAD` (clean), and `git status` (tracking origin and working tree clean). CP-10 **merged after separate explicit user approval**. Remote/local branch deletion and clean `main` state need confirmation from Windows PowerShell.
 - Pure Dart: do not run `dart format`; respect `docs/WORKING_RULES.md`.
 
 ## Authorized API, ownership and invariants
