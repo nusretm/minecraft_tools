@@ -1,9 +1,9 @@
 import '../model/minecraft_content_models.dart';
 import '../service/minecraft_content_service.dart';
+import 'minecraft_content_package.dart';
 import 'minecraft_content_package_lock.dart';
 import 'minecraft_content_package_metadata_cache.dart';
 import 'minecraft_content_package_source.dart';
-import 'minecraft_content_package.dart';
 
 enum MtnMinecraftContentItemPermission { enable, disable, remove, update }
 
