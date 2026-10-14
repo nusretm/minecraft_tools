@@ -6,6 +6,9 @@ import '../service/minecraft_content_service.dart';
 import 'minecraft_content_package_item.dart';
 import 'minecraft_content_package_lock.dart';
 import 'minecraft_content_package_metadata_cache.dart';
+import 'minecraft_content_package_record.dart';
+import 'minecraft_content_package_source.dart';
+import '../provider/minecraft_content_provider_models.dart';
 
 enum MtnMinecraftContentPackageMutationPolicy { none, readOnly, appendOnly }
 
@@ -41,8 +44,11 @@ class MtnMinecraftContentPackage {
     this.iconUrl,
     this.revision = 1,
     this.mutationPolicy = MtnMinecraftContentPackageMutationPolicy.none,
-    this.lock,
-  }) : items = List<MtnMinecraftContentPackageItem>.unmodifiable(items) {
+    MtnMinecraftContentPackageLock? lock,
+    Iterable<MtnMinecraftContentPackageLockedEdge>? dependencyEdges,
+  }) : _items = List<MtnMinecraftContentPackageItem>.of(items),
+       _lock = lock,
+       _dependencyEdges = List<MtnMinecraftContentPackageLockedEdge>.of(dependencyEdges ?? lock?.edges ?? const <MtnMinecraftContentPackageLockedEdge>[]) {
     if (id.trim().isEmpty || title.trim().isEmpty || minecraftVersion.trim().isEmpty) throw ArgumentError('Package ID, title and Minecraft version cannot be empty.');
     if (revision < 1) throw ArgumentError.value(revision, 'revision', 'Revision must be positive.');
     if (ramMiB < 1) throw ArgumentError.value(ramMiB, 'ramMiB', 'RAM must be positive MiB.');
@@ -61,6 +67,13 @@ class MtnMinecraftContentPackage {
     for (final item in this.items) {
       if (byKey.containsKey(item.key)) throw ArgumentError.value(item.key, 'items', 'Duplicate provider/project identity.');
       byKey[item.key] = item;
+    }
+    for (final item in this.items) {
+      item.attachToPackage(this);
+    }
+    final keys = byKey.keys.toSet();
+    if (_dependencyEdges.any((edge) => !keys.contains(edge.sourceKey) || !keys.contains(edge.targetKey))) {
+      throw ArgumentError('Dependency edges must refer to package items.');
     }
     final graph = lock;
     if (graph != null) {
@@ -124,6 +137,9 @@ class MtnMinecraftContentPackage {
     if (policy == null) throw FormatException('Unknown package mutation policy: ${map['mutationPolicy']}');
     final contents = map['items'];
     final locked = map['lock'];
+    final draftEdges = map['dependencyEdges'];
+    if (requireLock && map.containsKey('dependencyEdges')) throw const FormatException('Portable package cannot contain local dependency edges.');
+    if (draftEdges != null && (draftEdges is! List || locked != null)) throw const FormatException('Draft edges require an unlocked local package.');
     if (contents is! List || (requireLock ? locked is! Map : locked != null && locked is! Map)) throw const FormatException('Invalid Content Package item metadata or locked graph.');
     final description = map['description'];
     final iconUrl = map['iconUrl'];
@@ -149,6 +165,10 @@ class MtnMinecraftContentPackage {
         return requireLock ? MtnMinecraftContentPackageItem.fromMap(Map<String, dynamic>.from(value)) : MtnMinecraftContentPackageItem.fromLocalMap(Map<String, dynamic>.from(value));
       }),
       lock: locked == null ? null : MtnMinecraftContentPackageLock.fromMap(Map<String, dynamic>.from(locked as Map)),
+      dependencyEdges: draftEdges == null ? null : (draftEdges as List).map((value) {
+        if (value is! Map) throw const FormatException('Invalid local dependency edge.');
+        return MtnMinecraftContentPackageLockedEdge.fromMap(Map<String, dynamic>.from(value));
+      }),
     );
   }
 
@@ -168,8 +188,23 @@ class MtnMinecraftContentPackage {
   final DateTime updatedAt;
   final int revision;
   final MtnMinecraftContentPackageMutationPolicy mutationPolicy;
-  final List<MtnMinecraftContentPackageItem> items;
-  final MtnMinecraftContentPackageLock? lock;
+  final List<MtnMinecraftContentPackageItem> _items;
+  List<MtnMinecraftContentPackageItem> get items => List<MtnMinecraftContentPackageItem>.unmodifiable(_items);
+  MtnMinecraftContentPackageLock? _lock;
+  MtnMinecraftContentPackageLock? get lock => _lock;
+  final List<MtnMinecraftContentPackageLockedEdge> _dependencyEdges;
+  List<MtnMinecraftContentPackageLockedEdge> get dependencyEdges => List<MtnMinecraftContentPackageLockedEdge>.unmodifiable(_dependencyEdges);
+  MtnMinecraftContentPackageRecord? _record;
+  MtnMinecraftContentPackageRecord? get record => _record;
+
+  void attachRecord(MtnMinecraftContentPackageRecord value) {
+    if (_record != null && !identical(_record, value)) throw StateError('Package is already attached to a different record.');
+    _record = value;
+  }
+
+  final Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion> _updateList = <MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>{};
+  Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion> get updateList => Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>.unmodifiable(_updateList);
+
 
   MtnMinecraftContentPackageItem? getItem(String key) {
     for (final item in items) {
@@ -195,35 +230,11 @@ class MtnMinecraftContentPackage {
 
   List<MtnMinecraftContentPackageItem> get sortedItems => allItems;
 
-  /// Activity is a graph projection, not an independently mutable dependency flag.
-  Set<String> get effectiveEnabledKeys {
-    final active = <String>{for (final item in items) if (item.directEnabled) item.key};
-    final graph = lock;
-    if (graph == null) return Set<String>.unmodifiable(active);
-    final edgesBySource = <String, List<String>>{};
-    for (final edge in graph.edges) {
-      edgesBySource.putIfAbsent(edge.sourceKey, () => <String>[]).add(edge.targetKey);
-    }
-    final queue = active.toList();
-    for (var index = 0; index < queue.length; index++) {
-      for (final target in edgesBySource[queue[index]] ?? const <String>[]) {
-        if (active.add(target)) queue.add(target);
-      }
-    }
-    return Set<String>.unmodifiable(active);
-  }
-
-  bool effectiveEnabled(MtnMinecraftContentPackageItem item) {
-    if (!items.any((candidate) => identical(candidate, item))) throw ArgumentError.value(item, 'item', 'Item does not belong to this package.');
-    return effectiveEnabledKeys.contains(item.key);
-  }
-
   List<MtnMinecraftContentPackageTreeNode> get treeItems {
-    final graph = lock;
-    if (graph == null) return List<MtnMinecraftContentPackageTreeNode>.unmodifiable(directItems.map((item) => MtnMinecraftContentPackageTreeNode(item: item, children: const [])));
+    if (_dependencyEdges.isEmpty) return List<MtnMinecraftContentPackageTreeNode>.unmodifiable(directItems.map((item) => MtnMinecraftContentPackageTreeNode(item: item, children: const [])));
     final byKey = <String, MtnMinecraftContentPackageItem>{for (final item in items) item.key: item};
     final children = <String, Set<String>>{};
-    for (final edge in graph.edges) {
+    for (final edge in _dependencyEdges) {
       children.putIfAbsent(edge.sourceKey, () => <String>{}).add(edge.targetKey);
     }
 
@@ -296,6 +307,7 @@ class MtnMinecraftContentPackage {
       'updatedAt': updatedAt.toIso8601String(),
       'mutationPolicy': mutationPolicy.name,
       'items': (items.toList()..sort((a, b) => a.key.compareTo(b.key))).map((item) => requireLock ? item.toMap() : item.toLocalMap()).toList(growable: false),
+      if (!requireLock && graph == null && _dependencyEdges.isNotEmpty) 'dependencyEdges': _dependencyEdges.map((edge) => edge.toMap()).toList(growable: false),
       if (graph != null) 'lock': graph.toMap(),
     };
   }
