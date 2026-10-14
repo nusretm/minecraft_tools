@@ -6,10 +6,10 @@ import '../provider/minecraft_content_provider_models.dart';
 import '../service/minecraft_content_dependency_desired_state.dart';
 import '../service/minecraft_content_dependency_install_plan.dart';
 import '../service/minecraft_content_service.dart';
+import 'minecraft_content_package_builder.dart';
 import 'minecraft_content_package_item.dart';
 import 'minecraft_content_package_lock.dart';
 import 'minecraft_content_package_metadata_cache.dart';
-import 'minecraft_content_package_builder.dart';
 import 'minecraft_content_package_record.dart';
 import 'minecraft_content_package_source.dart';
 
