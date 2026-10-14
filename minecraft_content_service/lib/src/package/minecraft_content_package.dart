@@ -443,7 +443,7 @@ class MtnMinecraftContentPackage {
       final selected = current.selectedVersionId ?? currentLocks[key]?.versionId;
       final resolvedId = version.providers.firstWhere((metadata) => metadata.provider == identity.$1).id!;
       if (selected != null && selected != resolvedId) {
-        throw StateError('Dependency ${current.key} conflicts with the selected exact provider version ${selected}.');
+        throw StateError('Dependency ${current.key} conflicts with the selected exact provider version $selected.');
       }
     }
     return result;
