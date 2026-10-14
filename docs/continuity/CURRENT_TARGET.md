@@ -6,7 +6,7 @@
 - `package.add(version)` consumes a provider-returned `MtnMinecraftContentVersion`; `package.remove(item)` manages direct roots without discarding still-required dependencies.
 - Item owns `enabled` preference and graph-computed `effectiveEnabled`; Package owns transient `updateList` and provider update checks. Attached Package/Record relation supplies origin-aware permission checks.
 - Local drafts preserve selected version IDs and existing locked dependency edges across edits; unresolved dependencies and exact artifact choices still require existing planning before portable export. No new editor, policy manager, download service or Content Server.
-- Handoff: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_ITEM_LIFECYCLE.md`. Pending Windows `dart analyze`, focused/full tests, live Modrinth Fabric API add + encrypted disk smoke, clean `git diff --check`/status. Merge separately approved.
+- Handoff: `docs/continuity/PLANNED_2026-10-14_MINECRAFT_CONTENT_PACKAGE_ITEM_LIFECYCLE.md`, draft PR [#69](https://github.com/nusretm/minecraft_tools/pull/69). Pending Windows `dart analyze`, focused/full tests, live Modrinth Fabric API add + encrypted disk smoke, clean `git diff --check`/status. Merge separately approved.
 
 ## CP-08 — Shared Package / Item Source — MERGED / WINDOWS VALIDATED / CLEAN (2026-10-14)
 
