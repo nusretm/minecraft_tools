@@ -3,7 +3,10 @@ import 'dart:typed_data';
 
 import '../model/minecraft_content_models.dart';
 import '../provider/minecraft_content_provider_models.dart';
+import '../service/minecraft_content_dependency_desired_state.dart';
+import '../service/minecraft_content_dependency_install_plan.dart';
 import '../service/minecraft_content_service.dart';
+import 'minecraft_content_package_builder.dart';
 import 'minecraft_content_package_item.dart';
 import 'minecraft_content_package_lock.dart';
 import 'minecraft_content_package_metadata_cache.dart';
@@ -189,6 +192,22 @@ class MtnMinecraftContentPackage {
   final DateTime createdAt;
   final DateTime updatedAt;
   final int revision;
+
+  /// Alias for the existing portable revision; no second revision authority.
+  int get revisionNum => revision;
+
+  int? _newRevisionNum;
+
+  /// A newer remote published revision last observed for a downloaded package.
+  /// Transient only: the Content Server client owns polling and persistence.
+  int? get newRevisionNum => _newRevisionNum;
+  set newRevisionNum(int? value) {
+    if (_record?.source != MtnMinecraftContentPackageSource.downloaded) return;
+    _newRevisionNum = value != null && value > revisionNum ? value : null;
+  }
+
+  bool get updateAvail => revisionNum != (newRevisionNum ?? revisionNum);
+
   final MtnMinecraftContentPackageMutationPolicy mutationPolicy;
   final List<MtnMinecraftContentPackageItem> _items;
   List<MtnMinecraftContentPackageItem> get items => List<MtnMinecraftContentPackageItem>.unmodifiable(_items);
@@ -362,6 +381,145 @@ class MtnMinecraftContentPackage {
       _dependencyEdges.removeWhere((edge) => edge.sourceKey == item.key || edge.targetKey == item.key);
       item.detachFromPackage(this);
     }
+    return true;
+  }
+
+  /// Resolves the exact selected direct-root versions through the existing
+  /// provider graph resolver and multi-root install planner. Does not mutate
+  /// package membership or its lock; unresolved dependencies stay in the result.
+  Future<MtnMinecraftContentDependencyDesiredState> resolveDependencies(
+    MtnMinecraftContentService service, {
+    Map<String, List<String>> selectedOptionalVersionKeysByRoot = const <String, List<String>>{},
+  }) async {
+    final plans = <MtnMinecraftContentDependencyInstallPlan>[];
+    final currentLocks = <String, MtnMinecraftContentPackageLockedVersion>{
+      for (final entry in _lock?.versions ?? const <MtnMinecraftContentPackageLockedVersion>[]) entry.itemKey: entry,
+    };
+
+    for (final root in directItems) {
+      await root.hydrate(service, lock: currentLocks[root.key]);
+      final version = root.version;
+      if (version == null || !_compatible(version)) {
+        throw StateError('Cannot resolve dependencies without a compatible selected version for ${root.key}.');
+      }
+      final identity = _providerIdentity(version);
+      if (identity == null || '${identity.$1}:${identity.$2}' != root.key) {
+        throw StateError('Selected version identity does not match direct package item ${root.key}.');
+      }
+      final versionId = version.providers.firstWhere((entry) => entry.provider == root.provider).id!;
+      final pinned = root.selectedVersionId ?? currentLocks[root.key]?.versionId;
+      if (pinned != null && pinned != versionId) {
+        throw StateError('Direct root ${root.key} changed its selected provider version.');
+      }
+
+      final graph = await service.resolveDependencyGraph(
+        version,
+        MtnMinecraftContentVersionSelectionRequest(
+          gameVersions: <String>[minecraftVersion],
+          modLoaders: <MtnMinecraftModLoaderType>[modLoader],
+        ),
+      );
+      plans.add(service.planDependencyInstall(
+        graph,
+        MtnMinecraftContentDependencyInstallRequest(
+          selectedOptionalVersionKeys: selectedOptionalVersionKeysByRoot[version.key] ?? const <String>[],
+        ),
+      ));
+    }
+
+    final result = service.composeDependencyInstallPlans(plans);
+    if (!result.installable) return result;
+
+    for (final entry in result.versions) {
+      final version = entry.version;
+      if (!_compatible(version)) {
+        throw StateError('Dependency resolution selected an incompatible version: ${version.key}.');
+      }
+      final identity = _providerIdentity(version);
+      if (identity == null) throw StateError('Resolved version has ambiguous provider identity: ${version.key}.');
+      final key = '${identity.$1}:${identity.$2}';
+      final current = getItem(key);
+      if (current == null) continue;
+      final selected = current.selectedVersionId ?? currentLocks[key]?.versionId;
+      final resolvedId = version.providers.firstWhere((metadata) => metadata.provider == identity.$1).id!;
+      if (selected != null && selected != resolvedId) {
+        throw StateError('Dependency ${current.key} conflicts with the selected exact provider version $selected.');
+      }
+    }
+    return result;
+  }
+
+  /// Validates a full exact-lock candidate with the existing Package Builder
+  /// before changing this package. Existing item objects and their origin,
+  /// enabled preference and permissions survive; orphan dependencies are removed.
+  bool rebuildLock(
+    MtnMinecraftContentDependencyDesiredState desired, {
+    required Map<String, MtnMinecraftContentFile> selectedFilesByVersionKey,
+  }) {
+    if (!desired.installable || desired.directVersions.isEmpty) return false;
+
+    final previousRoots = directItems.map((item) => item.key).toSet();
+    final candidateRoots = <String>{};
+    for (final version in desired.directVersions) {
+      final identity = _providerIdentity(version);
+      if (identity == null) return false;
+      candidateRoots.add('${identity.$1}:${identity.$2}');
+    }
+    if (previousRoots.length != candidateRoots.length || !previousRoots.containsAll(candidateRoots)) return false;
+
+    final previous = <String, MtnMinecraftContentPackageItem>{for (final item in _items) item.key: item};
+    final desiredItemKeys = <String>{};
+    final currentLocks = <String, MtnMinecraftContentPackageLockedVersion>{
+      for (final entry in _lock?.versions ?? const <MtnMinecraftContentPackageLockedVersion>[]) entry.itemKey: entry,
+    };
+    for (final entry in desired.versions) {
+      final version = entry.version;
+      if (!_compatible(version)) return false;
+      final identity = _providerIdentity(version);
+      if (identity == null) return false;
+      final key = '${identity.$1}:${identity.$2}';
+      desiredItemKeys.add(key);
+      final old = previous[key];
+      if (old == null) continue;
+      final selected = old.selectedVersionId ?? currentLocks[key]?.versionId;
+      final resolvedId = version.providers.firstWhere((metadata) => metadata.provider == identity.$1).id!;
+      if (selected != null && selected != resolvedId) return false;
+    }
+
+    // Any validation error from the existing exact-file/graph builder leaves
+    // the original package completely unchanged.
+    final built = const MtnMinecraftContentPackageBuilder().build(
+      id: id, title: title, description: description, iconUrl: iconUrl,
+      minecraftVersion: minecraftVersion, modLoader: modLoader, loaderVersion: loaderVersion,
+      ramMiB: ramMiB, serverAddress: serverAddress, ownerName: ownerName,
+      createdAt: createdAt, updatedAt: updatedAt, revision: revision, mutationPolicy: mutationPolicy,
+      desired: desired, selectedFilesByVersionKey: selectedFilesByVersionKey,
+      permissionsByItemKey: <String, List<MtnMinecraftContentItemPermission>>{
+        for (final item in _items)
+          if (desiredItemKeys.contains(item.key)) item.key: item.permissions,
+      },
+    );
+
+    final nextItems = <MtnMinecraftContentPackageItem>[];
+    for (final item in built.items) {
+      final retained = previous[item.key];
+      final next = retained ?? item.attachToPackage(this);
+      nextItems.add(next);
+    }
+    for (final item in _items) {
+      if (!nextItems.contains(item)) item.detachFromPackage(this);
+    }
+    _items
+      ..clear()
+      ..addAll(nextItems);
+    _dependencyEdges
+      ..clear()
+      ..addAll(built.lock!.edges);
+    _lock = built.lock;
+    for (final entry in _lock!.versions) {
+      getItem(entry.itemKey)?.preserveVersionId(entry.versionId);
+    }
+    _updateList.clear();
     return true;
   }
 
