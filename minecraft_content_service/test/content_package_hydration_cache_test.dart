@@ -301,7 +301,7 @@ void main() {
     expect(package.getItem('modrinth:lib')!.state, MtnMinecraftContentItemState.loaded);
     expect(package.getItem('modrinth:b')!.state, MtnMinecraftContentItemState.error);
     expect(package.toJson(), exportBefore);
-    expect(package.effectiveEnabled(package.getItem('modrinth:lib')!), isTrue);
+    expect(package.getItem('modrinth:lib')!.effectiveEnabled, isTrue);
     expect(service.versionCalls.length, 3);
   });
 }
