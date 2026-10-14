@@ -5,6 +5,7 @@
 - User approved implementation in conversation following explicit API design review.
 - Branch `feature/minecraft-content-package-item-lifecycle` from CP-08 merged, clean `main` at `4df323c56b17f76730734c9d0335bc56f05cfa76`.
 - **IMPLEMENTED ON FEATURE BRANCH — Windows `dart analyze`, test suite and real Modrinth smoke PENDING; not merged.**
+- Draft PR [#69](https://github.com/nusretm/minecraft_tools/pull/69). Merge requires a separate explicit approval after real Windows verification.
 - Respect `docs/WORKING_RULES.md`: no `dart format` for pure Dart, few focused tests, real Windows smoke, separate merge approval.
 
 ## Exact API direction
