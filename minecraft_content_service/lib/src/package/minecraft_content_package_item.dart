@@ -2,6 +2,7 @@ import '../model/minecraft_content_models.dart';
 import '../service/minecraft_content_service.dart';
 import 'minecraft_content_package_lock.dart';
 import 'minecraft_content_package_metadata_cache.dart';
+import 'minecraft_content_package_source.dart';
 
 enum MtnMinecraftContentItemPermission { enable, disable, remove, update }
 
@@ -17,6 +18,7 @@ class MtnMinecraftContentPackageItem {
     this.description,
     this.iconUrl,
     this.direct = false,
+    this.source = MtnMinecraftContentPackageSource.local,
     bool enabled = true,
     Iterable<MtnMinecraftContentItemPermission> permissions = const <MtnMinecraftContentItemPermission>[],
   }) : permissions = List<MtnMinecraftContentItemPermission>.unmodifiable(permissions),
@@ -29,7 +31,22 @@ class MtnMinecraftContentPackageItem {
     if (!direct && this.permissions.any((value) => value == MtnMinecraftContentItemPermission.enable || value == MtnMinecraftContentItemPermission.disable)) throw ArgumentError.value(this.permissions, 'permissions', 'Dependencies cannot have manual enable/disable permissions.');
   }
 
-  factory MtnMinecraftContentPackageItem.fromMap(Map<String, dynamic> map) {
+  /// Portable imports always represent downloaded content on this device.
+  factory MtnMinecraftContentPackageItem.fromMap(Map<String, dynamic> map) => MtnMinecraftContentPackageItem._fromMap(map, local: false);
+
+  /// Encrypted local records retain per-item provenance across restarts.
+  factory MtnMinecraftContentPackageItem.fromLocalMap(Map<String, dynamic> map) => MtnMinecraftContentPackageItem._fromMap(map, local: true);
+
+  static MtnMinecraftContentPackageItem _fromMap(Map<String, dynamic> map, {required bool local}) {
+    MtnMinecraftContentPackageSource source = MtnMinecraftContentPackageSource.downloaded;
+    if (local) {
+      final rawSource = map['source'];
+      final selected = MtnMinecraftContentPackageSource.values.where((value) => value.name == rawSource).firstOrNull;
+      if (selected == null) throw FormatException('Invalid local Content Package Item source: $rawSource');
+      source = selected;
+    } else if (map.containsKey('source')) {
+      throw const FormatException('Portable Content Package Items cannot declare device-local source.');
+    }
     final direct = map['direct'] == true;
     final rawPermissions = map['permissions'];
     if (rawPermissions is! List) throw const FormatException('Item permissions must be a list.');
@@ -65,6 +82,7 @@ class MtnMinecraftContentPackageItem {
       description: description as String?,
       iconUrl: iconUrl as String?,
       direct: direct,
+      source: source,
       enabled: enabled,
       permissions: permissions,
     );
@@ -77,6 +95,7 @@ class MtnMinecraftContentPackageItem {
   final String? description;
   final String? iconUrl;
   final bool direct;
+  final MtnMinecraftContentPackageSource source;
   final List<MtnMinecraftContentItemPermission> permissions;
   bool _enabled;
 
@@ -184,6 +203,9 @@ class MtnMinecraftContentPackageItem {
     }
   }
 
+  Map<String, dynamic> toLocalMap() => <String, dynamic>{...toMap(), 'source': source.name};
+
+  /// Portable metadata excludes device-local item source.
   Map<String, dynamic> toMap() => <String, dynamic>{
     'provider': provider,
     'projectId': projectId,

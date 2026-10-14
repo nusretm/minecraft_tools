@@ -1,7 +1,5 @@
 import 'minecraft_content_package.dart';
-
-/// Origin of this device's record, not part of the portable package definition.
-enum MtnMinecraftContentPackageSource { local, downloaded }
+import 'minecraft_content_package_source.dart';
 
 /// Local metadata is encrypted at rest by MtnMinecraftContentPackageRecordCodec.
 ///
@@ -35,7 +33,7 @@ class MtnMinecraftContentPackageRecord {
     );
   }
 
-  static const int currentSchemaVersion = 1;
+  static const int currentSchemaVersion = 2;
 
   final MtnMinecraftContentPackage package;
   final MtnMinecraftContentPackageSource source;

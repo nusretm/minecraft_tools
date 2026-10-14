@@ -9,6 +9,7 @@ export 'src/package/minecraft_content_package_metadata_cache.dart';
 export 'src/package/minecraft_content_package_record.dart';
 export 'src/package/minecraft_content_package_record_codec.dart';
 export 'src/package/minecraft_content_package_record_storage.dart';
+export 'src/package/minecraft_content_package_source.dart';
 export 'src/provider/curseforge/minecraft_content_provider_curseforge.dart';
 export 'src/provider/minecraft_content_provider.dart';
 export 'src/provider/minecraft_content_provider_list.dart';

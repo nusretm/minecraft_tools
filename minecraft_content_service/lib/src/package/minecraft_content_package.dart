@@ -146,7 +146,7 @@ class MtnMinecraftContentPackage {
       mutationPolicy: policy,
       items: contents.map((value) {
         if (value is! Map) throw const FormatException('Invalid package item.');
-        return MtnMinecraftContentPackageItem.fromMap(Map<String, dynamic>.from(value));
+        return requireLock ? MtnMinecraftContentPackageItem.fromMap(Map<String, dynamic>.from(value)) : MtnMinecraftContentPackageItem.fromLocalMap(Map<String, dynamic>.from(value));
       }),
       lock: locked == null ? null : MtnMinecraftContentPackageLock.fromMap(Map<String, dynamic>.from(locked as Map)),
     );
@@ -295,7 +295,7 @@ class MtnMinecraftContentPackage {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'mutationPolicy': mutationPolicy.name,
-      'items': (items.toList()..sort((a, b) => a.key.compareTo(b.key))).map((item) => item.toMap()).toList(growable: false),
+      'items': (items.toList()..sort((a, b) => a.key.compareTo(b.key))).map((item) => requireLock ? item.toMap() : item.toLocalMap()).toList(growable: false),
       if (graph != null) 'lock': graph.toMap(),
     };
   }

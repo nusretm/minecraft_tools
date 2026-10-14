@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — CP-08 shared package/item source (Windows validation pending)
+
+- Reuse existing `MtnMinecraftContentPackageSource { local, downloaded }` for both encrypted local Package Record and Content Package Item, without introducing editor/override/protected models.
+- New items default to local, portable imports tag received items downloaded; mixed downloaded/local items survive the local encrypted record roundtrip.
+- Keep the portable Package schema v2 and AES-GCM envelope unchanged; item source exists only in local serialization, not portable exports. Advance local Record schema from v1 to v2 to require explicit per-item provenance.
+- Add focused source tests and real filesystem source smoke. UI owns read-only/append-only/permission decisions; no new mutation service.
+
 ## Unreleased — CP-07 portable game metadata and encrypted local storage (Windows validation pending)
 
 - Bump portable package schema to v2 with required owner display name, configured RAM, UTC creation/update timestamps, optional server address, and pinned non-Vanilla loader version; preserve Minecraft version, Markdown description, title, revision and exact lock.
