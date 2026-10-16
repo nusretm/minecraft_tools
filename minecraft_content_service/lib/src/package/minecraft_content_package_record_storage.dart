@@ -125,7 +125,7 @@ class MtnMinecraftContentPackageRecordStorage {
       final id = p.basename(entry.path);
       if (!_idPattern.hasMatch(id)) continue;
       if (entry is! Directory) throw FileSystemException('Record identity points to a non-directory.', entry.path);
-      if (await _publishedFileInDirectory(entry) != null) ids.add(id);
+      if ((await _publishedFileInDirectory(entry)) != null) ids.add(id);
     }
     ids.sort();
     return List<String>.unmodifiable(ids);
