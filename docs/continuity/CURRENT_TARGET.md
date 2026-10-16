@@ -1,6 +1,6 @@
 # Minecraft Tools — Current Target
 
-## CP-11 — Stable game record filename — FEATURE / WINDOWS VALIDATION PENDING (2026-10-16)
+## CP-11 — Stable game record filename — WINDOWS VALIDATED / MERGE APPROVAL PENDING (2026-10-16)
 
 - The MTN Launcher App owner authorized the minimal required `minecraft_tools` storage adjustment. Branch: `feature/content-package-fixed-record-file` (from `main` `588713d`). This change is limited to `minecraft_content_service`, focused tests, example, changelog, and continuity.
 - Agreed target layout: `<launcherDataRoot>/packages/<canonical-local-UUID>/mtn_game_package.mtncr`; the caller owns `launcherDataRoot` and passes the packages directory to `MtnMinecraftContentPackageRecordStorage`. Storage never hardcodes launcher paths.
@@ -8,7 +8,7 @@
 - Save writes a flushed unique stage; for existing primary, rotate to `.mtn_game_package.mtncr.bak` then rename stage to primary; old backup is cleaned. If interrupted between the two renames, backup serves as committed record until next save. A present primary wins; corrupt/wrong-key primary fails closed without backup fallback. Multi-process safety and absolute crash durability are not promised.
 - `listRecordIds` finds primary or recoverable backup; `delete` refuses unexpected files/links and only removes known primary, staging, backup. Filename-only copies are discoverable once they are valid AES-GCM records decryptable with the caller's key; different server/local keys still require decrypt-and-re-encrypt in a later client workflow.
 - Numbered-generation records are not automatically migrated in this pre-release checkpoint. Old numbered entries are not discovered and their files are not silently deleted. If actual user data needs migration, plan and authorize it separately.
-- Focused storage tests updated (overwrite, backup interruption, direct file discovery, corruption, concurrent saves, invalid ID/unknown-file delete); real temp-folder example updated to check stable filename. **No Windows analyzer/tests/runtime executed yet.**
+- Focused storage tests updated (overwrite, backup interruption, direct file discovery, corruption, concurrent saves, invalid ID/unknown-file delete); real temp-folder example updated to check stable filename. **Windows evidence confirmed by user:** `dart pub get` PASS, `dart analyze` No issues found, `dart test test/content_package_record_storage_test.dart -r expanded` **9/9 PASS**, real `dart run example/content_package_storage.dart` **PASS** (stable encrypted file updated, metadata/keyId restored, wrong key rejected, deletion complete). `git diff --check main...HEAD` clean, Git feature branch up to date and working tree clean. No full test suite claimed.
 - Separately after this storage PR is Windows-validated and merged: update `nusretm/mtn_launcher_app` to use the shared launcher data root / packages directory. No change to `mtn_launcher_app` yet. Merge separately requires explicit approval.
 
 ## CP-10 — Package Dependency Lock Rebuild & Remote Revision Candidate — SQUASH-MERGED / WINDOWS VALIDATED (2026-10-14)
