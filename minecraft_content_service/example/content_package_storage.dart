@@ -57,9 +57,11 @@ Future<void> main() async {
       wrongKeyRejected = true;
     }
     if (!wrongKeyRejected) throw StateError('Incorrect AES-GCM key unexpectedly decrypted the record.');
-    print('CP-07 PASS: 2 encrypted generations, restored new metadata and keyId=${await reopened.getKeyId(recordId)}');
+    final saved = File('${storage.directory.path}${Platform.pathSeparator}$recordId${Platform.pathSeparator}${MtnMinecraftContentPackageRecordStorage.fileName}');
+    if (!await saved.exists()) throw StateError('Stable encrypted game package file is missing.');
+    print('Storage PASS: stable encrypted package updated, metadata and keyId=${await reopened.getKeyId(recordId)}');
     if (!await reopened.delete(recordId)) throw StateError('Record deletion failed.');
-    print('CP-07 PASS: wrong key rejected; encrypted record deletion completed.');
+    print('Storage PASS: wrong key rejected; encrypted record deletion completed.');
   } finally {
     if (await root.exists()) await root.delete(recursive: true);
   }

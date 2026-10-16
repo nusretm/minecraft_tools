@@ -74,20 +74,21 @@ void main() {
     expect(restored.package.lock, isNull);
     expect(() => restored.package.toJson(), throwsStateError);
 
-    final saved = File(p.join(temp.path, 'storage', recordId, '000000000001.mtncr'));
+    final saved = File(p.join(temp.path, 'storage', recordId, MtnMinecraftContentPackageRecordStorage.fileName));
     expect(await saved.exists(), isTrue);
     expect(String.fromCharCodes(await saved.readAsBytes()), isNot(contains('Hypixel Skyblock')));
     await expectLater(storage.load(recordId, key: wrongKey), throwsA(anything));
     expect(await saved.exists(), isTrue);
   });
 
-  test('new generations preserve old snapshots; incomplete stages do not win', () async {
+  test('updates replace the stable filename; incomplete staging is ignored', () async {
     await storage.save(recordId, makeRecord(title: 'Draft 1'), key: key, keyId: 'key-v1');
     await storage.save(recordId, makeRecord(title: 'Draft 2'), key: key, keyId: 'key-v2');
     final folder = Directory(p.join(temp.path, 'storage', recordId));
-    expect(await File(p.join(folder.path, '000000000001.mtncr')).exists(), isTrue);
-    expect(await File(p.join(folder.path, '000000000002.mtncr')).exists(), isTrue);
-    await File(p.join(folder.path, '.000000000003.mtncr.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.tmp')).writeAsString('incomplete');
+    final current = File(p.join(folder.path, MtnMinecraftContentPackageRecordStorage.fileName));
+    expect(await current.exists(), isTrue);
+    expect(await File(p.join(folder.path, '.mtn_game_package.mtncr.bak')).exists(), isFalse);
+    await File(p.join(folder.path, '.mtn_game_package.mtncr.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.tmp')).writeAsString('incomplete');
 
     final restored = await storage.load(recordId, key: key);
     expect(restored!.package.title, 'Draft 2');
@@ -98,10 +99,41 @@ void main() {
     expect(await storage.listRecordIds(), isEmpty);
   });
 
-  test('corrupt latest generation fails closed instead of silently loading older one', () async {
+  test('an interrupted Windows replacement exposes the backup until next save', () async {
+    await storage.save(recordId, makeRecord(title: 'Before crash'), key: key, keyId: 'key-v1');
+    final folder = Directory(p.join(temp.path, 'storage', recordId));
+    final current = File(p.join(folder.path, MtnMinecraftContentPackageRecordStorage.fileName));
+    final backup = File(p.join(folder.path, '.mtn_game_package.mtncr.bak'));
+    await current.rename(backup.path);
+    await File(p.join(folder.path, '.mtn_game_package.mtncr.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.tmp')).writeAsString('unfinished');
+
+    final reopened = MtnMinecraftContentPackageRecordStorage(directory: storage.directory);
+    expect(await reopened.listRecordIds(), <String>[recordId]);
+    expect(await reopened.getKeyId(recordId), 'key-v1');
+    expect((await reopened.load(recordId, key: key))!.package.title, 'Before crash');
+
+    await reopened.save(recordId, makeRecord(title: 'After recovery'), key: key, keyId: 'key-v2');
+    expect((await reopened.load(recordId, key: key))!.package.title, 'After recovery');
+    expect(await current.exists(), isTrue);
+    expect(await backup.exists(), isFalse);
+  });
+
+  test('encrypted server record copied under canonical UUID becomes discoverable', () async {
+    final folder = Directory(p.join(temp.path, 'storage', recordId));
+    await folder.create(recursive: true);
+    final bytes = await storage.codec.encrypt(makeRecord(title: 'Downloaded'), key: key, keyId: 'server-key');
+    await File(p.join(folder.path, MtnMinecraftContentPackageRecordStorage.fileName)).writeAsBytes(bytes, flush: true);
+    expect(await storage.listRecordIds(), <String>[recordId]);
+    expect((await storage.load(recordId, key: key))!.package.title, 'Downloaded');
+    expect(await storage.getKeyId(recordId), 'server-key');
+  });
+
+  test('corrupt published primary fails closed even when a backup exists', () async {
     await storage.save(recordId, makeRecord(title: 'Previous'), key: key, keyId: 'same-key');
     await storage.save(recordId, makeRecord(title: 'Current'), key: key, keyId: 'same-key');
-    final latest = File(p.join(temp.path, 'storage', recordId, '000000000002.mtncr'));
+    final latest = File(p.join(temp.path, 'storage', recordId, MtnMinecraftContentPackageRecordStorage.fileName));
+    final backup = File(p.join(temp.path, 'storage', recordId, '.mtn_game_package.mtncr.bak'));
+    await backup.writeAsBytes(await latest.readAsBytes(), flush: true);
     final original = await latest.readAsBytes();
     original[original.length - 1] ^= 1;
     await latest.writeAsBytes(original, flush: true);
@@ -110,15 +142,16 @@ void main() {
     expect(await latest.exists(), isTrue);
   });
 
-  test('concurrent writers on one storage instance allocate distinct ordered generations', () async {
+  test('concurrent writers on one storage instance serialize updates to one file', () async {
     await Future.wait(<Future<void>>[
       for (var n = 1; n <= 5; n++)
         storage.save(recordId, makeRecord(title: 'Draft $n'), key: key, keyId: 'key'),
     ]);
     final folder = Directory(p.join(temp.path, 'storage', recordId));
-    for (var n = 1; n <= 5; n++) {
-      expect(await File(p.join(folder.path, '${n.toString().padLeft(12, '0')}.mtncr')).exists(), isTrue);
-    }
+    final current = File(p.join(folder.path, MtnMinecraftContentPackageRecordStorage.fileName));
+    expect(await current.exists(), isTrue);
+    expect(await File(p.join(folder.path, '.mtn_game_package.mtncr.bak')).exists(), isFalse);
+    expect(await folder.list(followLinks: false).length, 1);
     expect((await storage.load(recordId, key: key))!.package.title, 'Draft 5');
   });
 
