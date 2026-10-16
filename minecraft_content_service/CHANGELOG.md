@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — fixed filename encrypted local game records (Windows validated)
+
+- `MtnMinecraftContentPackageRecordStorage` now stores each UUID under one stable `mtn_game_package.mtncr` file instead of numbered generations. Retains caller-supplied encryption key and unchanged public `save/load/getKeyId/listRecordIds/delete` API.
+- Writes stage and flush encrypted payloads, rotate the primary into a known temporary backup on Windows, publish the new primary by rename, and remove backup. If interrupted between renames, reads can recover from the backup. A corrupt existing primary still fails closed.
+- Directory scanning accepts a stable primary or an interrupted-publication backup; deletion remains constrained to known temporary/storage filenames and refuses unknown entries. No automatic migration of legacy numbered files (pre-release).
+- Updated focused storage tests and real disk example; user-verified Windows `dart analyze` clean, focused storage tests 9/9 PASS, real encrypted disk example PASS, Git diff check clean. No external dependencies, crypto schema change, Content Server API, or launcher UI change. Separate merge approval pending.
+
 ## Unreleased — CP-10 dependency resolution and lock rebuild (Windows validated, merge pending)
 
 - Wire provider-selected package roots to the existing dependency resolver and multi-root desired install planner, with explicit optional selection and checks against silent pinned-version replacement.

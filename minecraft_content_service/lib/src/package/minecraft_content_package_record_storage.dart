@@ -10,10 +10,12 @@ import 'minecraft_content_package_record_codec.dart';
 
 /// Filesystem persistence for AES-GCM encrypted records, with no key provider.
 ///
-/// Layout: `directory/UUID/000000000001.mtncr` and later generations.
-/// A new generation is staged and flushed under a temporary name and renamed
-/// to a previously unused name. Older completed generations are preserved.
-/// Interrupted temporary files are ignored on reads.
+/// Layout: `directory/UUID/mtn_game_package.mtncr`.
+/// A new encrypted record is flushed to a unique staged file, then published
+/// under the stable name. On Windows, the previous file is first renamed to a
+/// known backup: if interrupted during this two-rename publication, reads use
+/// that backup until the next successful save. Staging files never count as
+/// committed records. A present, corrupt primary file always fails closed.
 ///
 /// Concurrent writes through the same instance are serialized per record ID.
 /// Multi-process writers, external filesystem mutation and power-loss durability
@@ -28,8 +30,9 @@ class MtnMinecraftContentPackageRecordStorage {
   final MtnMinecraftContentPackageRecordCodec codec;
 
   static final RegExp _idPattern = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$');
-  static final RegExp _generationPattern = RegExp(r'^[0-9]{12}\.mtncr$');
-  static final RegExp _stagingPattern = RegExp(r'^\.[0-9]{12}\.mtncr\.[a-f0-9]{32}\.tmp$');
+  static const String fileName = 'mtn_game_package.mtncr';
+  static const String _backupName = '.mtn_game_package.mtncr.bak';
+  static final RegExp _stagingPattern = RegExp(r'^\.mtn_game_package\.mtncr\.[a-f0-9]{32}\.tmp$');
   final Map<String, Future<void>> _writeTails = <String, Future<void>>{};
 
   Future<void> save(
@@ -41,28 +44,50 @@ class MtnMinecraftContentPackageRecordStorage {
     _checkId(recordId);
     return _exclusive(recordId, () async {
       final payload = await codec.encrypt(record, key: key, keyId: keyId);
-      final target = await _recordDirectory(recordId, create: true);
-      final existing = await _completedGenerations(target!);
-      final last = existing.isEmpty ? 0 : existing.last.$1;
-      if (last == 999999999999) throw StateError('Encrypted record generation limit reached.');
-      final nextName = '${(last + 1).toString().padLeft(12, '0')}.mtncr';
-      final published = File(p.join(target.path, nextName));
-      if (await FileSystemEntity.type(published.path, followLinks: false) != FileSystemEntityType.notFound) {
-        throw StateError('The next encrypted record generation already exists.');
-      }
+      final target = (await _recordDirectory(recordId, create: true))!;
+      final current = File(p.join(target.path, fileName));
+      final backup = File(p.join(target.path, _backupName));
+
+      // Reject file links and directories; do not follow attacker-controlled
+      // entries even if the path has a recognized storage filename.
+      await _regularFileExists(current);
+      await _regularFileExists(backup);
 
       final nonce = Random.secure();
       final suffix = List<int>.generate(16, (_) => nonce.nextInt(256)).map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
-      final staging = File(p.join(target.path, '.$nextName.$suffix.tmp'));
+      final staging = File(p.join(target.path, '.$fileName.$suffix.tmp'));
       try {
         if (await FileSystemEntity.type(staging.path, followLinks: false) != FileSystemEntityType.notFound) {
           throw StateError('Temporary record path already exists.');
         }
         await staging.writeAsBytes(payload, flush: true);
-        if (await FileSystemEntity.type(published.path, followLinks: false) != FileSystemEntityType.notFound) {
-          throw StateError('Record was concurrently published by another writer.');
+
+        if (await _regularFileExists(current)) {
+          // A backup beside a completed primary is an interrupted cleanup
+          // from an earlier successful publication, not a newer record.
+          if (await _regularFileExists(backup)) await backup.delete();
+          await current.rename(backup.path);
         }
-        await staging.rename(published.path);
+
+        try {
+          await staging.rename(current.path);
+        } catch (_) {
+          // Restore the previous record if publication failed after moving
+          // its primary to backup. If rollback fails, the backup is still
+          // readable through load()/listRecordIds() and is not discarded.
+          if (!await _regularFileExists(current) && await _regularFileExists(backup)) {
+            await backup.rename(current.path);
+          }
+          rethrow;
+        }
+
+        // Publication has succeeded. Cleanup failure must not turn a
+        // successfully saved primary into an apparent failed operation.
+        try {
+          if (await _regularFileExists(backup)) await backup.delete();
+        } on FileSystemException {
+          // The next successful save retries cleanup; primary is authoritative.
+        }
       } finally {
         if (await FileSystemEntity.type(staging.path, followLinks: false) == FileSystemEntityType.file) {
           await staging.delete();
@@ -76,22 +101,22 @@ class MtnMinecraftContentPackageRecordStorage {
     required Uint8List key,
   }) async {
     _checkId(recordId);
-    final file = await _latestFile(recordId);
+    final file = await _publishedFile(recordId);
     if (file == null) return null;
     final payload = await file.readAsBytes();
     return codec.decrypt(payload, key: key);
   }
 
-  /// Parses the unauthenticated key ID of the newest completed generation.
+  /// Parses the unauthenticated key ID of the published encrypted file.
   /// Its integrity is established only after authenticated load() succeeds.
   Future<String?> getKeyId(String recordId) async {
     _checkId(recordId);
-    final file = await _latestFile(recordId);
+    final file = await _publishedFile(recordId);
     if (file == null) return null;
     return codec.readKeyId(await file.readAsBytes());
   }
 
-  /// Returns canonical UUIDs with at least one completed generation.
+  /// Returns canonical UUIDs with a published primary or recoverable backup.
   Future<List<String>> listRecordIds() async {
     final root = await _rootDirectory();
     if (root == null) return const <String>[];
@@ -100,7 +125,7 @@ class MtnMinecraftContentPackageRecordStorage {
       final id = p.basename(entry.path);
       if (!_idPattern.hasMatch(id)) continue;
       if (entry is! Directory) throw FileSystemException('Record identity points to a non-directory.', entry.path);
-      if ((await _completedGenerations(entry)).isNotEmpty) ids.add(id);
+      if ((await _publishedFileInDirectory(entry)) != null) ids.add(id);
     }
     ids.sort();
     return List<String>.unmodifiable(ids);
@@ -112,13 +137,13 @@ class MtnMinecraftContentPackageRecordStorage {
       final target = await _recordDirectory(recordId);
       if (target == null) return false;
 
-      // Delete only known record generations and staging files, never unknown
-      // files or directories accidentally placed alongside them.
+      // Delete only our known primary, backup and staging files. Never remove
+      // unknown files or directories placed alongside this package.
       final files = <File>[];
       await for (final entry in target.list(followLinks: false)) {
         final name = p.basename(entry.path);
         final staging = _stagingPattern.hasMatch(name);
-        if (entry is! File || (!_generationPattern.hasMatch(name) && !staging)) {
+        if (entry is! File || (name != fileName && name != _backupName && !staging)) {
           throw FileSystemException('Record directory contains an unexpected entry; refusing recursive deletion.', entry.path);
         }
         files.add(entry);
@@ -131,25 +156,25 @@ class MtnMinecraftContentPackageRecordStorage {
     });
   }
 
-  Future<File?> _latestFile(String recordId) async {
+  Future<File?> _publishedFile(String recordId) async {
     final target = await _recordDirectory(recordId);
-    if (target == null) return null;
-    final generations = await _completedGenerations(target);
-    return generations.isEmpty ? null : generations.last.$2;
+    return target == null ? null : _publishedFileInDirectory(target);
   }
 
-  Future<List<(int, File)>> _completedGenerations(Directory target) async {
-    final results = <(int, File)>[];
-    await for (final entry in target.list(followLinks: false)) {
-      final name = p.basename(entry.path);
-      if (!_generationPattern.hasMatch(name)) continue;
-      if (entry is! File) throw FileSystemException('Encrypted generation is not a regular file.', entry.path);
-      final generation = int.parse(name.substring(0, 12));
-      if (generation == 0) throw FileSystemException('Invalid zero record generation.', entry.path);
-      results.add((generation, entry));
+  Future<File?> _publishedFileInDirectory(Directory target) async {
+    final current = File(p.join(target.path, fileName));
+    if (await _regularFileExists(current)) return current;
+    final backup = File(p.join(target.path, _backupName));
+    return await _regularFileExists(backup) ? backup : null;
+  }
+
+  Future<bool> _regularFileExists(File file) async {
+    final type = await FileSystemEntity.type(file.path, followLinks: false);
+    if (type == FileSystemEntityType.notFound) return false;
+    if (type != FileSystemEntityType.file) {
+      throw FileSystemException('Encrypted record entry must be a regular file, not a directory or link.', file.path);
     }
-    results.sort((a, b) => a.$1.compareTo(b.$1));
-    return results;
+    return true;
   }
 
   Future<Directory?> _rootDirectory({bool create = false}) async {
