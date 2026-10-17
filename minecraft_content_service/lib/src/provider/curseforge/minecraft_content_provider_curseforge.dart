@@ -46,7 +46,7 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
 
     final modId = MtnMinecraftContentProviderCurseForgeMapper.providerId(name, version.content);
     final fileId = MtnMinecraftContentProviderCurseForgeMapper.fileProviderId(name, file);
-    final envelope = await _getEnvelope(baseUri.resolve('v1/mods/$modId/files/$fileId/download-url'));
+    final envelope = await _getEnvelope(baseUri.resolve('v1/mods/$modId/files/$fileId/download-url'), cacheable: false);
     final value = MtnMinecraftContentProviderCurseForgeMapper.dataString(envelope);
     if (value == null || value.isEmpty) return null;
     return Uri.parse(value);
@@ -164,55 +164,39 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
     _contentTypesByClassId = maps.$2;
   }
 
-  Future<Map<String, dynamic>> _getEnvelope(Uri uri) {
-    return _requestEnvelope(
-      uri,
-      (apiKey) => _client.get(
-        uri,
-        headers: <String, String>{
-          'Accept': 'application/json',
-          'x-api-key': apiKey,
-        },
-      ),
-    );
+  Future<Map<String, dynamic>> _getEnvelope(Uri uri, {bool cacheable = true}) {
+    return _requestEnvelope(uri, method: 'GET', cacheable: cacheable);
   }
 
   Future<Map<String, dynamic>> _postEnvelope(Uri uri, Map<String, dynamic> body) {
-    return _requestEnvelope(
-      uri,
-      (apiKey) => _client.post(
-        uri,
-        headers: <String, String>{
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-        },
-        body: jsonEncode(body),
-      ),
-    );
+    return _requestEnvelope(uri, method: 'POST', body: jsonEncode(body));
   }
 
-  Future<Map<String, dynamic>> _requestEnvelope(Uri uri, Future<http.Response> Function(String apiKey) request) async {
-    final response = await runRequest(() async {
-      var retriedAfterRateLimit = false;
-
-      while (true) {
-        final apiKey = _apiKey;
-        if (apiKey == null) throw MtnMinecraftContentProviderNotReadyException(providerName: name);
-
-        final response = await request(apiKey);
-
-        if (response.statusCode != 429 || retriedAfterRateLimit) return response;
-
+  Future<Map<String, dynamic>> _requestEnvelope(Uri uri, {required String method, String? body, bool cacheable = true}) async {
+    final apiKey = _apiKey;
+    if (apiKey == null) throw MtnMinecraftContentProviderNotReadyException(providerName: name);
+    final response = await httpService.send(
+      client: _client,
+      uri: uri,
+      method: method,
+      body: body,
+      cacheable: cacheable,
+      headers: <String, String>{
+        'Accept': 'application/json',
+        if (body != null) 'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+      },
+      enqueue: (request) => runRequest(request),
+      onRateLimited: (response) async {
         final retryAfter = _retryAfter(response);
-        if (retryAfter == null) return response;
-
+        if (retryAfter == null) return false;
         throttleRequests(retryAfter);
         await waitForRequestAvailability();
         requireReady();
-        retriedAfterRateLimit = true;
-      }
-    });
+        // A changed credential must not retry under the previous cache identity.
+        return _apiKey == apiKey;
+      },
+    );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw MtnMinecraftContentProviderCurseForgeException(
@@ -225,7 +209,6 @@ class MtnMinecraftContentProviderCurseForge extends MtnMinecraftContentProvider 
 
     final decoded = jsonDecode(response.body);
     if (decoded is! Map<Object?, Object?>) throw MtnMinecraftContentProviderCurseForgeException(uri: uri, message: 'Expected a JSON object from CurseForge.');
-
     return decoded.map((key, value) => MapEntry(key.toString(), value));
   }
 
