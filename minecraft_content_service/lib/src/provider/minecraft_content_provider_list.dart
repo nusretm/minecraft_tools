@@ -1,14 +1,18 @@
+import '../service/minecraft_content_http_service.dart';
 import 'minecraft_content_provider.dart';
 
 class MtnMinecraftContentProviderList {
   MtnMinecraftContentProviderList([
     Iterable<MtnMinecraftContentProvider> providers = const <MtnMinecraftContentProvider>[],
-  ]) {
+  ], {
+    Duration cacheDuration = const Duration(hours: 1),
+  }) : httpService = MtnMinecraftContentHttpService(cacheDuration: cacheDuration) {
     for (final provider in providers) {
       register(provider);
     }
   }
 
+  final MtnMinecraftContentHttpService httpService;
   final List<MtnMinecraftContentProvider> _providers = <MtnMinecraftContentProvider>[];
 
   List<MtnMinecraftContentProvider> get items => List<MtnMinecraftContentProvider>.unmodifiable(_providers);
@@ -23,6 +27,7 @@ class MtnMinecraftContentProviderList {
 
   void register(MtnMinecraftContentProvider provider) {
     if (getFromName(provider.name) != null) throw StateError('Minecraft content provider is already registered: ${provider.name}');
+    provider.attachHttpService(httpService);
     _providers.add(provider);
   }
 
