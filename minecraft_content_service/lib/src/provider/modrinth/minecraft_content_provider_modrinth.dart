@@ -73,8 +73,7 @@ class MtnMinecraftContentProviderModrinth extends MtnMinecraftContentProvider {
     final projectId = MtnMinecraftContentProviderModrinthMapper.providerId(name, content);
     final query = MtnMinecraftContentProviderModrinthMapper.versionQuery(request);
 
-    final value = await _get(baseUri.resolve('project/${Uri.encodeComponent(projectId)}/version').replace(queryParameters: query));
-    final decoded = jsonDecode(value);
+    final decoded = await _getJson(baseUri.resolve('project/${Uri.encodeComponent(projectId)}/version').replace(queryParameters: query));
     if (decoded is! List<Object?>) throw MtnMinecraftContentProviderModrinthException(uri: baseUri, message: 'Expected a JSON array while reading Modrinth project versions.');
 
     return MtnMinecraftContentProviderModrinthMapper.versionResult(name, content, request, decoded);
@@ -85,13 +84,12 @@ class MtnMinecraftContentProviderModrinth extends MtnMinecraftContentProvider {
   }
 
   Future<Map<String, dynamic>> _getMap(Uri uri) async {
-    final value = await _get(uri);
-    final decoded = jsonDecode(value);
+    final decoded = await _getJson(uri);
     if (decoded is! Map<Object?, Object?>) throw MtnMinecraftContentProviderModrinthException(uri: uri, message: 'Expected a JSON object from Modrinth.');
     return decoded.map((key, item) => MapEntry(key.toString(), item));
   }
 
-  Future<String> _get(Uri uri) async {
+  Future<Object?> _getJson(Uri uri) async {
     final response = await httpService.send(
       client: _client,
       uri: uri,
@@ -120,7 +118,7 @@ class MtnMinecraftContentProviderModrinth extends MtnMinecraftContentProvider {
       );
     }
 
-    return response.body;
+    return httpService.decodeJson(response);
   }
 
   void _updateRateLimitFromResponse(http.Response response) {
