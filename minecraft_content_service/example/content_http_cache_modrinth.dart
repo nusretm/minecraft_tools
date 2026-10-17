@@ -52,7 +52,7 @@ Future<void> main(List<String> args) async {
     if (client.requests != afterList) {
       throw StateError('Changing only local pagination offset fetched Modrinth list again.');
     }
-    stdout.writeln('CP-11 PASS version=${first.version} firstExactHttp=$afterFirst repeatedExactHttp=0');
+    stdout.writeln('CP-12 PASS version=${first.version} firstExactHttp=$afterFirst repeatedExactHttp=0');
     stdout.writeln('versionListFirstPage=${listOne.versions.length} versionListSecondPage=${listTwo.versions.length}');
     stdout.writeln('versionListRepeatedHttp=0 cachedResponses=${service.providers.httpService.cachedResponseCount} totalHttp=${client.requests}');
   } finally {
