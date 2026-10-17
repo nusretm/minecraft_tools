@@ -4,7 +4,7 @@
 
 - User explicitly approved implementation after reviewing repeated Modrinth version-list HTTP calls. Main already uses CP-11 for stable encrypted game-record filenames; this bounded HTTP checkpoint is **CP-12** to avoid duplicate numbering.
 - Feature branch: `feature/minecraft-content-central-http-cache`; draft PR pending Windows validation and separate merge approval.
-- **NOT YET WINDOWS VALIDATED.** Repository changes are via GitHub; Dart SDK execution must be performed on the user's Windows checkout.
+- First user Windows run: `dart pub get` succeeded but `dart analyze` found **3 compile errors** caused by a single invalid mixed positional/named constructor in `minecraft_content_provider_list.dart`. Therefore focused, provider, full tests and live smoke could not load; these results are **blocked**, not genuine runtime test failures. The constructor was changed to valid optional positional parameters while preserving the existing registry API, and the service forwards `cacheDuration` positionally (fix commits `a299386`, `6ba863b`). **Post-fix Windows analyzer/tests/live smoke PENDING.**
 - `docs/WORKING_RULES.md` applies. Never run `dart format` for pure Dart.
 
 ## User-approved scope
