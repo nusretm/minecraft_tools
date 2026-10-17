@@ -1,11 +1,11 @@
 # Changelog
 
-## Unreleased — CP-12 centralized HTTP cache (Windows validation pending)
+## Unreleased — CP-12 centralized HTTP cache (Windows validated, merge pending)
 
 - Route Modrinth and CurseForge metadata HTTP calls through a shared response-cache transport instead of performing repeated `http.Client.get/post` calls in providers.
 - SHA-256 request keys use method, normalized URL/query, headers including credential scope, and POST body; successful replies remain in bounded in-memory cache for configurable TTL (default 1 hour). Deduplicate identical in-flight requests before provider request gate.
 - Preserve rate limits / HTTP 429 retry semantics; do not cache failed responses or CurseForge expiring download URLs.
-- Add focused transport/cache tests and actual Modrinth HTTP-count smoke example. No new Dart dependencies, disk cache, model-layer cache or UI changes. Runtime validations pending.
+- Add focused transport/cache tests and actual Modrinth HTTP-count smoke example. No new Dart dependencies, disk cache, model-layer cache or UI changes. Windows analyzer clean; focused cache tests 8/8, provider/service tests 41/41, full suite 318/318 PASS. Real Modrinth HTTP count smoke PASS with zero repeat HTTP calls; diff/working tree clean. Only smoke output checkpoint label corrected after validation.
 
 ## Unreleased — fixed filename encrypted local game records (Windows validated)
 
