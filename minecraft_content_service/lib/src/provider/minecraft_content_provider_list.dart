@@ -4,9 +4,8 @@ import 'minecraft_content_provider.dart';
 class MtnMinecraftContentProviderList {
   MtnMinecraftContentProviderList([
     Iterable<MtnMinecraftContentProvider> providers = const <MtnMinecraftContentProvider>[],
-  ], {
     Duration cacheDuration = const Duration(hours: 1),
-  }) : httpService = MtnMinecraftContentHttpService(cacheDuration: cacheDuration) {
+  ]) : httpService = MtnMinecraftContentHttpService(cacheDuration: cacheDuration) {
     for (final provider in providers) {
       register(provider);
     }
