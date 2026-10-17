@@ -21,7 +21,7 @@ class MtnMinecraftContentService {
   MtnMinecraftContentService({
     Iterable<MtnMinecraftContentProvider> providers = const <MtnMinecraftContentProvider>[],
     Duration cacheDuration = const Duration(hours: 1),
-  }) : providers = MtnMinecraftContentProviderList(providers, cacheDuration: cacheDuration);
+  }) : providers = MtnMinecraftContentProviderList(providers, cacheDuration);
 
   final MtnMinecraftContentProviderList providers;
 
