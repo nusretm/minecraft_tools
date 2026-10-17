@@ -4,6 +4,23 @@ Pure Dart Minecraft content domain and provider-service foundation for reusable 
 
 The package models logical Minecraft content independently from any single provider. The same model family can represent mods, modpacks, resource packs, shader packs and data packs while preserving Modrinth, CurseForge and future provider provenance.
 
+## HTTP response caching
+
+All registered providers use a shared `MtnMinecraftContentHttpService` for HTTP transport. Successful metadata responses are cached in memory for **one hour by default** using a SHA-256 request identity (HTTP method, canonical URL/query, headers/auth scope and POST body). Equivalent in-flight requests are coalesced; HTTP errors and expiring CurseForge download URLs are not cached. Request queueing and 429 throttling still apply to real HTTP calls.
+
+```dart
+final service = MtnMinecraftContentService(
+  providers: <MtnMinecraftContentProvider>[modrinthProvider, curseForgeProvider],
+  cacheDuration: const Duration(hours: 1),
+);
+
+final cache = service.providers.httpService;
+print(cache.cachedResponseCount);
+cache.clear();
+```
+
+The cache belongs to the provider registry (including late registrations); it is not persisted across process restarts. Use `Duration.zero` to disable completed-response reuse.
+
 Current foundation includes:
 
 - `MtnMinecraftContentModel` serialization and parsing utilities
