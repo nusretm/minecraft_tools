@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:isolate';
 
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
@@ -24,6 +25,22 @@ class MtnMinecraftContentHttpService {
 
   final Map<String, (http.Response, DateTime)> _responses = <String, (http.Response, DateTime)>{};
   final Map<String, Future<http.Response>> _pending = <String, Future<http.Response>>{};
+
+  // Decoded objects share the lifetime of their owning cached HTTP response.
+  // No second independent key/TTL/eviction authority is introduced.
+  final Expando<Future<Object?>> _decodedJson = Expando<Future<Object?>>('content-http-json');
+
+  /// Decode JSON once per response identity. The costly first decode runs off
+  /// the calling isolate; subsequent cache hits reuse the same Future.
+  Future<Object?> decodeJson(http.Response response) {
+    final Future<Object?>? existing = _decodedJson[response];
+    if (existing != null) return existing;
+    final String body = response.body;
+    final Future<Object?> decoded = Isolate.run(() => jsonDecode(body));
+    _decodedJson[response] = decoded;
+    return decoded;
+  }
+
 
   int get cachedResponseCount {
     final now = DateTime.now();
