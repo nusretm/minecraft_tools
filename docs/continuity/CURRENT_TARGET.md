@@ -1,5 +1,12 @@
 # Minecraft Tools — Current Target
 
+## CP-12 — Centralized HTTP Cache — IMPLEMENTED / WINDOWS VALIDATION PENDING (2026-10-18)
+
+- User reported repeated Modrinth catalog/version-list HTTP requests and approved a **single HTTP owner** instead of higher-level per-model cache changes. Active feature branch: `feature/minecraft-content-central-http-cache`. Existing CP-11 numbering is already occupied by stable game record filename; this is CP-12.
+- New `MtnMinecraftContentHttpService` is shared by registered Modrinth/CurseForge providers. Request SHA-256 key includes method, canonical URL/query params, headers/auth identity and POST body; successful response TTL defaults to **one hour**, configurable via `MtnMinecraftContentService(cacheDuration: ...)`. In-flight dedup and bounded 256-entry response cache.
+- HTTP cache is checked **before** provider rate-limit queue; existing throttling / one bounded 429 retry preserved. HTTP errors are never cached. CurseForge time-limited download URLs bypass cache. No new model caches, disk writes, UI edits, dependencies, or pagination engine.
+- New focused HTTP-cache test, Modrinth actual HTTP-call-count example and continuity doc added. **No Windows Dart analyzer/tests/live evidence yet; no merge approval.** Handoff: `docs/continuity/PLANNED_2026-10-18_MINECRAFT_CONTENT_CENTRAL_HTTP_CACHE.md`.
+
 ## CP-11 — Stable game record filename — WINDOWS VALIDATED / MERGE APPROVAL PENDING (2026-10-16)
 
 - The MTN Launcher App owner authorized the minimal required `minecraft_tools` storage adjustment. Branch: `feature/content-package-fixed-record-file` (from `main` `588713d`). This change is limited to `minecraft_content_service`, focused tests, example, changelog, and continuity.
