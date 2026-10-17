@@ -92,30 +92,24 @@ class MtnMinecraftContentProviderModrinth extends MtnMinecraftContentProvider {
   }
 
   Future<String> _get(Uri uri) async {
-    final response = await runRequest(() async {
-      var retriedAfterRateLimit = false;
-
-      while (true) {
-        final response = await _client.get(
-          uri,
-          headers: <String, String>{
-            'Accept': 'application/json',
-            'User-Agent': userAgent,
-          },
-        );
-
-        _updateRateLimitFromResponse(response);
-
-        if (response.statusCode != 429 || retriedAfterRateLimit) return response;
-
+    final response = await httpService.send(
+      client: _client,
+      uri: uri,
+      method: 'GET',
+      headers: <String, String>{
+        'Accept': 'application/json',
+        'User-Agent': userAgent,
+      },
+      enqueue: (request) => runRequest(request),
+      onResponse: _updateRateLimitFromResponse,
+      onRateLimited: (response) async {
         final retryAfter = _retryAfter(response);
-        if (retryAfter == null) return response;
-
+        if (retryAfter == null) return false;
         throttleRequests(retryAfter);
         await waitForRequestAvailability();
-        retriedAfterRateLimit = true;
-      }
-    });
+        return true;
+      },
+    );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw MtnMinecraftContentProviderModrinthException(

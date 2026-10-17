@@ -20,7 +20,8 @@ import 'minecraft_content_materialization_planner.dart';
 class MtnMinecraftContentService {
   MtnMinecraftContentService({
     Iterable<MtnMinecraftContentProvider> providers = const <MtnMinecraftContentProvider>[],
-  }) : providers = MtnMinecraftContentProviderList(providers);
+    Duration cacheDuration = const Duration(hours: 1),
+  }) : providers = MtnMinecraftContentProviderList(providers, cacheDuration);
 
   final MtnMinecraftContentProviderList providers;
 

@@ -1,5 +1,12 @@
 # Minecraft Tools — Current Target
 
+## CP-12 — Centralized HTTP Cache — WINDOWS VALIDATED / MERGE APPROVAL PENDING (2026-10-18)
+
+- User reported repeated Modrinth catalog/version-list HTTP requests and approved a **single HTTP owner** instead of higher-level per-model cache changes. Active feature branch: `feature/minecraft-content-central-http-cache`. Existing CP-11 numbering is already occupied by stable game record filename; this is CP-12.
+- New `MtnMinecraftContentHttpService` is shared by registered Modrinth/CurseForge providers. Request SHA-256 key includes method, canonical URL/query params, headers/auth identity and POST body; successful response TTL defaults to **one hour**, configurable via `MtnMinecraftContentService(cacheDuration: ...)`. In-flight dedup and bounded 256-entry response cache.
+- HTTP cache is checked **before** provider rate-limit queue; existing throttling / one bounded 429 retry preserved. HTTP errors are never cached. CurseForge time-limited download URLs bypass cache. No new model caches, disk writes, UI edits, dependencies, or pagination engine.
+- New focused HTTP-cache test, Modrinth actual HTTP-call-count example and continuity doc added. Initial user Windows build was **BLOCKED** by three analyzer diagnostics from one invalid mixed positional/named provider-registry constructor; all tests/live smoke failed at load time, not behavior. Corrected in commits `a299386`, `6ba863b`; **post-fix Windows verification PASSED**: `dart analyze` No issues found; cache 8/8 PASS; provider/service 41/41 PASS; full `dart test` **318/318 PASS**; live Modrinth HTTP-count smoke PASS (`firstExactHttp=2`, `repeatedExactHttp=0`, `versionListRepeatedHttp=0`, `cachedResponses=3`, `totalHttp=3`). `git diff --check main...HEAD` and tracked working tree clean. Live example initially printed `CP-11 PASS` despite this being CP-12; the label alone was corrected after validation. **Merge awaits separate explicit approval.** Handoff: `docs/continuity/PLANNED_2026-10-18_MINECRAFT_CONTENT_CENTRAL_HTTP_CACHE.md`.
+
 ## CP-11 — Stable game record filename — WINDOWS VALIDATED / MERGE APPROVAL PENDING (2026-10-16)
 
 - The MTN Launcher App owner authorized the minimal required `minecraft_tools` storage adjustment. Branch: `feature/content-package-fixed-record-file` (from `main` `588713d`). This change is limited to `minecraft_content_service`, focused tests, example, changelog, and continuity.
