@@ -112,7 +112,7 @@ class MtnMinecraftContentHttpService {
       ..sort((a, b) => a.key.compareTo(b.key));
     final data = jsonEncode(<Object?>[
       method,
-      uri.replace(query: null, fragment: null).toString(),
+      uri.replace(query: '', fragment: '').toString(),
       normalizedQuery,
       <List<String>>[for (final entry in headerEntries) <String>[entry.key, entry.value]],
       body,
