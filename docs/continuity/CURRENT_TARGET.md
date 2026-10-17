@@ -1,5 +1,16 @@
 # Minecraft Tools — Current Target
 
+
+## CP-13 — Modrinth cached-version mapping responsiveness — IMPLEMENTED / WINDOWS VALIDATION PENDING (2026-10-18)
+
+- **Reason and approval:** After testing CP-12 via `mtn_launcher_app`'s temporary dependency override pinned to `2f1ac07`, user confirmed central HTTP cache works but reported several seconds of frozen Flutter UI while ContentItem ↔ Minecraft version compatibility is computed. User approved a separate small `minecraft_tools` performance checkpoint before returning to launcher-side compatibility work.
+- **Scope and branch:** `feature/minecraft-content-version-page-perf` is stacked on **unmerged** CP-12 `2f1ac07`. New PR must target `feature/minecraft-content-central-http-cache`, not `main`, until CP-12 is merged. No merges without separate approval.
+- **Implementation:** The existing `MtnMinecraftContentHttpService` owns an `Expando<Future<Object?>>` attached to the already-bounded `http.Response` object identity: the JSON decode runs once in `Isolate.run` off the caller isolate and subsequent offsets share its decoded Future. Entries follow the HTTP response cache's lifetime, with no new independent key, TTL, model cache, or provider registry. Modrinth's `getVersions` uses the shared JSON decode. The existing Modrinth version mapper filters/sorts lightweight raw version metadata then **materializes only the requested 1–50 versions**, rather than every version on every offset. Original filtering/sorting/page result contracts are retained.
+- **Focused regression coverage:** cached decoded response identity and post-clear fresh decode; Modrinth 120 raw versions, release filtering, pages 0/50, order, identity and only one HTTP request; existing CP-12 focused and provider tests remain in scope.
+- **Windows verification still required:** From `minecraft_tools/minecraft_content_service` run `dart analyze`, `dart test test/content_http_cache_test.dart test/content_provider_modrinth_test.dart -r expanded`, and `dart run example/content_http_cache_modrinth.dart 6qAuTtLR`; check `git diff --check` and clean status. Then temporarily override `mtn_launcher_app` to this branch's exact SHA and repeat *within one process* cache-hit ContentItem/Minecraft selection with observable UI responsiveness. A successful UI result is **not yet claimed**; no Dart tools or Windows Flutter process have been run by the assistant.
+- **Separate follow-up, not in CP-13:** `mtn_launcher_app`'s compatibility helper recomputes `matching()` over many Minecraft versions and may need another approved, measured optimization if the remaining UI stall persists.
+
+
 ## CP-12 — Centralized HTTP Cache — WINDOWS VALIDATED / MERGE APPROVAL PENDING (2026-10-18)
 
 - User reported repeated Modrinth catalog/version-list HTTP requests and approved a **single HTTP owner** instead of higher-level per-model cache changes. Active feature branch: `feature/minecraft-content-central-http-cache`. Existing CP-11 numbering is already occupied by stable game record filename; this is CP-12.
