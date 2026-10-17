@@ -97,7 +97,7 @@ void main() {
     final client = MockClient((request) async {
       ++calls;
       expect(request.method, 'POST');
-      return http.Response('{"data":${calls}}', 200);
+      return http.Response('{"data":$calls}', 200);
     });
     final cache = MtnMinecraftContentHttpService();
     final uri = Uri.parse('https://api.curseforge.test/v1/mods/files');
