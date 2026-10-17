@@ -136,24 +136,40 @@ class MtnMinecraftContentProviderModrinthMapper {
     MtnMinecraftContentVersionListRequest request,
     List<Object?> values,
   ) {
-    final versions = values.map(MtnMinecraftContentModel.mapFromMap).map((map) => version(providerName, content, map)).where((version) {
-      return request.releaseTypes.isEmpty || request.releaseTypes.contains(version.releaseType);
-    }).toList(growable: true);
+    // Modrinth returns the entire version list for every local offset. Sort
+    // only lightweight wire metadata, then materialize the requested page.
+    // Previously each offset rebuilt every version's files and dependencies.
+    final List<({Map<String, dynamic> map, DateTime? publishedAt, String key})> candidates =
+        <({Map<String, dynamic> map, DateTime? publishedAt, String key})>[];
+    for (final Object? entry in values) {
+      final Map<String, dynamic> map = MtnMinecraftContentModel.mapFromMap(entry);
+      final MtnMinecraftContentVersionReleaseType releaseType =
+          _releaseType(MtnMinecraftContentModel.stringFromMap(map['version_type']));
+      if (request.releaseTypes.isNotEmpty && !request.releaseTypes.contains(releaseType)) continue;
+      candidates.add((
+        map: map,
+        publishedAt: MtnMinecraftContentModel.nullableDateTimeFromMap(map['date_published']),
+        key: '$providerName:${MtnMinecraftContentModel.stringFromMap(map['id'])}',
+      ));
+    }
 
-    versions.sort((a, b) {
-      final aDate = a.publishedAt;
-      final bDate = b.publishedAt;
+    candidates.sort((a, b) {
+      final DateTime? aDate = a.publishedAt;
+      final DateTime? bDate = b.publishedAt;
       if (aDate == null && bDate == null) return a.key.compareTo(b.key);
       if (aDate == null) return -1;
       if (bDate == null) return 1;
-      final compare = aDate.compareTo(bDate);
+      final int compare = aDate.compareTo(bDate);
       return compare == 0 ? a.key.compareTo(b.key) : compare;
     });
 
-    final total = versions.length;
-    final start = request.offset > total ? total : request.offset;
-    final end = start + request.limit > total ? total : start + request.limit;
-    final page = versions.sublist(start, end);
+    final int total = candidates.length;
+    final int start = request.offset > total ? total : request.offset;
+    final int end = start + request.limit > total ? total : start + request.limit;
+    final List<MtnMinecraftContentVersion> page = <MtnMinecraftContentVersion>[
+      for (int index = start; index < end; index++)
+        version(providerName, content, candidates[index].map),
+    ];
 
     return MtnMinecraftContentVersionListResult(
       versions: page,
@@ -163,6 +179,7 @@ class MtnMinecraftContentProviderModrinthMapper {
       hasMore: end < total,
     );
   }
+
 
   static MtnMinecraftContent _searchContent(String providerName, Map<String, dynamic> map) {
     final id = MtnMinecraftContentModel.stringFromMap(map['project_id']);

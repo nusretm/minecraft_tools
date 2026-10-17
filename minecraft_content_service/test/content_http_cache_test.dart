@@ -46,6 +46,28 @@ void main() {
     expect(calls, 2);
   });
 
+  test('parsed JSON is reused with the cached response and discarded with it', () async {
+    var calls = 0;
+    final client = MockClient((request) async =>
+        http.Response('{"version":${++calls},"data":[1,2,3]}', 200));
+    final cache = MtnMinecraftContentHttpService();
+    final uri = Uri.parse('https://example.test/v2/project/id/version');
+    final firstResponse = await fetch(cache, client, uri);
+    final first = await cache.decodeJson(firstResponse);
+    final secondResponse = await fetch(cache, client, uri);
+    final second = await cache.decodeJson(secondResponse);
+    expect(identical(firstResponse, secondResponse), isTrue);
+    expect(identical(first, second), isTrue);
+    expect(calls, 1);
+
+    cache.clear();
+    final refreshedResponse = await fetch(cache, client, uri);
+    final refreshed = await cache.decodeJson(refreshedResponse);
+    expect(identical(first, refreshed), isFalse);
+    expect((refreshed as Map<String, dynamic>)['version'], 2);
+    expect(calls, 2);
+  });
+
   test('in-flight equivalent requests join before entering the request gate', () async {
     var calls = 0;
     var queued = 0;

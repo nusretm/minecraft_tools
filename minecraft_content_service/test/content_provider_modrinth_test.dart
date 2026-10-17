@@ -218,6 +218,54 @@ void main() {
       expect(version.providers.single.metadata['status'], 'listed');
     });
 
+    test('local pagination sorts all metadata but maps only the requested release page', () async {
+      var requests = 0;
+      final response = jsonEncode(<Map<String, dynamic>>[
+        for (var index = 119; index >= 0; index--)
+          _versionJson(
+            id: 'V${index.toString().padLeft(3, '0')}',
+            version: '1.0.$index',
+            type: index.isEven ? 'release' : 'beta',
+            date: DateTime.utc(2026, 1, 1).add(Duration(days: index)).toIso8601String(),
+          ),
+      ]);
+      final client = MockClient((request) async {
+        ++requests;
+        return http.Response(response, 200);
+      });
+      final provider = MtnMinecraftContentProviderModrinth(userAgent: 'test', client: client);
+      final content = MtnMinecraftContentMod(
+        key: 'modrinth:AABBCCDD', name: 'Example Mod',
+        providers: <MtnMinecraftContentProviderMetadata>[
+          MtnMinecraftContentProviderMetadata(provider: MtnMinecraftContentProviderModrinth.providerName, id: 'AABBCCDD'),
+        ],
+      );
+      final first = await provider.getVersions(
+        content, MtnMinecraftContentVersionListRequest(
+          releaseTypes: <MtnMinecraftContentVersionReleaseType>[MtnMinecraftContentVersionReleaseType.release],
+          limit: 50,
+        ),
+      );
+      final second = await provider.getVersions(
+        content, MtnMinecraftContentVersionListRequest(
+          releaseTypes: <MtnMinecraftContentVersionReleaseType>[MtnMinecraftContentVersionReleaseType.release],
+          offset: 50, limit: 50,
+        ),
+      );
+      expect(first.total, 60);
+      expect(first.versions.length, 50);
+      expect(first.hasMore, isTrue);
+      expect(first.versions.first.key, 'modrinth:V000');
+      expect(first.versions.last.key, 'modrinth:V098');
+      expect(second.total, 60);
+      expect(second.versions.length, 10);
+      expect(second.versions.first.key, 'modrinth:V100');
+      expect(second.versions.last.key, 'modrinth:V118');
+      expect(second.hasMore, isFalse);
+      expect(second.versions.first.content, same(content));
+      expect(requests, 1);
+    });
+
     test('normalizes Modrinth embedded dependencies as bundled', () async {
       final client = MockClient((request) async {
         return http.Response(
