@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../model/minecraft_content_models.dart';
+import '../service/minecraft_content_http_service.dart';
 import 'minecraft_content_provider_models.dart';
 
 abstract class MtnMinecraftContentProvider {
@@ -12,6 +13,14 @@ abstract class MtnMinecraftContentProvider {
   }
 
   final String name;
+
+  MtnMinecraftContentHttpService _httpService = MtnMinecraftContentHttpService();
+  MtnMinecraftContentHttpService get httpService => _httpService;
+
+  /// The provider registry binds all registered providers to one HTTP authority.
+  void attachHttpService(MtnMinecraftContentHttpService service) {
+    _httpService = service;
+  }
 
   bool get ready;
 
