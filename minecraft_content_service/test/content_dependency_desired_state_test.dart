@@ -96,6 +96,15 @@ void main() {
       expect(report.issues.where((issue) => issue.type == MtnMinecraftContentDependencyIssueType.multipleVersions), hasLength(2));
       expect(report.issues.map((issue) => issue.rootContentKey).toSet(), <String>{rootA.content.key, rootX.content.key});
       expect(MtnMinecraftContentDependencyReport.fromMap(report.toMap()).issues, hasLength(2));
+      const issue = MtnMinecraftContentDependencyIssue(
+        type: MtnMinecraftContentDependencyIssueType.unresolvedRequired,
+        rootVersionKey: 'test:root-version', rootContentKey: 'test:root',
+        dependencyContentKey: 'test:required-library', dependencyName: 'Required Library',
+      );
+      expect(issue.matchesDependency(provider: null, projectId: null, versionId: null,
+        contentKey: 'test:required-library'), isTrue);
+      final restored = MtnMinecraftContentDependencyIssue.fromMap(issue.toMap());
+      expect(restored.dependencyName, 'Required Library');
     });
 
     test('preserves root-local blockers without duplicating them as desired-state conflicts', () {
