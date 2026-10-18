@@ -1,5 +1,13 @@
 # Minecraft Tools — Current Target
 
+## 2026-10-18 — Content Service dependency issue diagnostics (feature; Windows validation pending)
+
+- **User-approved behavior:** Preserve per-root, per-source dependency-resolution failures rather than collapsing install plans into unresolved/conflict counts. The existing `MtnMinecraftContentItemState` continues to mean only item metadata hydration; no new provider registry, resolver, or duplicate dependency cache is introduced.
+- **New public API:** `MtnMinecraftContentDependencyIssueType` (`unresolvedRequired`, `incompatible`, `multipleVersions`), immutable `MtnMinecraftContentDependencyIssue`, and `MtnMinecraftContentDependencyReport.fromDesired(desired)` in `minecraft_content_service`. The report derives from existing `desired.plans[].unresolvedInstallEdges`, **plan-local conflicts**, and cross-root `desired.conflicts`. Each issue preserves the exact direct root version/content identity, requesting source version/content identity, and available provider/version/constraint/file/conflict references; absent evidence is not fabricated. Roundtrip maps support the app's local diagnostic storage; this report is not part of published ContentPackage state.
+- **Focused test updates:** Existing desired-state tests now check cross-root two-root conflict attribution, plan-local unresolved + multiple-version reporting, and report serialization. No implicit install, provider HTTP calls or repair logic added.
+- **Consumer integration:** The app branch `feature/game-content-diagnostics-tab` uses the report in the existing Content Installer, stores a package-fingerprinted local snapshot and shows per-item warnings and a fifth **Bağımlılıklar** tab in ContentItem details. The tab reads `MtnMinecraftContentVersion.dependencies` for the exact currently selected provider version, not the newest release.
+- **Status:** Feature branch only, **not merged**. Real Windows `dart analyze`, `dart test test/content_dependency_desired_state_test.dart -r expanded`, and `git diff --check` have **not** been run. Keep publishing, startup on unresolvable dependencies, and user-controlled version selection unchanged. No pure-Dart formatting performed.
+
 ## 2026-10-18 — Portable Game Package logo metadata (feature; Windows verification pending)
 
 - User explicitly requires `logoImageFileName` and `logoImageMode` to belong to publishable `MtnMinecraftContentPackage` and travel with local/portable serialization. Local-only favorite preference stays in `mtn_launcher_app`, not this package.
