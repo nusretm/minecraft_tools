@@ -1,6 +1,6 @@
 import 'minecraft_content_dependency_desired_state.dart';
-import 'minecraft_content_dependency_install_plan.dart';
 import 'minecraft_content_dependency_graph.dart';
+import 'minecraft_content_dependency_install_plan.dart';
 
 /// An explanation of a failed dependency plan, not the Item's metadata/hydration state.
 enum MtnMinecraftContentDependencyIssueType { unresolvedRequired, incompatible, multipleVersions }
@@ -21,22 +21,6 @@ final class MtnMinecraftContentDependencyIssue {
     this.fileName,
     this.conflictingVersionKey,
   });
-
-  final MtnMinecraftContentDependencyIssueType type;
-  /// The explicitly selected root mod version affected by the failure.
-  final String rootVersionKey;
-  final String rootContentKey;
-  /// The requesting dependency source, potentially nested below the root.
-  final String? sourceVersionKey;
-  final String? sourceContentKey;
-  final String? dependencyProvider;
-  final String? dependencyProjectId;
-  final String? dependencyContentKey;
-  final String? dependencyName;
-  final String? dependencyVersionId;
-  final String? versionConstraint;
-  final String? fileName;
-  final String? conflictingVersionKey;
 
   factory MtnMinecraftContentDependencyIssue.fromMap(Map<String, dynamic> map) {
     final typeName = map['type'];
@@ -65,6 +49,22 @@ final class MtnMinecraftContentDependencyIssue {
       conflictingVersionKey: map['conflictingVersionKey'] as String?,
     );
   }
+
+  final MtnMinecraftContentDependencyIssueType type;
+  /// The explicitly selected root mod version affected by the failure.
+  final String rootVersionKey;
+  final String rootContentKey;
+  /// The requesting dependency source, potentially nested below the root.
+  final String? sourceVersionKey;
+  final String? sourceContentKey;
+  final String? dependencyProvider;
+  final String? dependencyProjectId;
+  final String? dependencyContentKey;
+  final String? dependencyName;
+  final String? dependencyVersionId;
+  final String? versionConstraint;
+  final String? fileName;
+  final String? conflictingVersionKey;
 
   Map<String, dynamic> toMap() => <String, dynamic>{
     'type': type.name,
@@ -100,9 +100,6 @@ final class MtnMinecraftContentDependencyReport {
   MtnMinecraftContentDependencyReport(Iterable<MtnMinecraftContentDependencyIssue> issues)
       : issues = List<MtnMinecraftContentDependencyIssue>.unmodifiable(issues);
 
-  final List<MtnMinecraftContentDependencyIssue> issues;
-  bool get hasIssues => issues.isNotEmpty;
-
   factory MtnMinecraftContentDependencyReport.fromMap(Map<String, dynamic> map) {
     if (map['issues'] is! List) throw const FormatException('Dependency issue list is missing.');
     return MtnMinecraftContentDependencyReport((map['issues'] as List).map((value) {
@@ -110,10 +107,6 @@ final class MtnMinecraftContentDependencyReport {
       return MtnMinecraftContentDependencyIssue.fromMap(Map<String, dynamic>.from(value));
     }));
   }
-
-  Map<String, dynamic> toMap() => <String, dynamic>{
-    'issues': <Map<String, dynamic>>[for (final issue in issues) issue.toMap()],
-  };
 
   factory MtnMinecraftContentDependencyReport.fromDesired(MtnMinecraftContentDependencyDesiredState desired) {
     final issues = <MtnMinecraftContentDependencyIssue>[];
@@ -184,5 +177,12 @@ final class MtnMinecraftContentDependencyReport {
     }
 
     return MtnMinecraftContentDependencyReport(issues);
-  }
+  }  final List<MtnMinecraftContentDependencyIssue> issues;
+  bool get hasIssues => issues.isNotEmpty;
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+    'issues': <Map<String, dynamic>>[for (final issue in issues) issue.toMap()],
+  };
+
+
 }
