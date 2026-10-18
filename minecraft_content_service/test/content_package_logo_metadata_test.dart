@@ -24,7 +24,7 @@ void main() {
       );
 
   test('portable and encrypted-record model maps retain logo association and mode', () {
-    final String fileName = '${'a' * 64}.png';
+    final String fileName = '${List<String>.filled(64, 'a').join()}.png';
     final MtnMinecraftContentPackage package = sample(
       image: fileName, mode: MtnMinecraftContentPackageLogoImageMode.center,
     );
@@ -47,7 +47,7 @@ void main() {
 
   test('invalid paths and unsupported image modes are rejected', () {
     expect(() => sample(image: '../file.png'), throwsArgumentError);
-    expect(() => sample(image: '${'b' * 64}.gif'), throwsArgumentError);
+    expect(() => sample(image: '${List<String>.filled(64, 'b').join()}.gif'), throwsArgumentError);
     final Map<String, dynamic> original = sample().toLocalMap()..['logoImageMode'] = 'unknown';
     expect(() => MtnMinecraftContentPackage.fromLocalMap(original), throwsFormatException);
   });
