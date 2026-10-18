@@ -143,7 +143,11 @@ final class MtnMinecraftContentDependencyReport {
 
     // Conflicts can arise between separate roots, even if every plan is
     // individually installable. Keep all impacted direct roots.
-    for (final conflict in desired.conflicts) {
+    final conflicts = <MtnMinecraftContentDependencyInstallConflict>[
+      for (final plan in desired.plans) ...plan.conflicts,
+      ...desired.conflicts,
+    ];
+    for (final conflict in conflicts) {
       if (conflict is MtnMinecraftContentDependencyInstallConflictMultipleVersions) {
         for (final version in conflict.versions) {
           final roots = desired.versions.where((entry) => entry.version.key == version.key)
