@@ -177,12 +177,12 @@ final class MtnMinecraftContentDependencyReport {
     }
 
     return MtnMinecraftContentDependencyReport(issues);
-  }  final List<MtnMinecraftContentDependencyIssue> issues;
+  }
+
+  final List<MtnMinecraftContentDependencyIssue> issues;
   bool get hasIssues => issues.isNotEmpty;
 
   Map<String, dynamic> toMap() => <String, dynamic>{
     'issues': <Map<String, dynamic>>[for (final issue in issues) issue.toMap()],
   };
-
-
 }
