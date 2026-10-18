@@ -14,6 +14,8 @@ final class MtnMinecraftContentDependencyIssue {
     this.sourceContentKey,
     this.dependencyProvider,
     this.dependencyProjectId,
+    this.dependencyContentKey,
+    this.dependencyName,
     this.dependencyVersionId,
     this.versionConstraint,
     this.fileName,
@@ -29,6 +31,8 @@ final class MtnMinecraftContentDependencyIssue {
   final String? sourceContentKey;
   final String? dependencyProvider;
   final String? dependencyProjectId;
+  final String? dependencyContentKey;
+  final String? dependencyName;
   final String? dependencyVersionId;
   final String? versionConstraint;
   final String? fileName;
@@ -42,7 +46,7 @@ final class MtnMinecraftContentDependencyIssue {
       throw const FormatException('Invalid dependency issue identity.');
     }
     for (final key in const <String>['sourceVersionKey', 'sourceContentKey', 'dependencyProvider',
-      'dependencyProjectId', 'dependencyVersionId', 'versionConstraint', 'fileName', 'conflictingVersionKey']) {
+      'dependencyProjectId', 'dependencyContentKey', 'dependencyName', 'dependencyVersionId', 'versionConstraint', 'fileName', 'conflictingVersionKey']) {
       if (map[key] != null && map[key] is! String) throw FormatException('Invalid dependency issue field $key.');
     }
     return MtnMinecraftContentDependencyIssue(
@@ -53,6 +57,8 @@ final class MtnMinecraftContentDependencyIssue {
       sourceContentKey: map['sourceContentKey'] as String?,
       dependencyProvider: map['dependencyProvider'] as String?,
       dependencyProjectId: map['dependencyProjectId'] as String?,
+      dependencyContentKey: map['dependencyContentKey'] as String?,
+      dependencyName: map['dependencyName'] as String?,
       dependencyVersionId: map['dependencyVersionId'] as String?,
       versionConstraint: map['versionConstraint'] as String?,
       fileName: map['fileName'] as String?,
@@ -68,6 +74,8 @@ final class MtnMinecraftContentDependencyIssue {
     if (sourceContentKey != null) 'sourceContentKey': sourceContentKey,
     if (dependencyProvider != null) 'dependencyProvider': dependencyProvider,
     if (dependencyProjectId != null) 'dependencyProjectId': dependencyProjectId,
+    if (dependencyContentKey != null) 'dependencyContentKey': dependencyContentKey,
+    if (dependencyName != null) 'dependencyName': dependencyName,
     if (dependencyVersionId != null) 'dependencyVersionId': dependencyVersionId,
     if (versionConstraint != null) 'versionConstraint': versionConstraint,
     if (fileName != null) 'fileName': fileName,
@@ -79,9 +87,11 @@ final class MtnMinecraftContentDependencyIssue {
     required String? provider,
     required String? projectId,
     required String? versionId,
-  }) => dependencyProvider != null && dependencyProvider == provider &&
+    String? contentKey,
+  }) => (dependencyProvider != null && dependencyProvider == provider &&
       ((dependencyProjectId != null && dependencyProjectId == projectId) ||
-       (dependencyVersionId != null && dependencyVersionId == versionId));
+       (dependencyVersionId != null && dependencyVersionId == versionId))) ||
+      (dependencyContentKey != null && dependencyContentKey == contentKey);
 }
 
 /// Snapshot built exclusively from the existing multi-root install plans.
@@ -128,6 +138,8 @@ final class MtnMinecraftContentDependencyReport {
       sourceContentKey: edge.source.content.key,
       dependencyProvider: edge.dependency.provider,
       dependencyProjectId: edge.dependency.providerContentId,
+      dependencyContentKey: edge.resolution.content?.key ?? edge.dependency.content?.key,
+      dependencyName: edge.resolution.content?.name ?? edge.dependency.content?.name,
       dependencyVersionId: edge.dependency.providerVersionId,
       versionConstraint: edge.dependency.versionConstraint,
       fileName: edge.dependency.fileName,
