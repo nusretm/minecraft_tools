@@ -15,6 +15,9 @@ import 'minecraft_content_package_source.dart';
 
 enum MtnMinecraftContentPackageMutationPolicy { none, readOnly, appendOnly }
 
+/// Portable presentation of a game's logo.
+enum MtnMinecraftContentPackageLogoImageMode { fit, center }
+
 /// A tree presentation node. Shared dependencies may occur under multiple roots.
 class MtnMinecraftContentPackageTreeNode {
   MtnMinecraftContentPackageTreeNode({
@@ -45,6 +48,8 @@ class MtnMinecraftContentPackage {
     this.serverAddress,
     this.description,
     this.iconUrl,
+    this.logoImageFileName,
+    this.logoImageMode = MtnMinecraftContentPackageLogoImageMode.fit,
     this.revision = 1,
     this.mutationPolicy = MtnMinecraftContentPackageMutationPolicy.none,
     MtnMinecraftContentPackageLock? lock,
@@ -54,6 +59,9 @@ class MtnMinecraftContentPackage {
        _dependencyEdges = List<MtnMinecraftContentPackageLockedEdge>.of(dependencyEdges ?? lock?.edges ?? const <MtnMinecraftContentPackageLockedEdge>[]) {
     if (id.trim().isEmpty || title.trim().isEmpty || minecraftVersion.trim().isEmpty) throw ArgumentError('Package ID, title and Minecraft version cannot be empty.');
     if (revision < 1) throw ArgumentError.value(revision, 'revision', 'Revision must be positive.');
+    if (logoImageFileName != null && !RegExp(r'^[a-f0-9]{64}\.(png|jpg|webp)$').hasMatch(logoImageFileName!)) {
+      throw ArgumentError.value(logoImageFileName, 'logoImageFileName', 'Logo must use a canonical lowercase SHA-256 basename.');
+    }
     if (ramMiB < 1) throw ArgumentError.value(ramMiB, 'ramMiB', 'RAM must be positive MiB.');
     if (ownerName.trim().isEmpty) throw ArgumentError.value(ownerName, 'ownerName', 'Owner name cannot be blank.');
     if (!createdAt.isUtc || !updatedAt.isUtc) throw ArgumentError('Package timestamps must be UTC.');
@@ -148,6 +156,12 @@ class MtnMinecraftContentPackage {
     if (contents is! List || (requireLock ? locked is! Map : locked != null && locked is! Map)) throw const FormatException('Invalid Content Package item metadata or locked graph.');
     final description = map['description'];
     final iconUrl = map['iconUrl'];
+    final logoImageFileName = map['logoImageFileName'];
+    if (logoImageFileName != null && logoImageFileName is! String) throw const FormatException('Logo file name must be text.');
+    final rawImageMode = map['logoImageMode'];
+    if (rawImageMode != null && rawImageMode is! String) throw const FormatException('Logo image mode must be text.');
+    final logoImageMode = MtnMinecraftContentPackageLogoImageMode.values.where((value) => value.name == (rawImageMode ?? 'fit')).firstOrNull;
+    if (logoImageMode == null) throw const FormatException('Unsupported package logo image mode.');
     if (description != null && description is! String) throw const FormatException('Package description must be text.');
     if (iconUrl != null && iconUrl is! String) throw const FormatException('Package iconUrl must be text.');
     return MtnMinecraftContentPackage(
@@ -155,6 +169,8 @@ class MtnMinecraftContentPackage {
       title: title,
       description: description as String?,
       iconUrl: iconUrl as String?,
+      logoImageFileName: logoImageFileName as String?,
+      logoImageMode: logoImageMode,
       minecraftVersion: minecraftVersion,
       modLoader: modLoader,
       loaderVersion: map['loaderVersion'] as String?,
@@ -183,6 +199,8 @@ class MtnMinecraftContentPackage {
   final String title;
   final String? description;
   final String? iconUrl;
+  final String? logoImageFileName;
+  final MtnMinecraftContentPackageLogoImageMode logoImageMode;
   final String minecraftVersion;
   final MtnMinecraftModLoaderType modLoader;
   final String? loaderVersion;
@@ -490,6 +508,7 @@ class MtnMinecraftContentPackage {
     // the original package completely unchanged.
     final built = const MtnMinecraftContentPackageBuilder().build(
       id: id, title: title, description: description, iconUrl: iconUrl,
+      logoImageFileName: logoImageFileName, logoImageMode: logoImageMode,
       minecraftVersion: minecraftVersion, modLoader: modLoader, loaderVersion: loaderVersion,
       ramMiB: ramMiB, serverAddress: serverAddress, ownerName: ownerName,
       createdAt: createdAt, updatedAt: updatedAt, revision: revision, mutationPolicy: mutationPolicy,
@@ -592,6 +611,8 @@ class MtnMinecraftContentPackage {
       'title': title,
       if (description != null) 'description': description,
       if (iconUrl != null) 'iconUrl': iconUrl,
+      if (logoImageFileName != null) 'logoImageFileName': logoImageFileName,
+      'logoImageMode': logoImageMode.name,
       'revision': revision,
       'minecraftVersion': minecraftVersion,
       'modLoader': modLoader.name,
