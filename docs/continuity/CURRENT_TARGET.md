@@ -1,5 +1,12 @@
 # Minecraft Tools — Current Target
 
+## 2026-10-18 — Portable Game Package logo metadata (feature; Windows verification pending)
+
+- User explicitly requires `logoImageFileName` and `logoImageMode` to belong to publishable `MtnMinecraftContentPackage` and travel with local/portable serialization. Local-only favorite preference stays in `mtn_launcher_app`, not this package.
+- Adds optional SHA-256-addressed logo basename `<hash>.(png|jpg|webp)` and typed `MtnMinecraftContentPackageLogoImageMode` (`fit`, `center`). Keeps `iconUrl` separate and schema 2 readable with absent logo keys defaulting to null/fit. Both portable/local map paths persist fields; exact-lock builder/rebuild propagates them.
+- A focused model round-trip test was added. No publishing HTTP/upload/download implementation in this feature; the future transport must handle image bytes and `.info` companion files separately and verify content hash.
+- This feature is unmerged; `dart analyze`, focused tests and real Windows app integration **not run here**, and must be user-verified before separate merge approval. Pure Dart formatting was not performed.
+
 
 ## CP-13 — Modrinth cached-version mapping responsiveness — WINDOWS UNIT/HTTP VALIDATED / LAUNCHER UI VALIDATION PENDING (2026-10-18)
 
