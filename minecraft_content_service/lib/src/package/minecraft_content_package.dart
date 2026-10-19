@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
+
 import '../model/minecraft_content_models.dart';
 import '../provider/minecraft_content_provider_models.dart';
 import '../service/minecraft_content_dependency_desired_state.dart';
@@ -165,7 +167,7 @@ class MtnMinecraftContentPackage {
     if (logoImageMode == null) throw const FormatException('Unsupported package logo image mode.');
     if (description != null && description is! String) throw const FormatException('Package description must be text.');
     if (iconUrl != null && iconUrl is! String) throw const FormatException('Package iconUrl must be text.');
-    return MtnMinecraftContentPackage(
+    final package = MtnMinecraftContentPackage(
       id: id,
       title: title,
       description: description as String?,
@@ -192,6 +194,8 @@ class MtnMinecraftContentPackage {
         return MtnMinecraftContentPackageLockedEdge.fromMap(Map<String, dynamic>.from(value));
       }),
     );
+    if (!requireLock) package._restoreLocalUpdateCheck(map['localUpdateCheck']);
+    return package;
   }
 
   static const int currentSchemaVersion = 2;
@@ -248,7 +252,34 @@ class MtnMinecraftContentPackage {
   void attachContentService(MtnMinecraftContentService service) => _contentService = service;
 
   final Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion> _updateList = <MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>{};
-  Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion> get updateList => Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>.unmodifiable(_updateList);
+  DateTime? _lastSuccessfulUpdateCheckAt;
+  String? _updateSelectionFingerprint;
+
+  /// This is a local scan result, not the HTTP cache's receipt time.
+  /// Invalidated whenever the exact package content/permissions change.
+  DateTime? get lastSuccessfulUpdateCheckAt =>
+      _updateSelectionFingerprint == _updateFingerprint() ? _lastSuccessfulUpdateCheckAt : null;
+
+  bool get hasUpdateEligibleItems => items.any(_mayUpdate);
+
+  bool needsUpdateCheck({DateTime? now, Duration interval = const Duration(hours: 6)}) {
+    if (interval.isNegative) throw ArgumentError.value(interval, 'interval', 'Update check interval cannot be negative.');
+    if (!hasUpdateEligibleItems) return false;
+    final checkedAt = lastSuccessfulUpdateCheckAt;
+    if (checkedAt == null) return true;
+    final current = (now ?? DateTime.now()).toUtc();
+    return current.isBefore(checkedAt) || !current.isBefore(checkedAt.add(interval));
+  }
+
+  Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion> get updateList {
+    if (_updateSelectionFingerprint != null && _updateSelectionFingerprint != _updateFingerprint()) {
+      return const <MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>{};
+    }
+    return Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>.unmodifiable(<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>{
+      for (final entry in _updateList.entries)
+        if (_mayUpdate(entry.key)) entry.key: entry.value,
+    });
+  }
 
 
   MtnMinecraftContentPackageItem? getItem(String key) {
@@ -345,6 +376,8 @@ class MtnMinecraftContentPackage {
       _lock = null;
     }
     _updateList.clear();
+    _lastSuccessfulUpdateCheckAt = null;
+    _updateSelectionFingerprint = null;
   }
 
   /// Adds one provider-selected version, or promotes an existing dependency.
@@ -560,14 +593,19 @@ class MtnMinecraftContentPackage {
     final source = service ?? _contentService;
     if (source == null) throw StateError('A Content Service must be supplied or attached before checking updates.');
     _contentService = source;
+    if (!hasUpdateEligibleItems) return;
+    final initialSelection = _updateFingerprint();
     final found = await source.providers.httpService.withCacheOptions(
       cacheDuration: cacheDuration,
       forceRefresh: force,
       action: () => _findUpdates(source, refresh: force),
     );
+    if (_updateFingerprint() != initialSelection) throw StateError('Content Package changed during its update scan.');
     _updateList
       ..clear()
       ..addAll(found);
+    _lastSuccessfulUpdateCheckAt = DateTime.now().toUtc();
+    _updateSelectionFingerprint = initialSelection;
   }
 
   /// Rebuilds updateList only if every required HTTP response remains in cache.
@@ -577,6 +615,7 @@ class MtnMinecraftContentPackage {
     Duration cacheDuration = const Duration(hours: 6),
   }) async {
     _contentService = service;
+    if (lastSuccessfulUpdateCheckAt != null || !hasUpdateEligibleItems) return;
     final detached = MtnMinecraftContentPackage.fromLocalMap(toLocalMap());
     try {
       final cached = await service.providers.httpService.withCacheOptions(
@@ -593,6 +632,7 @@ class MtnMinecraftContentPackage {
       final item = getItem(entry.key.key);
       if (item != null && _mayUpdate(item)) _updateList[item] = entry.value;
     }
+    _updateSelectionFingerprint = _updateFingerprint();
   }
 
   Future<Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>> _findUpdates(
@@ -631,6 +671,85 @@ class MtnMinecraftContentPackage {
       if (next != null) found[item] = next;
     }
     return found;
+  }
+
+  /// A deterministic digest of the selection, permissions and exact lock.
+  /// Presentation-only edits do not invalidate scan results.
+  String _updateFingerprint() {
+    final selection = <String, dynamic>{
+      'id': id,
+      'revision': revision,
+      'minecraftVersion': minecraftVersion,
+      'modLoader': modLoader.name,
+      'loaderVersion': loaderVersion,
+      'mutationPolicy': mutationPolicy.name,
+      'lock': lock?.toMap(),
+      'items': (items.toList()..sort((a, b) => a.key.compareTo(b.key))).map((item) => <String, dynamic>{
+        'key': item.key,
+        'type': item.type.name,
+        'selectedVersionId': item.selectedVersionId,
+        'source': item.source.name,
+        'direct': item.direct,
+        'enabled': item.direct ? item.enabled : null,
+        'permissions': item.permissions.map((value) => value.name).toList(growable: false),
+      }).toList(growable: false),
+    };
+    return sha256.convert(utf8.encode(jsonEncode(selection))).toString();
+  }
+
+  /// The update snapshot belongs to the encrypted local record only; neither
+  /// portable Content Packages nor the HTTP response cache include this state.
+  Map<String, dynamic>? _localUpdateCheckMap() {
+    final checkedAt = lastSuccessfulUpdateCheckAt;
+    if (checkedAt == null) return null;
+    return <String, dynamic>{
+      'schemaVersion': 1,
+      'selectionFingerprint': _updateSelectionFingerprint,
+      'checkedAt': checkedAt.toIso8601String(),
+      'updates': <Map<String, dynamic>>[
+        for (final entry in updateList.entries)
+          <String, dynamic>{
+            'itemKey': entry.key.key,
+            'content': MtnMinecraftContentModel.jsonDecode(MtnMinecraftContentModel.jsonEncode(entry.value.content.toMap())),
+            'version': MtnMinecraftContentModel.jsonDecode(MtnMinecraftContentModel.jsonEncode(entry.value.toMap())),
+          },
+      ],
+    };
+  }
+
+  void _restoreLocalUpdateCheck(Object? raw) {
+    if (raw is! Map) return;
+    try {
+      if (raw['schemaVersion'] != 1 || raw['selectionFingerprint'] != _updateFingerprint()) return;
+      final text = raw['checkedAt'];
+      if (text is! String || !text.endsWith('Z')) return;
+      final checkedAt = DateTime.tryParse(text);
+      if (checkedAt == null || !checkedAt.isUtc) return;
+      final updates = raw['updates'];
+      if (updates is! List) return;
+      final restored = <MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>{};
+      for (final value in updates) {
+        if (value is! Map || value['itemKey'] is! String || value['content'] is! Map || value['version'] is! Map) return;
+        final item = getItem(value['itemKey'] as String);
+        if (item == null || !_mayUpdate(item) || restored.containsKey(item)) return;
+        final content = MtnMinecraftContent.fromMap(Map<String, dynamic>.from(value['content'] as Map));
+        final versionMap = Map<String, dynamic>.from(value['version'] as Map);
+        if (versionMap['content'] != content.key) return;
+        final version = MtnMinecraftContentVersion.fromMap(versionMap, content);
+        final identity = _providerIdentity(version);
+        if (identity == null || identity.$1 != item.provider || identity.$2 != item.projectId ||
+            content.type != item.type || !_compatible(version) || version.publishedAt == null) return;
+        restored[item] = version;
+      }
+      _updateList
+        ..clear()
+        ..addAll(restored);
+      _lastSuccessfulUpdateCheckAt = checkedAt;
+      _updateSelectionFingerprint = raw['selectionFingerprint'] as String;
+    } catch (_) {
+      // Optional stale or malformed update metadata must not block a valid
+      // encrypted game record. Missing results trigger a new check when due.
+    }
   }
 
   /// Hydrates each item sequentially, verifying the imported exact lock when
@@ -686,6 +805,7 @@ class MtnMinecraftContentPackage {
       'items': (items.toList()..sort((a, b) => a.key.compareTo(b.key))).map((item) => requireLock ? item.toMap() : item.toLocalMap()).toList(growable: false),
       if (!requireLock && graph == null && _dependencyEdges.isNotEmpty) 'dependencyEdges': _dependencyEdges.map((edge) => edge.toMap()).toList(growable: false),
       if (graph != null) 'lock': graph.toMap(),
+      if (!requireLock && _localUpdateCheckMap() != null) 'localUpdateCheck': _localUpdateCheckMap(),
     };
   }
 
