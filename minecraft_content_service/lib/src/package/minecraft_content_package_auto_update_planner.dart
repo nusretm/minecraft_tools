@@ -52,11 +52,14 @@ class MtnMinecraftContentPackageAutoUpdatePlanner {
     final existingLocks = <String, String>{
       for (final entry in source.lock?.versions ?? []) entry.itemKey: entry.versionId,
     };
-    final draftMap = source.toLocalMap();
+    final baseline = source.toLocalMap()..remove('localUpdateCheck');
+    final savedSelection = jsonEncode(baseline);
+    final snapshotUpdates = <String, String>{
+      for (final entry in updates.entries) entry.key.key: entry.value.key,
+    };
+    final draftMap = Map<String, dynamic>.from(baseline);
     draftMap.remove('lock');
     draftMap.remove('dependencyEdges');
-    draftMap.remove('localUpdateCheck');
-    final savedSelection = jsonEncode(draftMap);
     final copiedRoots = <Map<String, dynamic>>[];
 
     for (final root in roots) {
@@ -98,12 +101,10 @@ class MtnMinecraftContentPackageAutoUpdatePlanner {
       throw StateError('Automatic content update has unresolved or conflicting dependencies.');
     }
 
-    final latestMap = source.toLocalMap();
-    latestMap.remove('localUpdateCheck');
-    latestMap.remove('lock');
-    latestMap.remove('dependencyEdges');
-    if (jsonEncode(latestMap) != savedSelection || source.updateList.length != updates.length ||
-        source.updateList.keys.any((item) => !updates.containsKey(item))) {
+    final latestMap = source.toLocalMap()..remove('localUpdateCheck');
+    final currentUpdates = source.updateList;
+    if (jsonEncode(latestMap) != savedSelection || currentUpdates.length != snapshotUpdates.length ||
+        currentUpdates.entries.any((entry) => snapshotUpdates[entry.key.key] != entry.value.key)) {
       throw StateError('Source Content Package changed during automatic update preparation.');
     }
 
