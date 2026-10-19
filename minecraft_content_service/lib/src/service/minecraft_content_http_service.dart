@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:isolate';
 
@@ -9,8 +10,27 @@ import 'package:http/http.dart' as http;
 /// The request key contains the HTTP method, full canonical URL, sorted request
 /// headers (including authorization identity) and body. Only the SHA-256 digest
 /// is retained; credentials are never stored as readable cache keys.
-/// Successful responses expire one hour after receipt by default. Failures and
+/// Successful responses have a default one-hour freshness window; callers may
+/// request a different TTL without introducing a second cache. Failures and
 /// HTTP 429 are never cached. In-flight equivalent calls share one request.
+/// A cached-only lookup never triggers a provider request.
+class MtnMinecraftContentHttpCacheMissException implements Exception {
+  const MtnMinecraftContentHttpCacheMissException();
+
+  @override
+  String toString() => 'MtnMinecraftContentHttpCacheMissException';
+}
+
+/// Async-local policy shares the existing transport for nested provider calls.
+final class _MtnMinecraftContentHttpCacheOptions {
+  _MtnMinecraftContentHttpCacheOptions(this.cacheDuration, this.forceRefresh, this.cachedOnly);
+
+  final Duration cacheDuration;
+  final bool forceRefresh;
+  final bool cachedOnly;
+  final Set<String> refreshedKeys = <String>{};
+}
+
 class MtnMinecraftContentHttpService {
   MtnMinecraftContentHttpService({
     this.cacheDuration = const Duration(hours: 1),
@@ -23,7 +43,9 @@ class MtnMinecraftContentHttpService {
   final Duration cacheDuration;
   final int maxCachedResponses;
 
-  final Map<String, (http.Response, DateTime)> _responses = <String, (http.Response, DateTime)>{};
+  /// Response, receipt time and longest granted retention window.
+  final Map<String, (http.Response, DateTime, Duration)> _responses = <String, (http.Response, DateTime, Duration)>{};
+  final Object _cacheOptionsKey = Object();
   final Map<String, Future<http.Response>> _pending = <String, Future<http.Response>>{};
 
   // Decoded objects share the lifetime of their owning cached HTTP response.
@@ -44,13 +66,30 @@ class MtnMinecraftContentHttpService {
 
   int get cachedResponseCount {
     final now = DateTime.now();
-    _responses.removeWhere((key, entry) => !entry.$2.isAfter(now));
+    _responses.removeWhere((key, entry) => !entry.$2.add(entry.$3).isAfter(now));
     return _responses.length;
   }
 
   void clear() {
     _responses.clear();
     _pending.clear();
+  }
+
+  /// Applies one request policy across async nested calls to any provider.
+  /// Async zones keep parallel package checks independent. forceRefresh fetches
+  /// each unique HTTP request once within the operation, then reuses its result.
+  Future<T> withCacheOptions<T>({
+    Duration? cacheDuration,
+    bool forceRefresh = false,
+    bool cachedOnly = false,
+    required Future<T> Function() action,
+  }) {
+    final duration = cacheDuration ?? this.cacheDuration;
+    if (duration.isNegative) throw ArgumentError.value(duration, 'cacheDuration', 'Cache duration cannot be negative.');
+    if (forceRefresh && cachedOnly) throw ArgumentError('Cannot force refresh while requiring cached-only responses.');
+    return runZoned(action, zoneValues: <Object, Object>{
+      _cacheOptionsKey: _MtnMinecraftContentHttpCacheOptions(duration, forceRefresh, cachedOnly),
+    });
   }
 
   /// Cache lookup precedes the provider's serial/rate-limit queue.
@@ -66,25 +105,38 @@ class MtnMinecraftContentHttpService {
     required Future<http.Response> Function(Future<http.Response> Function()) enqueue,
     String? body,
     bool cacheable = true,
+    Duration? cacheDuration,
+    bool forceRefresh = false,
+    bool cachedOnly = false,
     void Function(http.Response)? onResponse,
     Future<bool> Function(http.Response)? onRateLimited,
   }) {
     final verb = method.toUpperCase();
     if (verb != 'GET' && verb != 'POST') throw ArgumentError.value(method, 'method', 'Only GET and POST are supported by content metadata transport.');
+    final scope = Zone.current[_cacheOptionsKey] as _MtnMinecraftContentHttpCacheOptions?;
+    final duration = cacheDuration ?? scope?.cacheDuration ?? this.cacheDuration;
+    if (duration.isNegative) throw ArgumentError.value(duration, 'cacheDuration', 'Cache duration cannot be negative.');
     final key = _requestKey(verb, uri, headers, body);
-    if (cacheable) {
+    final onlyCached = cachedOnly || (scope?.cachedOnly ?? false);
+    final force = forceRefresh || (scope != null && scope.forceRefresh && !scope.refreshedKeys.contains(key));
+    if (onlyCached && force) throw ArgumentError('Cannot force refresh and read only cached responses.');
+
+    if (cacheable && duration > Duration.zero && !force) {
+      final saved = _responses[key];
+      if (saved != null && saved.$2.add(duration).isAfter(DateTime.now())) {
+        // An older 1-hour caller may not consume a 6-hour-old response.
+        // Extend retention for a longer-lived caller without changing receipt time.
+        final retention = duration > saved.$3 ? duration : saved.$3;
+        _responses.remove(key);
+        _responses[key] = (saved.$1, saved.$2, retention);
+        return Future<http.Response>.value(saved.$1);
+      }
+    }
+    if (onlyCached) return Future<http.Response>.error(const MtnMinecraftContentHttpCacheMissException());
+
+    if (cacheable && !force) {
       final running = _pending[key];
       if (running != null) return running;
-      final saved = _responses[key];
-      if (saved != null) {
-        if (saved.$2.isAfter(DateTime.now())) {
-          // Keep frequently used entries at the end for bounded LRU eviction.
-          _responses.remove(key);
-          _responses[key] = saved;
-          return Future<http.Response>.value(saved.$1);
-        }
-        _responses.remove(key);
-      }
     }
 
     Future<http.Response> network() => enqueue(() async {
@@ -104,13 +156,16 @@ class MtnMinecraftContentHttpService {
 
     late final Future<http.Response> pending;
     pending = Future<http.Response>.sync(network).then((response) {
-      if (identical(_pending[key], pending) && cacheDuration > Duration.zero &&
+      if (identical(_pending[key], pending) &&
           response.statusCode >= 200 && response.statusCode < 300) {
-        _responses.remove(key);
-        _responses[key] = (response, DateTime.now().add(cacheDuration));
-        while (_responses.length > maxCachedResponses) {
-          _responses.remove(_responses.keys.first);
+        if (duration > Duration.zero) {
+          _responses.remove(key);
+          _responses[key] = (response, DateTime.now(), duration);
+          while (_responses.length > maxCachedResponses) {
+            _responses.remove(_responses.keys.first);
+          }
         }
+        if (scope != null && scope.forceRefresh) scope.refreshedKeys.add(key);
       }
       return response;
     }).whenComplete(() {

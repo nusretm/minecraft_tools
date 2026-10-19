@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
+import '../service/minecraft_content_service.dart';
 import 'minecraft_content_package_record.dart';
 import 'minecraft_content_package_record_codec.dart';
 
@@ -23,10 +24,14 @@ import 'minecraft_content_package_record_codec.dart';
 class MtnMinecraftContentPackageRecordStorage {
   MtnMinecraftContentPackageRecordStorage({
     required this.directory,
+    this.contentService,
     MtnMinecraftContentPackageRecordCodec? codec,
   }) : codec = codec ?? MtnMinecraftContentPackageRecordCodec();
 
   final Directory directory;
+  /// Optional shared service for binding package.checkUpdates() and restoring
+  /// available in-memory HTTP cache results without any network on load.
+  final MtnMinecraftContentService? contentService;
   final MtnMinecraftContentPackageRecordCodec codec;
 
   static final RegExp _idPattern = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$');
@@ -104,7 +109,19 @@ class MtnMinecraftContentPackageRecordStorage {
     final file = await _publishedFile(recordId);
     if (file == null) return null;
     final payload = await file.readAsBytes();
-    return codec.decrypt(payload, key: key);
+    final record = await codec.decrypt(payload, key: key);
+    final service = contentService;
+    if (service != null) {
+      record.package.attachContentService(service);
+      try {
+        await record.package.restoreCachedUpdates(service);
+      } catch (_) {
+        // Corrupt/stale optional HTTP response cache must never make an
+        // otherwise valid encrypted game record unavailable for loading.
+        stderr.writeln('Cached content update information could not be restored.');
+      }
+    }
+    return record;
   }
 
   /// Parses the unauthenticated key ID of the published encrypted file.

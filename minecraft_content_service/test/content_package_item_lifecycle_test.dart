@@ -206,7 +206,7 @@ void main() {
     expect(package.add(old), isTrue);
     final item = package.items.single;
     expect(item.canUpdate, isFalse);
-    await package.checkUpdates(VersionService(content, old, <MtnMinecraftContentVersion>[old, latest]));
+    await package.checkUpdates(service: VersionService(content, old, <MtnMinecraftContentVersion>[old, latest]));
     expect(item.canUpdate, isTrue);
     expect(package.updateList[item], same(latest));
     expect(item.toLocalMap().containsKey('updateVersion'), isFalse);

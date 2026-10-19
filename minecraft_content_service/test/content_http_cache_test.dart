@@ -171,6 +171,48 @@ void main() {
     expect(calls, 2);
   });
 
+  test('request-scoped six-hour TTL and forced refresh share one HTTP cache', () async {
+    var calls = 0;
+    final client = MockClient((request) async => http.Response('${++calls}', 200));
+    final cache = MtnMinecraftContentHttpService(cacheDuration: const Duration(milliseconds: 10));
+    final uri = Uri.parse('https://example.test/v2/project/abc/version');
+
+    await cache.withCacheOptions(cacheDuration: const Duration(hours: 6), action: () async {
+      expect((await fetch(cache, client, uri)).body, '1');
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 25));
+    await cache.withCacheOptions(cacheDuration: const Duration(hours: 6), action: () async {
+      expect((await fetch(cache, client, uri)).body, '1');
+    });
+    // The shorter default TTL must not inherit the six-hour freshness grant.
+    expect((await fetch(cache, client, uri)).body, '2');
+
+    await cache.withCacheOptions(cacheDuration: const Duration(hours: 6), forceRefresh: true, action: () async {
+      expect((await fetch(cache, client, uri)).body, '3');
+      expect((await fetch(cache, client, uri)).body, '3');
+    });
+    expect(calls, 3);
+  });
+
+  test('cached-only lookups never issue HTTP and a miss cannot overwrite a response', () async {
+    var calls = 0;
+    final client = MockClient((request) async => http.Response('${++calls}', 200));
+    final cache = MtnMinecraftContentHttpService();
+    final uri = Uri.parse('https://example.test/v2/project/abc');
+    await expectLater(
+      cache.withCacheOptions(cacheDuration: const Duration(hours: 6), cachedOnly: true,
+        action: () => fetch(cache, client, uri)),
+      throwsA(isA<MtnMinecraftContentHttpCacheMissException>()),
+    );
+    expect(calls, 0);
+
+    expect((await fetch(cache, client, uri)).body, '1');
+    await cache.withCacheOptions(cacheDuration: const Duration(hours: 6), cachedOnly: true, action: () async {
+      expect((await fetch(cache, client, uri)).body, '1');
+    });
+    expect(calls, 1);
+  });
+
   test('one service owns all registered provider HTTP caches, including late registration', () {
     final modrinth = MtnMinecraftContentProviderModrinth(
       userAgent: 'test', client: MockClient((request) async => http.Response('{}', 200)),

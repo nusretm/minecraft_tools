@@ -5,6 +5,7 @@ import '../model/minecraft_content_models.dart';
 import '../provider/minecraft_content_provider_models.dart';
 import '../service/minecraft_content_dependency_desired_state.dart';
 import '../service/minecraft_content_dependency_install_plan.dart';
+import '../service/minecraft_content_http_service.dart';
 import '../service/minecraft_content_service.dart';
 import 'minecraft_content_package_builder.dart';
 import 'minecraft_content_package_item.dart';
@@ -240,6 +241,11 @@ class MtnMinecraftContentPackage {
     if (_record != null && !identical(_record, value)) throw StateError('Package is already attached to a different record.');
     _record = value;
   }
+
+  /// Service context is attached by RecordStorage when a package is loaded.
+  /// Manually constructed packages may still pass the service explicitly.
+  MtnMinecraftContentService? _contentService;
+  void attachContentService(MtnMinecraftContentService service) => _contentService = service;
 
   final Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion> _updateList = <MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>{};
   Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion> get updateList => Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>.unmodifiable(_updateList);
@@ -542,35 +548,89 @@ class MtnMinecraftContentPackage {
     return true;
   }
 
-  /// Checks provider updates without changing the selected version or lock.
-  /// Missing provider data or unorderable releases are left out of the result.
-  Future<void> checkUpdates(MtnMinecraftContentService service) async {
+  /// Checks for newer compatible published versions without changing the lock.
+  /// Provider HTTP results use the single Content Service cache for six hours
+  /// by default; a forced check bypasses that cache once per unique request.
+  /// Errors leave the previous updateList unchanged instead of claiming no updates.
+  Future<void> checkUpdates({
+    MtnMinecraftContentService? service,
+    bool force = false,
+    Duration cacheDuration = const Duration(hours: 6),
+  }) async {
+    final source = service ?? _contentService;
+    if (source == null) throw StateError('A Content Service must be supplied or attached before checking updates.');
+    _contentService = source;
+    final found = await source.providers.httpService.withCacheOptions(
+      cacheDuration: cacheDuration,
+      forceRefresh: force,
+      action: () => _findUpdates(source, refresh: force),
+    );
+    _updateList
+      ..clear()
+      ..addAll(found);
+  }
+
+  /// Rebuilds updateList only if every required HTTP response remains in cache.
+  /// The detached snapshot prevents a cache miss from changing item hydration,
+  /// provider pins or previously shown update information on this package.
+  Future<void> restoreCachedUpdates(MtnMinecraftContentService service, {
+    Duration cacheDuration = const Duration(hours: 6),
+  }) async {
+    _contentService = service;
+    final detached = MtnMinecraftContentPackage.fromLocalMap(toLocalMap());
+    try {
+      final cached = await service.providers.httpService.withCacheOptions(
+        cacheDuration: cacheDuration,
+        cachedOnly: true,
+        action: () => detached._findUpdates(service, refresh: false),
+      );
+      detached._updateList.addAll(cached);
+    } on MtnMinecraftContentHttpCacheMissException {
+      return;
+    }
     _updateList.clear();
+    for (final entry in detached.updateList.entries) {
+      final item = getItem(entry.key.key);
+      if (item != null && _mayUpdate(item)) _updateList[item] = entry.value;
+    }
+  }
+
+  Future<Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>> _findUpdates(
+    MtnMinecraftContentService service, {required bool refresh}
+  ) async {
+    final found = <MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>{};
     for (final item in items) {
       if (!_mayUpdate(item)) continue;
-      try {
-        final selectedLock = _lock?.versions.where((entry) => entry.itemKey == item.key).firstOrNull;
-        await item.hydrate(service, lock: selectedLock);
-        final current = item.version;
-        final published = current?.publishedAt;
-        final content = item.content;
-        if (current == null || published == null || content == null) continue;
-        final candidates = await service.getVersions(item.provider, content, MtnMinecraftContentVersionListRequest(
-          gameVersions: <String>[minecraftVersion],
-          modLoaders: item.type == MtnMinecraftContentType.mod ? <MtnMinecraftModLoaderType>[modLoader] : const <MtnMinecraftModLoaderType>[],
+      final selectedLock = _lock?.versions.where((entry) => entry.itemKey == item.key).firstOrNull;
+      await item.hydrate(service, lock: selectedLock, refresh: refresh);
+      final current = item.version;
+      final published = current?.publishedAt;
+      final content = item.content;
+      if (current == null || published == null || content == null) continue;
+      final filter = MtnMinecraftContentVersionListRequest(
+        gameVersions: <String>[minecraftVersion],
+        modLoaders: item.type == MtnMinecraftContentType.mod ? <MtnMinecraftModLoaderType>[modLoader] : const <MtnMinecraftModLoaderType>[],
+      );
+      MtnMinecraftContentVersion? next;
+      var offset = 0;
+      while (true) {
+        final result = await service.getVersions(item.provider, content, MtnMinecraftContentVersionListRequest(
+          gameVersions: filter.gameVersions, modLoaders: filter.modLoaders,
+          offset: offset, limit: 50,
         ));
-        MtnMinecraftContentVersion? next;
-        for (final version in candidates.versions) {
+        for (final version in result.versions) {
           if (!_compatible(version) || version.publishedAt == null || !version.publishedAt!.isAfter(published)) continue;
           final identity = _providerIdentity(version);
           if (identity == null || '${identity.$1}:${identity.$2}' != item.key) continue;
           if (next == null || version.publishedAt!.isAfter(next.publishedAt!)) next = version;
         }
-        if (next != null) _updateList[item] = next;
-      } catch (_) {
-        // An unavailable provider does not block checking other items.
+        if (!result.hasMore) break;
+        if (result.versions.isEmpty) throw StateError('Provider returned an empty version page while reporting further results for ${item.key}.');
+        offset += result.versions.length;
       }
+      if (next != null) found[item] = next;
     }
+    return found;
   }
 
   /// Hydrates each item sequentially, verifying the imported exact lock when
