@@ -783,6 +783,7 @@ class MtnMinecraftContentPackage {
 
   Map<String, dynamic> _toMap({required bool requireLock}) {
     final graph = lock;
+    final localUpdateCheck = requireLock ? null : _localUpdateCheckMap();
     if (requireLock && graph == null) throw StateError('Cannot export a Content Package without a complete locked graph.');
     return <String, dynamic>{
       'schemaVersion': currentSchemaVersion,
@@ -805,7 +806,7 @@ class MtnMinecraftContentPackage {
       'items': (items.toList()..sort((a, b) => a.key.compareTo(b.key))).map((item) => requireLock ? item.toMap() : item.toLocalMap()).toList(growable: false),
       if (!requireLock && graph == null && _dependencyEdges.isNotEmpty) 'dependencyEdges': _dependencyEdges.map((edge) => edge.toMap()).toList(growable: false),
       if (graph != null) 'lock': graph.toMap(),
-      if (!requireLock && _localUpdateCheckMap() != null) 'localUpdateCheck': _localUpdateCheckMap(),
+      if (localUpdateCheck != null) 'localUpdateCheck': localUpdateCheck,
     };
   }
 
