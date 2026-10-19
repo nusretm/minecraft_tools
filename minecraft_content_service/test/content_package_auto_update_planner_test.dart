@@ -201,6 +201,32 @@ void main() {
     expect(original.toLocalMap(), before);
   });
 
+  test('appendOnly added roots cannot upgrade protected downloaded dependency as a side effect', () async {
+    final local = makePackage().toLocalMap();
+    local['mutationPolicy'] = MtnMinecraftContentPackageMutationPolicy.appendOnly.name;
+    local['items'] = <Map<String, dynamic>>[
+      for (final raw in local['items'] as List)
+        Map<String, dynamic>.from(raw as Map)..['source'] =
+          (raw['projectId'] == 'a' ? MtnMinecraftContentPackageSource.local : MtnMinecraftContentPackageSource.downloaded).name,
+    ];
+    final record = MtnMinecraftContentPackageRecord.fromMap(<String, dynamic>{
+      'schemaVersion': MtnMinecraftContentPackageRecord.currentSchemaVersion,
+      'source': MtnMinecraftContentPackageSource.downloaded.name,
+      'package': local,
+    });
+    final original = record.package;
+    final provider = service();
+    await original.checkUpdates(service: provider);
+    expect(original.updateList.keys.map((item) => item.key), <String>['test:a']);
+    final before = original.toLocalMap();
+    await expectLater(
+      const MtnMinecraftContentPackageAutoUpdatePlanner().prepare(original, provider),
+      throwsStateError,
+    );
+    expect(original.toLocalMap(), before);
+    expect(original.getItem('test:library')!.selectedVersionId, 'library-old');
+  });
+
   test('changing source preferences during graph resolution rejects the stale preparation', () async {
     final original = makePackage();
     final scanService = service();
