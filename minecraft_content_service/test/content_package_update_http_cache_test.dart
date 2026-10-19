@@ -172,6 +172,18 @@ void main() {
     expect(blocked.updateList, isEmpty);
     expect(blocked.needsUpdateCheck(), isFalse);
 
+    final appendOnlyLocal = Map<String, dynamic>.from(local);
+    appendOnlyLocal['mutationPolicy'] = 'appendOnly';
+    appendOnlyLocal['items'] = (local['items'] as List).map((value) => Map<String, dynamic>.from(value as Map)..['source'] = 'downloaded').toList(growable: false);
+    final appendOnlyDownloaded = MtnMinecraftContentPackageRecord.fromMap(<String, dynamic>{
+      'schemaVersion': MtnMinecraftContentPackageRecord.currentSchemaVersion,
+      'source': MtnMinecraftContentPackageSource.downloaded.name,
+      'package': appendOnlyLocal,
+    });
+    expect(appendOnlyDownloaded.package.hasUpdateEligibleItems, isFalse);
+    expect(appendOnlyDownloaded.package.updateList, isEmpty);
+    expect(appendOnlyDownloaded.package.needsUpdateCheck(), isFalse);
+
     final updated = MtnMinecraftContentPackage.fromLocalMap(local);
     expect(updated.updateList.length, 1);
     expect(updated.lastSuccessfulUpdateCheckAt, isNotNull);
