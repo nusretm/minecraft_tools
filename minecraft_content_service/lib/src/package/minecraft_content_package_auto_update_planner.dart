@@ -4,6 +4,7 @@ import '../model/minecraft_content_models.dart';
 import '../service/minecraft_content_dependency_desired_state.dart';
 import '../service/minecraft_content_service.dart';
 import 'minecraft_content_package.dart';
+import 'minecraft_content_package_lock.dart';
 import 'minecraft_content_package_source.dart';
 
 /// An isolated candidate for a later coordinated install, not an installed
@@ -50,7 +51,7 @@ class MtnMinecraftContentPackageAutoUpdatePlanner {
     final roots = source.directItems;
     final chosen = <String, MtnMinecraftContentVersion>{};
     final existingLocks = <String, String>{
-      for (final entry in source.lock?.versions ?? []) entry.itemKey: entry.versionId,
+      for (final entry in source.lock?.versions ?? const <MtnMinecraftContentPackageLockedVersion>[]) entry.itemKey: entry.versionId,
     };
     final baseline = source.toLocalMap()..remove('localUpdateCheck');
     final savedSelection = jsonEncode(baseline);
