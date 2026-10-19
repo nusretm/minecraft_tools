@@ -4,6 +4,7 @@ import '../model/minecraft_content_models.dart';
 import '../service/minecraft_content_dependency_desired_state.dart';
 import '../service/minecraft_content_service.dart';
 import 'minecraft_content_package.dart';
+import 'minecraft_content_package_source.dart';
 
 /// An isolated candidate for a later coordinated install, not an installed
 /// update. The caller may publish [package] only after the existing installer
@@ -98,6 +99,27 @@ class MtnMinecraftContentPackageAutoUpdatePlanner {
     final desired = await staged.resolveDependencies(service);
     if (!desired.installable) {
       throw StateError('Automatic content update has unresolved or conflicting dependencies.');
+    }
+
+    // A downloaded appendOnly package may contain locally appended updateable
+    // roots, but resolving them must not silently replace or remove the
+    // publisher-owned original roots or their protected dependencies.
+    if (source.mutationPolicy == MtnMinecraftContentPackageMutationPolicy.appendOnly &&
+        source.record?.source == MtnMinecraftContentPackageSource.downloaded) {
+      for (final item in source.items) {
+        if (item.source != MtnMinecraftContentPackageSource.downloaded) continue;
+        final pinnedId = item.selectedVersionId ?? existingLocks[item.key];
+        final resolvedIds = <String>[
+          for (final entry in desired.versions)
+            if (entry.version.content.providers.any((owner) =>
+                owner.provider == item.provider && owner.id == item.projectId))
+              for (final identity in entry.version.providers)
+                if (identity.provider == item.provider && identity.id != null) identity.id!,
+        ];
+        if (pinnedId == null || resolvedIds.length != 1 || resolvedIds.single != pinnedId) {
+          throw StateError('Automatic update would modify protected downloaded ContentItem ${item.key}.');
+        }
+      }
     }
 
     final latestMap = source.toLocalMap()..remove('localUpdateCheck');
