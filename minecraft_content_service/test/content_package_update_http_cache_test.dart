@@ -190,7 +190,8 @@ void main() {
     // The portable map does not contain any machine-local update metadata.
     // This package is an unlocked local draft; portable serialization needs
     // a full lock, so only the local map is inspected here.
-    expect(local['localUpdateCheck']['updates'], hasLength(1));
+    final updateSnapshot = Map<String, dynamic>.from(local['localUpdateCheck'] as Map);
+    expect(updateSnapshot['updates'], hasLength(1));
   });
 
   test('record storage restores cached updates without network and skips an empty cache', () async {
