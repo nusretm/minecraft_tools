@@ -161,7 +161,9 @@ class MtnMinecraftContentHttpService {
         if (duration > Duration.zero) {
           _responses.remove(key);
           _responses[key] = (response, DateTime.now(), duration);
-          while (_responses.length > maxCachedResponses) _responses.remove(_responses.keys.first);
+          while (_responses.length > maxCachedResponses) {
+            _responses.remove(_responses.keys.first);
+          }
         }
         if (scope != null && scope.forceRefresh) scope.refreshedKeys.add(key);
       }
