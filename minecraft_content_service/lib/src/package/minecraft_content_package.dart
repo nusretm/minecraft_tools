@@ -5,8 +5,8 @@ import '../model/minecraft_content_models.dart';
 import '../provider/minecraft_content_provider_models.dart';
 import '../service/minecraft_content_dependency_desired_state.dart';
 import '../service/minecraft_content_dependency_install_plan.dart';
-import '../service/minecraft_content_service.dart';
 import '../service/minecraft_content_http_service.dart';
+import '../service/minecraft_content_service.dart';
 import 'minecraft_content_package_builder.dart';
 import 'minecraft_content_package_item.dart';
 import 'minecraft_content_package_lock.dart';
@@ -596,7 +596,7 @@ class MtnMinecraftContentPackage {
   }
 
   Future<Map<MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>> _findUpdates(
-    MtnMinecraftContentService service, {required bool refresh},
+    MtnMinecraftContentService service, {required bool refresh}
   ) async {
     final found = <MtnMinecraftContentPackageItem, MtnMinecraftContentVersion>{};
     for (final item in items) {
