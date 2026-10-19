@@ -130,6 +130,47 @@ void main() {
     expect(calls, 8); // fresh content, selected version and two pages
   });
 
+  test('auto-update opt-out skips provider calls and survives restart without resetting other settings', () async {
+    var calls = 0;
+    final provider = UpdatesProviderFake(MockClient((request) async {
+      calls++;
+      return http.Response('{}', 200);
+    }));
+    final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]);
+    final package = makeUpdatePackage();
+    final item = package.getItem('updates:sample')!;
+    expect(item.autoUpdate, isTrue);
+    await package.checkUpdates(service: service);
+    expect(calls, 4);
+    expect(package.updateList.length, 1);
+    final before = package.lastSuccessfulUpdateCheckAt;
+
+    item.autoUpdate = false;
+    expect(package.updateList, isEmpty);
+    expect(item.canUpdate, isFalse);
+    expect(package.hasUpdateEligibleItems, isFalse);
+    expect(package.needsUpdateCheck(), isFalse);
+    expect(package.lastSuccessfulUpdateCheckAt, isNull);
+    final optedOutLocal = package.toLocalMap();
+    expect(optedOutLocal['localUpdateCheck'], isNull);
+    await package.checkUpdates(force: true);
+    expect(calls, 4); // Explicit scan cannot bypass the user's opt-out.
+
+    final optedOut = MtnMinecraftContentPackage.fromLocalMap(optedOutLocal);
+    final reloaded = optedOut.getItem(item.key)!;
+    expect(reloaded.autoUpdate, isFalse);
+    expect(optedOut.hasUpdateEligibleItems, isFalse);
+    expect(optedOut.needsUpdateCheck(), isFalse);
+
+    reloaded.autoUpdate = true;
+    expect(optedOut.needsUpdateCheck(), isTrue);
+    await optedOut.checkUpdates(service: service);
+    expect(optedOut.updateList.values.single.key, 'updates:newest');
+    expect(calls, 4); // One existing HTTP authority; no forced duplicate requests.
+    expect(optedOut.lastSuccessfulUpdateCheckAt, isNotNull);
+    expect(before, isNotNull);
+  });
+
   test('failed later page does not replace a previously valid updateList', () async {
     var calls = 0;
     final provider = UpdatesProviderFake(MockClient((request) async {
