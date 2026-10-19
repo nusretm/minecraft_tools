@@ -113,9 +113,14 @@ void main() {
     await package.checkUpdates(service: service);
     expect(package.updateList.values.single.key, 'updates:newest');
     expect(package.getItem('updates:sample')!.canUpdate, isTrue);
+    final checkedAt = package.lastSuccessfulUpdateCheckAt!;
+    expect(package.needsUpdateCheck(now: checkedAt.add(const Duration(hours: 5))), isFalse);
+    expect(package.needsUpdateCheck(now: checkedAt.add(const Duration(hours: 6))), isTrue);
     expect(calls, 4); // content, selected version and two version pages
 
     final reloaded = MtnMinecraftContentPackage.fromLocalMap(package.toLocalMap());
+    expect(reloaded.lastSuccessfulUpdateCheckAt, checkedAt);
+    expect(reloaded.updateList.values.single.key, 'updates:newest'); // restored before attaching service
     await reloaded.restoreCachedUpdates(service);
     expect(reloaded.updateList.values.single.key, 'updates:newest');
     expect(calls, 4); // pure cache restoration; no provider call
@@ -136,9 +141,57 @@ void main() {
     await package.checkUpdates(service: service);
     provider.failLastPage = true;
 
+    final lastSuccessful = package.lastSuccessfulUpdateCheckAt;
     await expectLater(package.checkUpdates(force: true), throwsStateError);
     expect(package.updateList.values.single.key, 'updates:newest');
+    expect(package.lastSuccessfulUpdateCheckAt, lastSuccessful);
     expect(calls, 8);
+  });
+
+  test('local update snapshot is ignored after selection changes and is never published', () async {
+    final provider = UpdatesProviderFake(MockClient((request) async => http.Response('{}', 200)));
+    final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]);
+    final package = makeUpdatePackage();
+    await package.checkUpdates(service: service);
+    final local = package.toLocalMap();
+    expect(local['localUpdateCheck'], isNotNull);
+    expect(package.lastSuccessfulUpdateCheckAt, isNotNull);
+
+    final changed = Map<String, dynamic>.from(local);
+    changed['items'] = (local['items'] as List).map((value) => Map<String, dynamic>.from(value as Map)).toList(growable: false);
+    final items = (changed['items'] as List).cast<Map<String, dynamic>>();
+    items.single['selectedVersionId'] = 'other';
+    final stale = MtnMinecraftContentPackage.fromLocalMap(changed);
+    expect(stale.updateList, isEmpty);
+    expect(stale.lastSuccessfulUpdateCheckAt, isNull);
+    expect(stale.needsUpdateCheck(), isTrue);
+
+    final readOnly = Map<String, dynamic>.from(local)..['mutationPolicy'] = 'readOnly';
+    final blocked = MtnMinecraftContentPackage.fromLocalMap(readOnly);
+    expect(blocked.hasUpdateEligibleItems, isFalse);
+    expect(blocked.updateList, isEmpty);
+    expect(blocked.needsUpdateCheck(), isFalse);
+
+    final appendOnlyLocal = Map<String, dynamic>.from(local);
+    appendOnlyLocal['mutationPolicy'] = 'appendOnly';
+    appendOnlyLocal['items'] = (local['items'] as List).map((value) => Map<String, dynamic>.from(value as Map)..['source'] = 'downloaded').toList(growable: false);
+    final appendOnlyDownloaded = MtnMinecraftContentPackageRecord.fromMap(<String, dynamic>{
+      'schemaVersion': MtnMinecraftContentPackageRecord.currentSchemaVersion,
+      'source': MtnMinecraftContentPackageSource.downloaded.name,
+      'package': appendOnlyLocal,
+    });
+    expect(appendOnlyDownloaded.package.hasUpdateEligibleItems, isFalse);
+    expect(appendOnlyDownloaded.package.updateList, isEmpty);
+    expect(appendOnlyDownloaded.package.needsUpdateCheck(), isFalse);
+
+    final updated = MtnMinecraftContentPackage.fromLocalMap(local);
+    expect(updated.updateList.length, 1);
+    expect(updated.lastSuccessfulUpdateCheckAt, isNotNull);
+    // The portable map does not contain any machine-local update metadata.
+    // This package is an unlocked local draft; portable serialization needs
+    // a full lock, so only the local map is inspected here.
+    final updateSnapshot = Map<String, dynamic>.from(local['localUpdateCheck'] as Map);
+    expect(updateSnapshot['updates'], hasLength(1));
   });
 
   test('record storage restores cached updates without network and skips an empty cache', () async {
@@ -165,6 +218,25 @@ void main() {
       final warm = (await storage.load(id, key: key))!;
       expect(warm.package.updateList.values.single.key, 'updates:newest');
       expect(calls, 4);
+
+      // The app will save the updated encrypted record after a successful
+      // check. A completely new service has no HTTP response cache.
+      await storage.save(id, cold, key: key, keyId: 'test-key');
+      var restartedCalls = 0;
+      final restarted = MtnMinecraftContentPackageRecordStorage(
+        directory: directory,
+        contentService: MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[
+          UpdatesProviderFake(MockClient((request) async {
+            restartedCalls++;
+            return http.Response('{}', 200);
+          })),
+        ]),
+      );
+      final persisted = (await restarted.load(id, key: key))!.package;
+      expect(persisted.updateList.values.single.key, 'updates:newest');
+      expect(persisted.lastSuccessfulUpdateCheckAt, isNotNull);
+      expect(persisted.needsUpdateCheck(), isFalse);
+      expect(restartedCalls, 0);
     } finally {
       await directory.delete(recursive: true);
     }
