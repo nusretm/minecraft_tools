@@ -738,7 +738,9 @@ class MtnMinecraftContentPackage {
         final version = MtnMinecraftContentVersion.fromMap(versionMap, content);
         final identity = _providerIdentity(version);
         if (identity == null || identity.$1 != item.provider || identity.$2 != item.projectId ||
-            content.type != item.type || !_compatible(version) || version.publishedAt == null) return;
+            content.type != item.type || !_compatible(version) || version.publishedAt == null) {
+          return;
+        }
         restored[item] = version;
       }
       _updateList
