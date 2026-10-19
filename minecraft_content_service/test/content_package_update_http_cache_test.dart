@@ -158,6 +158,7 @@ void main() {
     expect(package.lastSuccessfulUpdateCheckAt, isNotNull);
 
     final changed = Map<String, dynamic>.from(local);
+    changed['items'] = (local['items'] as List).map((value) => Map<String, dynamic>.from(value as Map)).toList(growable: false);
     final items = (changed['items'] as List).cast<Map<String, dynamic>>();
     items.single['selectedVersionId'] = 'other';
     final stale = MtnMinecraftContentPackage.fromLocalMap(changed);
