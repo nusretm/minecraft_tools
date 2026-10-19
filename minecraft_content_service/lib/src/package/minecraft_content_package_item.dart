@@ -22,11 +22,13 @@ class MtnMinecraftContentPackageItem {
     String? selectedVersionId,
     this.source = MtnMinecraftContentPackageSource.local,
     bool enabled = true,
+    bool autoUpdate = true,
     Iterable<MtnMinecraftContentItemPermission> permissions = const <MtnMinecraftContentItemPermission>[],
   }) : _permissions = List<MtnMinecraftContentItemPermission>.unmodifiable(permissions),
        _direct = direct,
        _selectedVersionId = selectedVersionId,
-       _enabled = enabled {
+       _enabled = enabled,
+       _autoUpdate = autoUpdate {
     if (provider.isEmpty || provider.contains(':') || provider.trim() != provider) throw ArgumentError.value(provider, 'provider', 'Provider identity must be nonempty, trimmed and contain no colon.');
     if (projectId.isEmpty || projectId.trim() != projectId) throw ArgumentError.value(projectId, 'projectId', 'Project identity must be nonempty and trimmed.');
     if (title.trim().isEmpty) throw ArgumentError.value(title, 'title', 'Item title cannot be empty.');
@@ -63,6 +65,9 @@ class MtnMinecraftContentPackageItem {
     if (!direct && map.containsKey('enabled')) throw const FormatException('Dependency enabled state cannot be serialized.');
     final enabled = map['enabled'] ?? true;
     if (enabled is! bool) throw const FormatException('Item enabled must be boolean.');
+    if (!local && map.containsKey('autoUpdate')) throw const FormatException('Portable item cannot declare a device-local auto-update preference.');
+    final autoUpdate = local ? (map['autoUpdate'] ?? true) : true;
+    if (autoUpdate is! bool) throw const FormatException('Item autoUpdate must be boolean.');
     final typeName = map['type'];
     MtnMinecraftContentType? type;
     for (final candidate in MtnMinecraftContentType.values) {
@@ -92,6 +97,7 @@ class MtnMinecraftContentPackageItem {
       selectedVersionId: selectedVersionId as String?,
       source: source,
       enabled: enabled,
+      autoUpdate: autoUpdate,
       permissions: permissions,
     );
   }
@@ -116,6 +122,7 @@ class MtnMinecraftContentPackageItem {
           _permissions.where((value) => value != MtnMinecraftContentItemPermission.enable && value != MtnMinecraftContentItemPermission.disable),
         );
   bool _enabled;
+  bool _autoUpdate;
 
   /// A Package owns its Items. Reusing an Item creates an independent local copy
   /// rather than moving the original and corrupting its Package relation.
@@ -163,6 +170,16 @@ class MtnMinecraftContentPackageItem {
     }
   }
   bool get directEnabled => direct && _enabled;
+
+  /// Device-local opt-in to both release checks and automatic application at
+  /// launch. Existing saved items and new items default to enabled.
+  /// Mutations must pass the owning package's policy and item permissions.
+  bool get autoUpdate => _autoUpdate;
+  set autoUpdate(bool value) {
+    if (_autoUpdate != value && _package != null && package.canSetAutoUpdate(this)) {
+      _autoUpdate = value;
+    }
+  }
 
   /// Walks package dependency edges from enabled direct roots; cycles are safe.
   bool get effectiveEnabled {
@@ -285,7 +302,12 @@ class MtnMinecraftContentPackageItem {
     }
   }
 
-  Map<String, dynamic> toLocalMap() => <String, dynamic>{...toMap(), 'source': source.name, if (_selectedVersionId != null) 'selectedVersionId': _selectedVersionId};
+  Map<String, dynamic> toLocalMap() => <String, dynamic>{
+    ...toMap(),
+    'source': source.name,
+    if (_selectedVersionId != null) 'selectedVersionId': _selectedVersionId,
+    if (!_autoUpdate) 'autoUpdate': false,
+  };
 
   /// Portable metadata excludes device-local item source.
   Map<String, dynamic> toMap() => <String, dynamic>{

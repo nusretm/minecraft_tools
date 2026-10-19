@@ -344,11 +344,19 @@ class MtnMinecraftContentPackage {
       !_protectedItem(item) && item.canRemove &&
       (mutationPolicy == MtnMinecraftContentPackageMutationPolicy.none || item.source == MtnMinecraftContentPackageSource.local);
 
-  bool _mayUpdate(MtnMinecraftContentPackageItem item) =>
+  /// Permission to toggle a direct item's local check/apply preference.
+  /// This does not change the locked version or bypass package policies.
+  bool canSetAutoUpdate(MtnMinecraftContentPackageItem item) =>
+      item.direct && _updatePermitted(item);
+
+  bool _updatePermitted(MtnMinecraftContentPackageItem item) =>
       mutationPolicy != MtnMinecraftContentPackageMutationPolicy.readOnly &&
       !_protectedItem(item) &&
       _items.any((candidate) => identical(candidate, item)) &&
       item.permissions.contains(MtnMinecraftContentItemPermission.update);
+
+  bool _mayUpdate(MtnMinecraftContentPackageItem item) =>
+      item.autoUpdate && _updatePermitted(item);
 
   bool _compatible(MtnMinecraftContentVersion version) =>
       version.gameVersions.contains(minecraftVersion) &&
@@ -691,6 +699,9 @@ class MtnMinecraftContentPackage {
         'source': item.source.name,
         'direct': item.direct,
         'enabled': item.direct ? item.enabled : null,
+        // Keep legacy fingerprints valid while every preference is default-on.
+        // Only a deliberate opt-out invalidates the saved six-hour scan.
+        if (!item.autoUpdate) 'autoUpdate': false,
         'permissions': item.permissions.map((value) => value.name).toList(growable: false),
       }).toList(growable: false),
     };
