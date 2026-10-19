@@ -552,7 +552,8 @@ class MtnMinecraftContentPackage {
   /// Provider HTTP results use the single Content Service cache for six hours
   /// by default; a forced check bypasses that cache once per unique request.
   /// Errors leave the previous updateList unchanged instead of claiming no updates.
-  Future<void> checkUpdates([MtnMinecraftContentService? service], {
+  Future<void> checkUpdates({
+    MtnMinecraftContentService? service,
     bool force = false,
     Duration cacheDuration = const Duration(hours: 6),
   }) async {
