@@ -578,11 +578,12 @@ class MtnMinecraftContentPackage {
     _contentService = service;
     final detached = MtnMinecraftContentPackage.fromLocalMap(toLocalMap());
     try {
-      await service.providers.httpService.withCacheOptions(
+      final cached = await service.providers.httpService.withCacheOptions(
         cacheDuration: cacheDuration,
         cachedOnly: true,
-        action: () => detached.checkUpdates(service, cacheDuration: cacheDuration),
+        action: () => detached._findUpdates(service, refresh: false),
       );
+      detached._updateList.addAll(cached);
     } on MtnMinecraftContentHttpCacheMissException {
       return;
     }
