@@ -109,6 +109,87 @@ void main() {
     expect(MtnMinecraftContentPackage.fromLocalMap(second.toLocalMap()).items.single.source, MtnMinecraftContentPackageSource.downloaded);
   });
 
+  test('auto-update defaults on and explicit opt-out survives encrypted local records', () async {
+    final item = MtnMinecraftContentPackageItem(
+      provider: 'modrinth', projectId: 'optional', title: 'Optional Mod',
+      type: MtnMinecraftContentType.mod, direct: true, selectedVersionId: 'v1',
+      permissions: const <MtnMinecraftContentItemPermission>[MtnMinecraftContentItemPermission.update],
+    );
+    final package = pack(policy: MtnMinecraftContentPackageMutationPolicy.none,
+      items: <MtnMinecraftContentPackageItem>[item]);
+    expect(item.autoUpdate, isTrue);
+    expect(package.canSetAutoUpdate(item), isTrue);
+    expect(item.toLocalMap().containsKey('autoUpdate'), isFalse);
+    expect(MtnMinecraftContentPackageItem.fromLocalMap(item.toLocalMap()).autoUpdate, isTrue);
+
+    item.autoUpdate = false;
+    expect(item.autoUpdate, isFalse);
+    expect(package.hasUpdateEligibleItems, isFalse);
+    expect(package.needsUpdateCheck(), isFalse);
+    expect(item.selectedVersionId, 'v1');
+    expect(item.toLocalMap()['autoUpdate'], isFalse);
+    expect(item.toMap().containsKey('autoUpdate'), isFalse);
+    expect(() => MtnMinecraftContentPackageItem.fromMap(item.toLocalMap()), throwsFormatException);
+    final invalid = Map<String, dynamic>.from(item.toLocalMap())..['autoUpdate'] = 'no';
+    expect(() => MtnMinecraftContentPackageItem.fromLocalMap(invalid), throwsFormatException);
+
+    final record = MtnMinecraftContentPackageRecord(
+      package: package, source: MtnMinecraftContentPackageSource.local);
+    final codec = MtnMinecraftContentPackageRecordCodec();
+    final key = Uint8List.fromList(List<int>.generate(32, (index) => index));
+    final bytes = await codec.encrypt(record, key: key, keyId: 'auto-update-test');
+    final restored = (await codec.decrypt(bytes, key: key)).package;
+    final reloaded = restored.getItem(item.key)!;
+    expect(reloaded.autoUpdate, isFalse);
+    expect(restored.hasUpdateEligibleItems, isFalse);
+    expect(restored.canSetAutoUpdate(reloaded), isTrue);
+
+    reloaded.autoUpdate = true;
+    expect(reloaded.autoUpdate, isTrue);
+    expect(restored.hasUpdateEligibleItems, isTrue);
+    expect(restored.needsUpdateCheck(), isTrue);
+  });
+
+  test('auto-update switch respects readOnly, protected appendOnly and direct permissions', () {
+    MtnMinecraftContentPackageItem makeItem(String project, {MtnMinecraftContentPackageSource source = MtnMinecraftContentPackageSource.local,
+      bool direct = true, bool autoUpdate = true, Iterable<MtnMinecraftContentItemPermission> permissions = const <MtnMinecraftContentItemPermission>[MtnMinecraftContentItemPermission.update]}) =>
+        MtnMinecraftContentPackageItem(
+          provider: 'modrinth', projectId: project, title: project,
+          type: MtnMinecraftContentType.mod, direct: direct,
+          source: source, autoUpdate: autoUpdate, permissions: permissions,
+        );
+
+    final readonlyItem = makeItem('readonly');
+    final readonly = pack(policy: MtnMinecraftContentPackageMutationPolicy.readOnly,
+      items: <MtnMinecraftContentPackageItem>[readonlyItem]);
+    expect(readonly.canSetAutoUpdate(readonlyItem), isFalse);
+    readonlyItem.autoUpdate = false;
+    expect(readonlyItem.autoUpdate, isTrue);
+
+    final protectedItem = makeItem('protected', source: MtnMinecraftContentPackageSource.downloaded);
+    final localItem = makeItem('added');
+    final appendOnly = pack(policy: MtnMinecraftContentPackageMutationPolicy.appendOnly,
+      items: <MtnMinecraftContentPackageItem>[protectedItem, localItem]);
+    MtnMinecraftContentPackageRecord(package: appendOnly, source: MtnMinecraftContentPackageSource.downloaded);
+    expect(appendOnly.canSetAutoUpdate(protectedItem), isFalse);
+    protectedItem.autoUpdate = false;
+    expect(protectedItem.autoUpdate, isTrue);
+    expect(appendOnly.canSetAutoUpdate(localItem), isTrue);
+    localItem.autoUpdate = false;
+    expect(localItem.autoUpdate, isFalse);
+
+    final dependency = makeItem('dependency', direct: false);
+    final noPermission = makeItem('no-permission', permissions: const <MtnMinecraftContentItemPermission>[]);
+    final editable = pack(policy: MtnMinecraftContentPackageMutationPolicy.none,
+      items: <MtnMinecraftContentPackageItem>[dependency, noPermission]);
+    expect(editable.canSetAutoUpdate(dependency), isFalse);
+    dependency.autoUpdate = false;
+    expect(dependency.autoUpdate, isTrue);
+    expect(editable.canSetAutoUpdate(noPermission), isFalse);
+    noPermission.autoUpdate = false;
+    expect(noPermission.autoUpdate, isTrue);
+  });
+
   test('type and loader compatibility comes from the selected provider version', () {
     final package = pack();
     final fabric = project('fabric-api');
