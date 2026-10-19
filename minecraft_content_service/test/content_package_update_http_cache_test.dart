@@ -110,7 +110,7 @@ void main() {
     final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]);
     final package = makeUpdatePackage();
 
-    await package.checkUpdates(service);
+    await package.checkUpdates(service: service);
     expect(package.updateList.values.single.key, 'updates:newest');
     expect(package.getItem('updates:sample')!.canUpdate, isTrue);
     expect(calls, 4); // content, selected version and two version pages
@@ -133,7 +133,7 @@ void main() {
     }));
     final service = MtnMinecraftContentService(providers: <MtnMinecraftContentProvider>[provider]);
     final package = makeUpdatePackage();
-    await package.checkUpdates(service);
+    await package.checkUpdates(service: service);
     provider.failLastPage = true;
 
     await expectLater(package.checkUpdates(force: true), throwsStateError);
