@@ -205,8 +205,8 @@ void main() {
     final local = makePackage().toLocalMap();
     local['mutationPolicy'] = MtnMinecraftContentPackageMutationPolicy.appendOnly.name;
     local['items'] = <Map<String, dynamic>>[
-      for (final raw in local['items'] as List)
-        Map<String, dynamic>.from(raw as Map)..['source'] =
+      for (final Map<String, dynamic> raw in (local['items'] as List).cast<Map<String, dynamic>>())
+        Map<String, dynamic>.from(raw)..['source'] =
           (raw['projectId'] == 'a' ? MtnMinecraftContentPackageSource.local : MtnMinecraftContentPackageSource.downloaded).name,
     ];
     final record = MtnMinecraftContentPackageRecord.fromMap(<String, dynamic>{
