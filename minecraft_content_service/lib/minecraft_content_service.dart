@@ -3,6 +3,7 @@ library;
 export 'src/model/minecraft_content_models.dart';
 export 'src/package/minecraft_content_package.dart';
 export 'src/package/minecraft_content_package_builder.dart';
+export 'src/package/minecraft_content_package_auto_update_planner.dart';
 export 'src/package/minecraft_content_package_item.dart';
 export 'src/package/minecraft_content_package_lock.dart';
 export 'src/package/minecraft_content_package_metadata_cache.dart';
