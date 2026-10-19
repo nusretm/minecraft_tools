@@ -80,11 +80,7 @@ class _AutoUpdateService extends MtnMinecraftContentService {
   }
 }
 
-MtnMinecraftContentPackage makePackage({
-  required MtnMinecraftContentVersion oldA,
-  required MtnMinecraftContentVersion oldB,
-  required MtnMinecraftContentVersion oldDependency,
-}) {
+MtnMinecraftContentPackage makePackage() {
   final a = MtnMinecraftContentPackageItem(
     provider: 'test', projectId: 'a', title: 'A', type: MtnMinecraftContentType.mod,
     direct: true, selectedVersionId: 'a-old',
@@ -146,7 +142,7 @@ void main() {
   );
 
   test('prepares updated root and new dependency while retaining other pinned roots without changing source', () async {
-    final original = makePackage(oldA: aOld, oldB: bOld, oldDependency: libraryOld);
+    final original = makePackage();
     final beforeItem = original.getItem('test:a')!;
     original.getItem('test:b')!.autoUpdate = false;
     original.getItem('test:b')!.enabled = false;
@@ -184,7 +180,7 @@ void main() {
   });
 
   test('no compatible direct update returns null and leaves existing dependency pins untouched', () async {
-    final original = makePackage(oldA: aOld, oldB: bOld, oldDependency: libraryOld);
+    final original = makePackage();
     expect(await const MtnMinecraftContentPackageAutoUpdatePlanner().prepare(original, service()), isNull);
     expect(original.getItem('test:library')!.selectedVersionId, 'library-old');
     original.getItem('test:a')!.autoUpdate = false;
@@ -194,7 +190,7 @@ void main() {
   });
 
   test('conflicting updated dependency graphs are rejected without changing the source package', () async {
-    final original = makePackage(oldA: aOld, oldB: bOld, oldDependency: libraryOld);
+    final original = makePackage();
     final provider = service(conflict: true);
     await original.checkUpdates(service: provider);
     final before = original.toLocalMap();
@@ -206,7 +202,7 @@ void main() {
   });
 
   test('changing source preferences during graph resolution rejects the stale preparation', () async {
-    final original = makePackage(oldA: aOld, oldB: bOld, oldDependency: libraryOld);
+    final original = makePackage();
     final scanService = service();
     await original.checkUpdates(service: scanService);
     final provider = service(onResolve: () { original.getItem('test:a')!.autoUpdate = false; });
