@@ -4,7 +4,6 @@ import '../model/minecraft_content_models.dart';
 import '../service/minecraft_content_dependency_desired_state.dart';
 import '../service/minecraft_content_service.dart';
 import 'minecraft_content_package.dart';
-import 'minecraft_content_package_item.dart';
 
 /// An isolated candidate for a later coordinated install, not an installed
 /// update. The caller may publish [package] only after the existing installer
