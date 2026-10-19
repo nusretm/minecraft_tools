@@ -118,7 +118,7 @@ class MtnMinecraftContentHttpService {
     if (duration.isNegative) throw ArgumentError.value(duration, 'cacheDuration', 'Cache duration cannot be negative.');
     final key = _requestKey(verb, uri, headers, body);
     final onlyCached = cachedOnly || (scope?.cachedOnly ?? false);
-    final force = forceRefresh || ((scope?.forceRefresh ?? false) && !scope!.refreshedKeys.contains(key));
+    final force = forceRefresh || (scope != null && scope.forceRefresh && !scope.refreshedKeys.contains(key));
     if (onlyCached && force) throw ArgumentError('Cannot force refresh and read only cached responses.');
 
     if (cacheable && duration > Duration.zero && !force) {
@@ -163,7 +163,7 @@ class MtnMinecraftContentHttpService {
           _responses[key] = (response, DateTime.now(), duration);
           while (_responses.length > maxCachedResponses) _responses.remove(_responses.keys.first);
         }
-        if (scope?.forceRefresh ?? false) scope!.refreshedKeys.add(key);
+        if (scope != null && scope.forceRefresh) scope.refreshedKeys.add(key);
       }
       return response;
     }).whenComplete(() {
