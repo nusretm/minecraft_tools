@@ -179,6 +179,52 @@ void main() {
     expect(original.toLocalMap(), before); // Future install+save must publish the staged copy, never the source.
   });
 
+  test('disabled direct roots are skipped by update checks and auto-application', () async {
+    final original = makePackage();
+    final a = original.getItem('test:a')!;
+    final b = original.getItem('test:b')!;
+    a.enabled = false;
+    b.autoUpdate = false;
+    expect(a.enabled, isFalse);
+    expect(original.hasUpdateEligibleItems, isFalse);
+    expect(original.needsUpdateCheck(), isFalse);
+
+    final provider = service();
+    await original.checkUpdates(service: provider, force: true);
+    expect(original.updateList, isEmpty);
+    expect(await const MtnMinecraftContentPackageAutoUpdatePlanner().prepare(original, provider), isNull);
+
+    a.enabled = true;
+    expect(original.needsUpdateCheck(), isTrue);
+    await original.checkUpdates(service: provider);
+    expect(original.updateList.keys.map((item) => item.key), <String>['test:a']);
+
+    // A previously scanned candidate must disappear immediately after the
+    // user disables the root, even without a second HTTP request.
+    a.enabled = false;
+    expect(original.updateList, isEmpty);
+    expect(original.hasUpdateEligibleItems, isFalse);
+    expect(await const MtnMinecraftContentPackageAutoUpdatePlanner().prepare(original, provider), isNull);
+  });
+
+  test('disabled direct root is never update-eligible even when another root depends on it', () async {
+    final saved = makePackage().toLocalMap();
+    saved['dependencyEdges'] = <Map<String, dynamic>>[
+      for (final entry in (saved['dependencyEdges'] as List).cast<Map<String, dynamic>>()) entry,
+      MtnMinecraftContentPackageLockedEdge(
+        sourceKey: 'test:b', targetKey: 'test:a',
+        type: MtnMinecraftContentDependencyType.required,
+      ).toMap(),
+    ];
+    final original = MtnMinecraftContentPackage.fromLocalMap(saved);
+    original.getItem('test:a')!.enabled = false;
+    original.getItem('test:b')!.autoUpdate = false;
+    expect(original.getItem('test:a')!.effectiveEnabled, isTrue);
+    expect(original.hasUpdateEligibleItems, isFalse);
+    await original.checkUpdates(service: service(), force: true);
+    expect(original.updateList, isEmpty);
+  });
+
   test('no compatible direct update returns null and leaves existing dependency pins untouched', () async {
     final original = makePackage();
     expect(await const MtnMinecraftContentPackageAutoUpdatePlanner().prepare(original, service()), isNull);

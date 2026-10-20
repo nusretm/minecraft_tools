@@ -356,6 +356,7 @@ class MtnMinecraftContentPackage {
       item.permissions.contains(MtnMinecraftContentItemPermission.update);
 
   bool _mayUpdate(MtnMinecraftContentPackageItem item) =>
+      (item.direct ? item.enabled : item.effectiveEnabled) &&
       item.autoUpdate && _updatePermitted(item);
 
   bool _compatible(MtnMinecraftContentVersion version) =>

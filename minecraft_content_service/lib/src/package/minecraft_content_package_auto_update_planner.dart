@@ -68,7 +68,7 @@ class MtnMinecraftContentPackageAutoUpdatePlanner {
       final priorId = root.selectedVersionId ?? existingLocks[root.key];
       if (priorId != null) copy['selectedVersionId'] = priorId;
 
-      final candidate = source.canSetAutoUpdate(root) && root.autoUpdate ? updates[root] : null;
+      final candidate = root.enabled && source.canSetAutoUpdate(root) && root.autoUpdate ? updates[root] : null;
       if (candidate != null) {
         final identities = candidate.providers.where((value) =>
           value.provider == root.provider && value.id != null && value.id!.isNotEmpty).toList(growable: false);
