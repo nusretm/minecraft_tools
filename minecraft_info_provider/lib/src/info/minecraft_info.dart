@@ -1,3 +1,7 @@
+export '../resource/mtn_minecraft_resource_data.dart';
+export '../resource/mtn_minecraft_resource_loader.dart';
+export '../resource/mtn_minecraft_resource_source_abs.dart';
+
 export 'effect/info_mob_effect.dart';
 export 'effect/info_potion_contents.dart';
 
@@ -34,9 +38,5 @@ export 'server/info_server_health_check.dart';
 export 'server/info_server_srv.dart';
 export 'server/info_server_status.dart';
 export 'server/info_server_status_client.dart';
-
-export '../resource/mtn_minecraft_resource_data.dart';
-export '../resource/mtn_minecraft_resource_loader.dart';
-export '../resource/mtn_minecraft_resource_source_abs.dart';
 
 export 'world/info_world.dart';

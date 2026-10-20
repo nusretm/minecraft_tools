@@ -1,12 +1,12 @@
 # Minecraft Tools — Current Target
 
-## 2026-10-21 — Item Resource Source Core CP1 implemented, Windows validation pending
+## 2026-10-21 — Item Resource Source Core CP1 Windows tests PASS, analyzer cleanup pending
 
 - **Branch:** `feature/item-resource-source-core-cp1`, based on `main` `14dfe37aa38fa96b245f7419355242fcc5e326b2`; CP1 implementation explicitly approved by user. **Not merged; no merge approval.**
 - **Scope:** `minecraft_info_provider` only. Generic `MtnMinecraftResourceSourceAbs` now owns namespace/path validation and lazy copied bytes; existing `MtnMinecraftInfoModAssetSource` retains its public constructor, archive-chain provenance and `sameArchive()` contract. `MtnMinecraftResourceData` carries exact origin; `MtnMinecraftResourceLoader` owns explicit low-to-high source order, `read()`, `readAll()`, register/unregister/clear and duplicate-instance protection.
 - **Behavior:** Effective reads iterate high-to-low; missing resource permits fallback, source failure propagates; `readAll()` returns immutable candidate list high-to-low. Source discovery order is **not** resource precedence; caller registers in desired order. No helper registry, item entry, JSON model parsing, PNG or app code in CP1.
 - **Focused test:** `minecraft_info_provider/test/minecraft_resource_source_core_test.dart`; preserves existing `minecraft_mod_asset_resource_test.dart` behavior.
-- **Validation status:** GitHub branch implementation committed; Windows `dart analyze`, focused `dart test`, full `dart test`, and real-JAR smoke still required. Pure Dart `dart format` prohibited. After user validation/acceptance, continue CP2 only with separate explicit approval; PR merge requires a distinct approval.
+- **Windows evidence (user-run):** `dart pub get` PASS; focused `dart test test/minecraft_resource_source_core_test.dart test/minecraft_mod_asset_resource_test.dart -r expanded` **12/12 PASS**; full `dart test` **366/366 PASS**; `git diff --check origin/main...HEAD` clean; branch synchronized with origin and working tree clean. First `dart analyze` had exactly two info-level lints: `directives_ordering` in the public export barrel and `use_super_parameters` in the mod asset source constructor. These two lint-only changes are applied in the next commit; **post-fix Windows analyzer recheck remains pending**. Real-JAR CP1 smoke is not newly claimed; existing archive smoke foundation is recorded in the 2026-10-06 handoff. No `dart format`. After user validation/acceptance, continue CP2 only with separate explicit approval; PR merge requires a distinct approval.
 - **Design baseline:** `docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md`.
 
 

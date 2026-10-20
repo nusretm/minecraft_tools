@@ -18,15 +18,14 @@ final class MtnMinecraftInfoModAssetSource extends MtnMinecraftResourceSourceAbs
   MtnMinecraftInfoModAssetSource({
     required File? rootFile,
     Iterable<String> embeddedArchivePaths = const <String>[],
-    Iterable<String> namespaces = const <String>[],
+    super.namespaces = const <String>[],
     required MtnMinecraftInfoModAssetLoader loader,
   })  : rootFile = rootFile == null
             ? null
             : File(p.normalize(p.absolute(rootFile.path))),
         embeddedArchivePaths =
             List<String>.unmodifiable(embeddedArchivePaths),
-        _loader = loader,
-        super(namespaces: namespaces);
+        _loader = loader;
 
   final File? rootFile;
 
