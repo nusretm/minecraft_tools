@@ -1,5 +1,11 @@
 # Minecraft Tools — Current Target
 
+## 2026-10-20 — PR #80 merged: disabled mod auto-update eligibility fix CLOSED
+
+- **Status:** User explicitly approved squash merge; [PR #80](https://github.com/nusretm/minecraft_tools/pull/80) merged to `main` at `e9aafbb760682356064211789009e70b2216e165`. GitHub verified `merged=true` and `main` pointed to that commit before this docs-only closure.
+- **Verified on Windows:** `dart analyze` clean, 7/7 focused Content Service planner tests PASS and diff check clean. In the real Windows Launcher, the user confirmed disabling a mod stops update proposals and the per-item Auto Update switch works through the editor.
+- **Downstream:** `mtn_launcher_app` pinned the merged Content Service SHA; its `PR #18` and `PR #19` were subsequently squash merged to app `main` (see app continuity). No additional domain code is pending in this fix. This docs-only closure does not require repinning the app dependency.
+
 ## 2026-10-20 — Disabled ContentItems excluded from auto-update discovery and application (Windows analyzer and 7/7 focused tests PASS; merge approval pending)
 
 - **User-observed blocker:** Disabling a mod did not stop the manual/six-hour update scan from finding its newer version. Play then tried to install that newer version and failed dependency resolution. The Launcher editor's auto-update switch remains to be wired in `mtn_launcher_app` PR #19.
