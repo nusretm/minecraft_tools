@@ -207,6 +207,24 @@ void main() {
     expect(await const MtnMinecraftContentPackageAutoUpdatePlanner().prepare(original, provider), isNull);
   });
 
+  test('disabled direct root is never update-eligible even when another root depends on it', () async {
+    final saved = makePackage().toLocalMap();
+    saved['dependencyEdges'] = <Map<String, dynamic>>[
+      for (final entry in (saved['dependencyEdges'] as List).cast<Map<String, dynamic>>()) entry,
+      MtnMinecraftContentPackageLockedEdge(
+        sourceKey: 'test:b', targetKey: 'test:a',
+        type: MtnMinecraftContentDependencyType.required,
+      ).toMap(),
+    ];
+    final original = MtnMinecraftContentPackage.fromLocalMap(saved);
+    original.getItem('test:a')!.enabled = false;
+    original.getItem('test:b')!.autoUpdate = false;
+    expect(original.getItem('test:a')!.effectiveEnabled, isTrue);
+    expect(original.hasUpdateEligibleItems, isFalse);
+    await original.checkUpdates(service: service(), force: true);
+    expect(original.updateList, isEmpty);
+  });
+
   test('no compatible direct update returns null and leaves existing dependency pins untouched', () async {
     final original = makePackage();
     expect(await const MtnMinecraftContentPackageAutoUpdatePlanner().prepare(original, service()), isNull);
