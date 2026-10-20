@@ -1,5 +1,15 @@
 # Minecraft Tools — Current Target
 
+## 2026-10-21 — Item Resource Source Core CP1 implemented, Windows validation pending
+
+- **Branch:** `feature/item-resource-source-core-cp1`, based on `main` `14dfe37aa38fa96b245f7419355242fcc5e326b2`; CP1 implementation explicitly approved by user. **Not merged; no merge approval.**
+- **Scope:** `minecraft_info_provider` only. Generic `MtnMinecraftResourceSourceAbs` now owns namespace/path validation and lazy copied bytes; existing `MtnMinecraftInfoModAssetSource` retains its public constructor, archive-chain provenance and `sameArchive()` contract. `MtnMinecraftResourceData` carries exact origin; `MtnMinecraftResourceLoader` owns explicit low-to-high source order, `read()`, `readAll()`, register/unregister/clear and duplicate-instance protection.
+- **Behavior:** Effective reads iterate high-to-low; missing resource permits fallback, source failure propagates; `readAll()` returns immutable candidate list high-to-low. Source discovery order is **not** resource precedence; caller registers in desired order. No helper registry, item entry, JSON model parsing, PNG or app code in CP1.
+- **Focused test:** `minecraft_info_provider/test/minecraft_resource_source_core_test.dart`; preserves existing `minecraft_mod_asset_resource_test.dart` behavior.
+- **Validation status:** GitHub branch implementation committed; Windows `dart analyze`, focused `dart test`, full `dart test`, and real-JAR smoke still required. Pure Dart `dart format` prohibited. After user validation/acceptance, continue CP2 only with separate explicit approval; PR merge requires a distinct approval.
+- **Design baseline:** `docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md`.
+
+
 ## 2026-10-20 — PR #80 merged: disabled mod auto-update eligibility fix CLOSED
 
 - **Status:** User explicitly approved squash merge; [PR #80](https://github.com/nusretm/minecraft_tools/pull/80) merged to `main` at `e9aafbb760682356064211789009e70b2216e165`. GitHub verified `merged=true` and `main` pointed to that commit before this docs-only closure.

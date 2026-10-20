@@ -35,4 +35,8 @@ export 'server/info_server_srv.dart';
 export 'server/info_server_status.dart';
 export 'server/info_server_status_client.dart';
 
+export '../resource/mtn_minecraft_resource_data.dart';
+export '../resource/mtn_minecraft_resource_loader.dart';
+export '../resource/mtn_minecraft_resource_source_abs.dart';
+
 export 'world/info_world.dart';
