@@ -1,5 +1,12 @@
 # Minecraft Tools — Current Target
 
+## 2026-10-20 — Disabled ContentItems excluded from auto-update discovery and application (draft; Windows validation pending)
+
+- **User-observed blocker:** Disabling a mod did not stop the manual/six-hour update scan from finding its newer version. Play then tried to install that newer version and failed dependency resolution. The Launcher editor's auto-update switch remains to be wired in `mtn_launcher_app` PR #19.
+- **Domain fix:** `MtnMinecraftContentPackage._mayUpdate` now requires `item.effectiveEnabled` plus `autoUpdate` and existing policy/permission gates. The same predicate powers `hasUpdateEligibleItems`, `needsUpdateCheck()`, scanned/restored `updateList`, and saved suggestions. Disabled direct mods are skipped and their cached suggestions disappear; dependency-only entries not reachable from enabled roots are ineligible. Existing fingerprint already includes direct `enabled`.
+- **Planner hardening:** CP2 planner explicitly checks `root.enabled` before applying a suggested newer version; no unrelated dependency, HTTP, Download Service or installer code changed.
+- **Focused test authored:** disabling eligible roots skips scans and Play auto-application, re-enabling makes them eligible, disabling after a successful scan hides previous suggestions immediately. Run `dart analyze`, `dart test test/content_package_auto_update_planner_test.dart -r expanded`, `git diff --check origin/main...HEAD` and `git status -sb` on Windows. **Not yet validated.** No `dart format`. Draft PR and separate merge approval required. Downstream app will temporarily pin this exact branch SHA until an independently approved merge.
+
 ## 2026-10-19 — CP2 detached automatic Content Package update preparation (Windows analyze and 10/10 tests PASS; merge approval pending)
 
 - **Authorized scope:** After merged CP1 default-on `autoUpdate` preference (PR #78, merge `62150e8285d4196f2872b1411bef35071f939d13`), implement the *shared Content Service* version-staging and dependency-validation contract for Play-time automatic updates. No Launcher code, Rust TaskList, filesystem writes, HTTP cache replacement, or auto-application hook is in this CP.
