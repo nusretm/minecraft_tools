@@ -179,6 +179,34 @@ void main() {
     expect(original.toLocalMap(), before); // Future install+save must publish the staged copy, never the source.
   });
 
+  test('disabled direct roots are skipped by update checks and auto-application', () async {
+    final original = makePackage();
+    final a = original.getItem('test:a')!;
+    final b = original.getItem('test:b')!;
+    a.enabled = false;
+    b.autoUpdate = false;
+    expect(a.enabled, isFalse);
+    expect(original.hasUpdateEligibleItems, isFalse);
+    expect(original.needsUpdateCheck(), isFalse);
+
+    final provider = service();
+    await original.checkUpdates(service: provider, force: true);
+    expect(original.updateList, isEmpty);
+    expect(await const MtnMinecraftContentPackageAutoUpdatePlanner().prepare(original, provider), isNull);
+
+    a.enabled = true;
+    expect(original.needsUpdateCheck(), isTrue);
+    await original.checkUpdates(service: provider);
+    expect(original.updateList.keys.map((item) => item.key), <String>['test:a']);
+
+    // A previously scanned candidate must disappear immediately after the
+    // user disables the root, even without a second HTTP request.
+    a.enabled = false;
+    expect(original.updateList, isEmpty);
+    expect(original.hasUpdateEligibleItems, isFalse);
+    expect(await const MtnMinecraftContentPackageAutoUpdatePlanner().prepare(original, provider), isNull);
+  });
+
   test('no compatible direct update returns null and leaves existing dependency pins untouched', () async {
     final original = makePackage();
     expect(await const MtnMinecraftContentPackageAutoUpdatePlanner().prepare(original, service()), isNull);
