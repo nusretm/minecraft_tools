@@ -1,5 +1,15 @@
 # Minecraft Tools — Current Target
 
+## 2026-10-21 — Item Resource Source Core CP1 Windows validated / user accepted / PR pending merge approval
+
+- **Branch:** `feature/item-resource-source-core-cp1`, based on `main` `14dfe37aa38fa96b245f7419355242fcc5e326b2`; CP1 implementation explicitly approved by user. **Not merged; no merge approval.**
+- **Scope:** `minecraft_info_provider` only. Generic `MtnMinecraftResourceSourceAbs` now owns namespace/path validation and lazy copied bytes; existing `MtnMinecraftInfoModAssetSource` retains its public constructor, archive-chain provenance and `sameArchive()` contract. `MtnMinecraftResourceData` carries exact origin; `MtnMinecraftResourceLoader` owns explicit low-to-high source order, `read()`, `readAll()`, register/unregister/clear and duplicate-instance protection.
+- **Behavior:** Effective reads iterate high-to-low; missing resource permits fallback, source failure propagates; `readAll()` returns immutable candidate list high-to-low. Source discovery order is **not** resource precedence; caller registers in desired order. No helper registry, item entry, JSON model parsing, PNG or app code in CP1.
+- **Focused test:** `minecraft_info_provider/test/minecraft_resource_source_core_test.dart`; preserves existing `minecraft_mod_asset_resource_test.dart` behavior.
+- **Windows evidence (user-run):** `dart pub get` PASS; focused `dart test test/minecraft_resource_source_core_test.dart test/minecraft_mod_asset_resource_test.dart -r expanded` **12/12 PASS** before and after lint cleanup; full `dart test` **366/366 PASS** before lint cleanup; latest `dart analyze` **No issues found!**; `git diff --check origin/main...HEAD` clean; branch synchronized with origin and working tree clean. The original `directives_ordering` and `use_super_parameters` info notices were corrected in commit `d0422d2f3f50b8084e5a8840e59385a8e6a30b5e`. Real-JAR CP1 smoke is not newly claimed; existing archive smoke foundation is recorded in the 2026-10-06 handoff. No `dart format`. **User explicitly accepted CP1 on 2026-10-21.** Merge requires separate explicit approval. CP2 needs its own implementation approval after CP1 is merged.
+- **Design baseline:** `docs/continuity/PLANNED_2026-10-07_MINECRAFT_RESOURCE_ITEM_RENDERING_FOUNDATION.md`.
+
+
 ## 2026-10-20 — PR #80 merged: disabled mod auto-update eligibility fix CLOSED
 
 - **Status:** User explicitly approved squash merge; [PR #80](https://github.com/nusretm/minecraft_tools/pull/80) merged to `main` at `e9aafbb760682356064211789009e70b2216e165`. GitHub verified `merged=true` and `main` pointed to that commit before this docs-only closure.

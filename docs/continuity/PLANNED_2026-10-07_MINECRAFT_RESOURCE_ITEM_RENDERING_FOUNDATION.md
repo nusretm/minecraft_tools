@@ -2,6 +2,9 @@
 
 Date: 2026-10-07
 
+> **2026-10-21 resumption:** CP1 Resource Source Core implementation approved and started on `feature/item-resource-source-core-cp1`. The original deferred status below is historical baseline; current CP1 validation/merge state is tracked in `CURRENT_TARGET.md`. Later checkpoints and merge remain separately approval-gated.
+
+
 ## Status
 
 ```text
