@@ -39,16 +39,3 @@ final class MtnMinecraftResourceItem {
     );
   }
 }
-);
-    final bool hasLayers = textures.any(
-      (MtnMinecraftResourceTexture texture) => layerPattern.hasMatch(texture.symbol),
-    );
-    return List<Uint8List>.unmodifiable(
-      textures.where(
-        (MtnMinecraftResourceTexture texture) =>
-            texture.image != null &&
-            (!hasLayers || layerPattern.hasMatch(texture.symbol)),
-      ).map((MtnMinecraftResourceTexture texture) => texture.image!.png),
-    );
-  }
-}

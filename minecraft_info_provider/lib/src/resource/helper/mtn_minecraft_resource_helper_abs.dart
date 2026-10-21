@@ -255,23 +255,3 @@ abstract class MtnMinecraftResourceHelperAbs {
       version.major != null &&
       version.qualifier == null;
 }
-);
-
-  static int _compareTextureSymbols(String a, String b) {
-    final RegExpMatch? ma = _layerName.firstMatch(a);
-    final RegExpMatch? mb = _layerName.firstMatch(b);
-    if (ma != null && mb != null) {
-      return int.parse(ma.group(1)!).compareTo(int.parse(mb.group(1)!));
-    }
-    if (ma != null) return -1;
-    if (mb != null) return 1;
-    if (a == 'particle') return 1;
-    if (b == 'particle') return -1;
-    return a.compareTo(b);
-  }
-
-  static bool _isOrderedRelease(MtnMinecraftVersion version) =>
-      version.type == MtnMinecraftGameVersionType.release &&
-      version.major != null &&
-      version.qualifier == null;
-}
