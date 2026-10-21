@@ -5,6 +5,8 @@ export '../resource/helper/mtn_minecraft_resource_helper_modern.dart';
 export '../resource/mtn_minecraft_resource_data.dart';
 export '../resource/mtn_minecraft_resource_environment.dart';
 export '../resource/mtn_minecraft_resource_image.dart';
+export '../resource/mtn_minecraft_resource_image_animation_parser.dart';
+export '../resource/mtn_minecraft_resource_image_region.dart';
 export '../resource/mtn_minecraft_resource_item.dart';
 export '../resource/mtn_minecraft_resource_item_entry.dart';
 export '../resource/mtn_minecraft_resource_item_model_node.dart';
