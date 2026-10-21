@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — CP5 Vanilla client-JAR resource source (2026-10-21)
+- Add `MtnMinecraftResourceSourceVanilla.open(clientJar: ...)` as a read-only source for safe Vanilla client-JAR `assets` entries, keeping file provenance and existing source registration/precedence authority.
+- Share low-level stream-backed ZIP directory discovery and on-demand entry reads with mod archive providers; preserve embedded JAR reads and existing provider exceptions.
+- Cover synthetic Vanilla JAR discovery, byte reads, invalid files, source override precedence, and modern Mod -> Vanilla -> Mod model/texture provenance. Add an example for already-installed Fabric item and Vanilla JAR real-profile smoke.
+- First Windows run: focused tests 31/31 and full suite 398/398 passed; analyzer reported one super-parameter lint, and a real Minecraft 26.2 Farmer's Delight smoke exposed `minecraft:builtin/generated` misclassified as a missing file.
+- Recognize the engine built-in `generated` model parent as a valid terminal without synthetic JSON data, preserving parent identity. Fix super-parameter lint and cover 26.2 `hamburger`/`smoked_ham` plus unknown built-in parent regressions.
+- Post-fix Windows verification: `dart analyze` clean, focused tests **33/33 PASS**, full suite **400/400 PASS**, `git diff --check` clean and branch working tree synchronized. Real Minecraft **26.2** Farmer's Delight smoke: `hamburger` (440-byte PNG) and `smoked_ham` (406-byte PNG) both resolve mod/Vanilla model ancestry and return `isComplete=true` without missing-parent issues. No `dart format`; CP5 acceptance, PR and merge are still pending.
+
 ## Unreleased — CP4 modern item-model static graph (2026-10-21)
 - Parse 1.21.4+ `items/*.json` into typed model, composite, condition, select, range_dispatch, special, empty and unknown nodes. Retain original node metadata and top-level fields without choosing runtime branches.
 - Reuse CP1–CP3 source/model/texture/PNG infrastructure for every statically referenced model, retaining per-branch graph bindings and missing/unsupported diagnostics.
