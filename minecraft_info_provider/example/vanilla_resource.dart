@@ -8,6 +8,7 @@ import 'package:minecraft_models/minecraft_models.dart';
 Future<void> main(List<String> args) async {
   if (args.length != 4) {
     stderr.writeln('Usage: dart run example/vanilla_resource.dart CLIENT_JAR FABRIC_MOD_JAR ITEM_ID MC_RELEASE_VERSION');
+    exitCode = 64;
     return;
   }
 
@@ -36,9 +37,11 @@ Future<void> main(List<String> args) async {
   );
   if (item == null) {
     stderr.writeln('Item resource not found.');
+    exitCode = 2;
     return;
   }
 
+  stdout.writeln(vanilla.clientJar.path);
   stdout.writeln(item.entry.entryLocation);
   stdout.writeln(item.entry.resource.source.runtimeType);
   if (item.itemModelGraph != null) {
@@ -61,4 +64,5 @@ Future<void> main(List<String> args) async {
   for (final MtnMinecraftResourceIssue issue in item.issues) {
     stderr.writeln(issue);
   }
+  if (!item.isComplete) exitCode = 2;
 }
