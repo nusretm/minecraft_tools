@@ -1,6 +1,11 @@
 import 'package:minecraft_models/minecraft_models.dart';
 
 import '../mtn_minecraft_resource_data.dart';
+import '../mtn_minecraft_resource_image.dart';
+import '../mtn_minecraft_resource_item.dart';
+import '../mtn_minecraft_resource_model.dart';
+import '../mtn_minecraft_resource_model_resolver.dart';
+import '../mtn_minecraft_resource_texture.dart';
 import '../mtn_minecraft_resource_environment.dart';
 import '../mtn_minecraft_resource_item_entry.dart';
 import '../mtn_minecraft_resource_item_request.dart';
@@ -99,6 +104,155 @@ abstract class MtnMinecraftResourceHelperAbs {
       modelIdentityOrigin: origin,
       resource: resource,
     );
+  }
+
+  /// Standard normal-model JSON resolution, including parent inheritance.
+  Future<MtnMinecraftResourceModelResolution> loadModel(
+    MtnMinecraftResourceLoader loader,
+    MtnMinecraftResourceLocation location, {
+    MtnMinecraftResourceData? rootResource,
+  }) =>
+      const MtnMinecraftResourceModelResolver().resolve(
+        loader, location, rootResource: rootResource,
+      );
+
+  /// Loads raw PNG bytes by sprite ID from the effective CP1 source stack.
+  Future<MtnMinecraftResourceImage?> loadTexture(
+    MtnMinecraftResourceLoader loader,
+    MtnMinecraftResourceLocation location,
+  ) async {
+    final MtnMinecraftResourceData? data =
+        await loader.read(location.namespace, 'textures/' + location.path + '.png');
+    if (data == null) return null;
+    return MtnMinecraftResourceImage(location: location, resource: data);
+  }
+
+  /// Resolves the static normal-model and texture graph for one item.
+  ///
+  /// In CP3 modern items/*.json graph evaluation is intentionally unsupported;
+  /// the raw entry remains accessible and the result carries an issue.
+  /// Missing entries return null, while incomplete graphs remain non-null.
+  Future<MtnMinecraftResourceItem?> loadItem(
+    MtnMinecraftResourceLoader loader,
+    MtnMinecraftResourceItemRequest request,
+  ) async {
+    final MtnMinecraftResourceItemEntry? entry = await loadItemEntry(loader, request);
+    if (entry == null) return null;
+
+    if (entry.kind == MtnMinecraftResourceItemEntryKind.itemDefinition) {
+      return MtnMinecraftResourceItem(
+        entry: entry,
+        model: null,
+        textures: const <MtnMinecraftResourceTexture>[],
+        issues: <MtnMinecraftResourceIssue>[
+          MtnMinecraftResourceIssue(
+            kind: MtnMinecraftResourceIssueKind.unsupportedItemDefinition,
+            reference: entry.entryLocation.toString(),
+          ),
+        ],
+      );
+    }
+
+    final String path = entry.entryLocation.path;
+    if (!path.startsWith('models/') || !path.endsWith('.json')) {
+      throw FormatException('Normal model entry has an unexpected path: ' + path);
+    }
+    final MtnMinecraftResourceLocation root = MtnMinecraftResourceLocation(
+      namespace: entry.entryLocation.namespace,
+      path: path.substring('models/'.length, path.length - '.json'.length),
+    );
+    final MtnMinecraftResourceModelResolution resolved =
+        await loadModel(loader, root, rootResource: entry.resource);
+    final List<MtnMinecraftResourceIssue> issues = <MtnMinecraftResourceIssue>[
+      ...resolved.issues,
+    ];
+    final List<MtnMinecraftResourceTexture> textures = <MtnMinecraftResourceTexture>[];
+    final Map<String, String> references =
+        resolved.model?.textureReferences ?? const <String, String>{};
+    final List<String> symbols = references.keys.toList()..sort(_compareTextureSymbols);
+
+    for (final String symbol in symbols) {
+      final MtnMinecraftResourceLocation? location =
+          _resolveTextureLocation(symbol, references, issues);
+      final MtnMinecraftResourceImage? image =
+          location == null ? null : await loadTexture(loader, location);
+      if (location != null && image == null) {
+        issues.add(MtnMinecraftResourceIssue(
+          kind: MtnMinecraftResourceIssueKind.missingTexture,
+          reference: location.toString(),
+        ));
+      }
+      textures.add(MtnMinecraftResourceTexture(
+        symbol: symbol,
+        reference: references[symbol]!,
+        location: location,
+        image: image,
+      ));
+    }
+
+    return MtnMinecraftResourceItem(
+      entry: entry,
+      model: resolved.model,
+      textures: textures,
+      issues: issues,
+    );
+  }
+
+  MtnMinecraftResourceLocation? _resolveTextureLocation(
+    String symbol,
+    Map<String, String> references,
+    List<MtnMinecraftResourceIssue> issues,
+  ) {
+    final Set<String> visited = <String>{};
+    String current = '#' + symbol;
+    while (current.startsWith('#')) {
+      final String name = current.substring(1);
+      if (!visited.add(name)) {
+        issues.add(MtnMinecraftResourceIssue(
+          kind: MtnMinecraftResourceIssueKind.textureVariableCycle,
+          reference: name,
+        ));
+        return null;
+      }
+      final String? next = references[name];
+      if (next == null) {
+        issues.add(MtnMinecraftResourceIssue(
+          kind: MtnMinecraftResourceIssueKind.missingTextureVariable,
+          reference: name,
+        ));
+        return null;
+      }
+      current = next;
+    }
+    try {
+      return MtnMinecraftResourceLocation.parse(current);
+    } on ArgumentError {
+      issues.add(MtnMinecraftResourceIssue(
+        kind: MtnMinecraftResourceIssueKind.invalidTextureReference,
+        reference: current,
+      ));
+      return null;
+    }
+  }
+
+  static final RegExp _layerName = RegExp(r'^layer([0-9]+)
+      version.type == MtnMinecraftGameVersionType.release &&
+      version.major != null &&
+      version.qualifier == null;
+}
+);
+
+  static int _compareTextureSymbols(String a, String b) {
+    final RegExpMatch? ma = _layerName.firstMatch(a);
+    final RegExpMatch? mb = _layerName.firstMatch(b);
+    if (ma != null && mb != null) {
+      return int.parse(ma.group(1)!).compareTo(int.parse(mb.group(1)!));
+    }
+    if (ma != null) return -1;
+    if (mb != null) return 1;
+    if (a == 'particle') return 1;
+    if (b == 'particle') return -1;
+    return a.compareTo(b);
   }
 
   static bool _isOrderedRelease(MtnMinecraftVersion version) =>

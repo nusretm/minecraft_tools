@@ -4,6 +4,7 @@ import 'helper/mtn_minecraft_resource_helper_legacy.dart';
 import 'helper/mtn_minecraft_resource_helper_modern.dart';
 import 'mtn_minecraft_resource_data.dart';
 import 'mtn_minecraft_resource_environment.dart';
+import 'mtn_minecraft_resource_item.dart';
 import 'mtn_minecraft_resource_item_entry.dart';
 import 'mtn_minecraft_resource_item_request.dart';
 import 'mtn_minecraft_resource_source_abs.dart';
@@ -60,6 +61,22 @@ final class MtnMinecraftResourceLoader {
   }
 
   void clearHelpers() => _helpers.clear();
+
+  /// Resolves item-entry and normal-model resources using one helper.
+  ///
+  /// A missing entry permits the next compatible helper; a partial graph
+  /// remains a non-null result with explicit unresolved issues.
+  Future<MtnMinecraftResourceItem?> loadItem({
+    required MtnMinecraftResourceEnvironment environment,
+    required MtnMinecraftResourceItemRequest request,
+  }) async {
+    for (final MtnMinecraftResourceHelperAbs helper in _helpers.reversed) {
+      if (!helper.supports(environment)) continue;
+      final MtnMinecraftResourceItem? result = await helper.loadItem(this, request);
+      if (result != null) return result;
+    }
+    return null;
+  }
 
   /// Selects a matching helper in descending registration priority.
   ///
