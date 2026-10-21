@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — CP5 Vanilla client-JAR resource source (2026-10-21)
+- Add `MtnMinecraftResourceSourceVanilla.open(clientJar: ...)` as a read-only source for safe Vanilla client-JAR `assets` entries, keeping file provenance and existing source registration/precedence authority.
+- Share low-level stream-backed ZIP directory discovery and on-demand entry reads with mod archive providers; preserve embedded JAR reads and existing provider exceptions.
+- Cover synthetic Vanilla JAR discovery, byte reads, invalid files, source override precedence, and modern Mod -> Vanilla -> Mod model/texture provenance. Add an example for already-installed Fabric item and Vanilla JAR real-profile smoke.
+- CP5 Windows analyzer, focused/full tests and real-profile smoke pending. No `dart format` and no approval to merge.
+
 ## Unreleased — CP4 modern item-model static graph (2026-10-21)
 - Parse 1.21.4+ `items/*.json` into typed model, composite, condition, select, range_dispatch, special, empty and unknown nodes. Retain original node metadata and top-level fields without choosing runtime branches.
 - Reuse CP1–CP3 source/model/texture/PNG infrastructure for every statically referenced model, retaining per-branch graph bindings and missing/unsupported diagnostics.
