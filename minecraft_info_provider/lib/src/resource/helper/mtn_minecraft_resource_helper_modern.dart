@@ -2,11 +2,10 @@ import 'package:minecraft_models/minecraft_models.dart';
 
 import '../mtn_minecraft_resource_environment.dart';
 import '../mtn_minecraft_resource_item.dart';
+import '../mtn_minecraft_resource_item_entry.dart';
 import '../mtn_minecraft_resource_item_model_resolver.dart';
 import '../mtn_minecraft_resource_item_request.dart';
 import '../mtn_minecraft_resource_loader.dart';
-
-import '../mtn_minecraft_resource_item_entry.dart';
 import 'mtn_minecraft_resource_helper_abs.dart';
 
 /// Modern Minecraft 1.21.4+ entry under items/*.json.

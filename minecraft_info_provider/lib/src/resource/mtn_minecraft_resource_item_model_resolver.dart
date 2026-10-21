@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'helper/mtn_minecraft_resource_helper_abs.dart';
 import 'mtn_minecraft_resource_item.dart';
 import 'mtn_minecraft_resource_item_entry.dart';
