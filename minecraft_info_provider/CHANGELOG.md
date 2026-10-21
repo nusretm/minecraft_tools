@@ -4,7 +4,7 @@
 - Retain full source-backed original PNG bytes while adding an optional pixel `MtnMinecraftResourceImageRegion` to image results.
 - Parse `.png.mcmeta` animation metadata, PNG IHDR dimensions, first logical frame indexes and row-major frame grids with explicit geometry/metadata validation. No playback, PNG pixel decoding, crop or image re-encode.
 - Resolve metadata strictly from the exact source selected for the effective PNG; do not borrow metadata from higher- or lower-priority asset sources.
-- Integrate via shared helper texture loading for legacy and modern items without changing `pngList` semantics; add 13 synthetic/precedence/invalid-metadata tests and an existing Minecraft 26.2 client-JAR smoke example.
+- Integrate via shared helper texture loading for legacy and modern items without changing `pngList` semantics; add 14 synthetic/precedence/invalid-metadata tests and an existing Minecraft 26.2 client-JAR smoke example.
 - Windows `dart analyze`, focused/full tests and real smoke pending; no `dart format`, CP6 acceptance or merge approval.
 
 ## Unreleased — CP5 Vanilla client-JAR resource source (2026-10-21)
