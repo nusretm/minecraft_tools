@@ -2,6 +2,8 @@
 
 Date: 2026-10-07
 
+> **2026-10-21 CP3 scope clarification:** CP1 and CP2 were implemented and squash-merged (PR #81 and #82), with branch cleanup verified. This current checkpoint adds **legacy normal-model/parent/texture resolution and original raw PNG bytes**, corresponding to previously deferred steps 8-9 plus basic step 11. Modern `items/*.json` static graph and `.png.mcmeta` first-frame policy are separate later checkpoints. The resource layer remains Pure Dart and must not decode, re-encode or compose PNGs. Source-layer Vanilla/pack integrations remain separate. The older checkpoint allocation below is a historical suggestion and does not override the active `CURRENT_TARGET.md` scope.
+
 > **2026-10-21 resumption:** CP1 Resource Source Core implementation approved and started on `feature/item-resource-source-core-cp1`. The original deferred status below is historical baseline; current CP1 validation/merge state is tracked in `CURRENT_TARGET.md`. Later checkpoints and merge remain separately approval-gated.
 
 

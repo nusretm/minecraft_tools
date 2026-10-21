@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — CP3 legacy normal model and raw-image resources (2026-10-21)
+- Resolve normal Minecraft model JSON, parent inheritance and effective texture symbols across ordered resource sources without assuming namespace ownership.
+- Preserve missing-parent/texture/cycle diagnostics and original model/provenance instead of discarding partial results; malformed effective JSON and source errors propagate.
+- Add raw PNG image/texture bindings and separate layer-preserving static item results, leaving visual composition, rendering, animated metadata and modern item graphs outside this checkpoint.
+- Add synthetic regression tests and CP2 closure continuity. Windows validation and merge are separate gates.
+
+
 ## 1.0.0-dev.32
 
 Item name resolution foundation and real-profile compatibility corrections.
