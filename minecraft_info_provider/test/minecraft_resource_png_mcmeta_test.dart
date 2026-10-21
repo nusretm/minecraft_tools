@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
 import 'package:minecraft_info_provider/minecraft_info_provider.dart';
 import 'package:minecraft_models/minecraft_models.dart';
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 void main() {
@@ -262,6 +265,39 @@ void main() {
         ),
         throwsFormatException,
       );
+    });
+
+    test('Vanilla client JAR reads PNG and matching mcmeta entry from one archive', () async {
+      final Directory directory =
+          await Directory.systemTemp.createTemp('mtn-cp6-vanilla-mcmeta-');
+      try {
+        final Uint8List png = pngHeader(16, 128);
+        final Archive archive = Archive()
+          ..add(ArchiveFile.bytes('assets/minecraft/textures/block/lava_still.png', png))
+          ..add(ArchiveFile.bytes(
+            'assets/minecraft/textures/block/lava_still.png.mcmeta',
+            meta(<String, Object?>{
+              'animation': <String, Object?>{'frames': <int>[3, 0, 1]},
+            }),
+          ));
+        final File clientJar = File(p.join(directory.path, 'client.jar'));
+        await clientJar.writeAsBytes(ZipEncoder().encodeBytes(archive));
+
+        final MtnMinecraftResourceSourceVanilla vanilla =
+            await MtnMinecraftResourceSourceVanilla.open(clientJar: clientJar);
+        final loader = MtnMinecraftResourceLoader(
+          sources: <MtnMinecraftResourceSourceAbs>[vanilla],
+        );
+        final image = (await MtnMinecraftResourceHelperLegacy().loadTexture(
+          loader, MtnMinecraftResourceLocation.parse('minecraft:block/lava_still'),
+        ))!;
+        expect(image.resource.source, same(vanilla));
+        expect(image.resource.assetPath, 'assets/minecraft/textures/block/lava_still.png');
+        expectRegion(image.region, x: 0, y: 48, width: 16, height: 16);
+        expect(image.png, png);
+      } finally {
+        await directory.delete(recursive: true);
+      }
     });
 
     test('modern 26.2 model graph carries region while pngList stays original', () async {
