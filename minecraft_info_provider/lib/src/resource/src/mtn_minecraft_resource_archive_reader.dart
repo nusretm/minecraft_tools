@@ -39,10 +39,8 @@ final class MtnMinecraftResourceArchiveReader {
     return result.toList()..sort();
   }
 
-  /// One-time inventory of safe asset entries from a file-backed client JAR.
-  ///
-  /// The scan reads ZIP metadata, not every uncompressed PNG or JSON.
-  static Future<Set<String>> scanAssetPaths(File file) async {
+  /// Refuse missing or invalid files before interpreting their ZIP directory.
+  static Future<void> _checkSignature(File file) async {
     final RandomAccessFile probe = await file.open();
     try {
       if (!hasZipSignature(await probe.read(4))) {
@@ -51,6 +49,13 @@ final class MtnMinecraftResourceArchiveReader {
     } finally {
       await probe.close();
     }
+  }
+
+  /// One-time inventory of safe asset entries from a file-backed client JAR.
+  ///
+  /// The scan reads ZIP metadata, not every uncompressed PNG or JSON.
+  static Future<Set<String>> scanAssetPaths(File file) async {
+    await _checkSignature(file);
 
     InputFileStream? input;
     Archive? archive;
@@ -100,6 +105,7 @@ final class MtnMinecraftResourceArchiveReader {
     final List<Archive> nestedArchives = <Archive>[];
     try {
       if (file != null) {
+        await _checkSignature(file);
         input = InputFileStream(file.path);
         root = ZipDecoder().decodeStream(input, verify: true);
       } else {
