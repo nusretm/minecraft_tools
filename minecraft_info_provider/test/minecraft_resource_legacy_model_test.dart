@@ -230,7 +230,7 @@ void main() {
       ), throwsFormatException);
     });
 
-    test('unsupported modern item graph is explicit; missing entry remains null', () async {
+    test('modern item graph preserves unresolved model; missing entry remains null', () async {
       final mod = source('verity', <String, List<int>>{
         'assets/verity/items/a.json': jsonBytes(<String, Object?>{
           'model': <String, Object?>{'type': 'minecraft:model', 'model': 'verity:item/a'},
@@ -245,7 +245,9 @@ void main() {
       ))!;
       expect(modern.entry.kind, MtnMinecraftResourceItemEntryKind.itemDefinition);
       expect(modern.model, isNull);
-      expect(modern.issues.single.kind, MtnMinecraftResourceIssueKind.unsupportedItemDefinition);
+      expect(modern.itemModelGraph!.root, isA<MtnMinecraftResourceItemModelNodeModel>());
+      expect(modern.itemModelGraph!.bindings.single.model, isNull);
+      expect(modern.issues.single.kind, MtnMinecraftResourceIssueKind.missingParent);
       expect(modern.isComplete, isFalse);
     });
   });

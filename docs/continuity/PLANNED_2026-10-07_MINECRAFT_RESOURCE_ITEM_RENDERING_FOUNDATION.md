@@ -2,6 +2,8 @@
 
 Date: 2026-10-07
 
+> **2026-10-21 CP4 implementation:** CP3 was squash-merged (PR #83) and fully branch-cleaned. CP4 is approved on `feature/item-resource-modern-model-cp4`; acceptance/merge are not yet approved. The seven 1.21.4+ client item model node types are parsed into typed static graph structures, their model and PNG references are resolved via the CP3 foundation, and 26.1 transformation/structured-texture metadata is retained without runtime evaluation. `.png.mcmeta`, image composition, runtime renderer and source integrations remain deferred. The historical checkpoint allocation below does not override the active `CURRENT_TARGET.md`.
+
 > **2026-10-21 CP3 scope clarification:** CP1 and CP2 were implemented and squash-merged (PR #81 and #82), with branch cleanup verified. This current checkpoint adds **legacy normal-model/parent/texture resolution and original raw PNG bytes**, corresponding to previously deferred steps 8-9 plus basic step 11. Modern `items/*.json` static graph and `.png.mcmeta` first-frame policy are separate later checkpoints. The resource layer remains Pure Dart and must not decode, re-encode or compose PNGs. Source-layer Vanilla/pack integrations remain separate. The older checkpoint allocation below is a historical suggestion and does not override the active `CURRENT_TARGET.md` scope.
 
 > **2026-10-21 resumption:** CP1 Resource Source Core implementation approved and started on `feature/item-resource-source-core-cp1`. The original deferred status below is historical baseline; current CP1 validation/merge state is tracked in `CURRENT_TARGET.md`. Later checkpoints and merge remain separately approval-gated.
