@@ -16,6 +16,7 @@ export '../resource/mtn_minecraft_resource_location.dart';
 export '../resource/mtn_minecraft_resource_model.dart';
 export '../resource/mtn_minecraft_resource_model_resolver.dart';
 export '../resource/mtn_minecraft_resource_source_abs.dart';
+export '../resource/mtn_minecraft_resource_source_vanilla.dart';
 export '../resource/mtn_minecraft_resource_texture.dart';
 
 export 'effect/info_mob_effect.dart';
