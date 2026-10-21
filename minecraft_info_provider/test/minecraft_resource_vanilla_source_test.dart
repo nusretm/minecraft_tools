@@ -170,5 +170,89 @@ void main() {
       expect(item.pngList, hasLength(1));
       expect(item.pngList.single, png);
     });
+
+    test('26.2 real-style item/generated and item/handheld stop at engine builtin/generated', () async {
+      final File vanillaJar = await writeJar('26.2-client.jar', <String, List<int>>{
+        'assets/minecraft/models/item/generated.json': jsonBytes(<String, Object?>{
+          'parent': 'builtin/generated',
+        }),
+        'assets/minecraft/models/item/handheld.json': jsonBytes(<String, Object?>{
+          'parent': 'minecraft:item/generated',
+          'display': <String, Object?>{'gui': <String, Object?>{'scale': <int>[1, 1, 1]}},
+        }),
+      });
+      final File modJar = await writeJar('farmers-delight.jar', <String, List<int>>{
+        'fabric.mod.json': jsonBytes(<String, Object?>{
+          'schemaVersion': 1, 'id': 'farmersdelight', 'version': '1.0',
+        }),
+        'assets/farmersdelight/items/hamburger.json': jsonBytes(<String, Object?>{
+          'model': <String, String>{'type': 'minecraft:model', 'model': 'farmersdelight:item/hamburger'},
+        }),
+        'assets/farmersdelight/models/item/hamburger.json': jsonBytes(<String, Object?>{
+          'parent': 'minecraft:item/generated',
+          'textures': <String, String>{'layer0': 'farmersdelight:item/hamburger'},
+        }),
+        'assets/farmersdelight/textures/item/hamburger.png': png,
+        'assets/farmersdelight/items/smoked_ham.json': jsonBytes(<String, Object?>{
+          'model': <String, String>{'type': 'minecraft:model', 'model': 'farmersdelight:item/smoked_ham'},
+        }),
+        'assets/farmersdelight/models/item/smoked_ham.json': jsonBytes(<String, Object?>{
+          'parent': 'minecraft:item/handheld',
+          'textures': <String, String>{'layer0': 'farmersdelight:item/smoked_ham'},
+        }),
+        'assets/farmersdelight/textures/item/smoked_ham.png': png,
+      });
+      final MtnMinecraftResourceSourceVanilla vanilla =
+          await MtnMinecraftResourceSourceVanilla.open(clientJar: vanillaJar);
+      final MtnMinecraftInfoModAssetSource mod =
+          (await const MtnMinecraftModInfoProviderFabric().parse(modJar))!.single.assetSources.single;
+      final MtnMinecraftResourceLoader loader = MtnMinecraftResourceLoader(
+        sources: <MtnMinecraftResourceSourceAbs>[vanilla, mod],
+      );
+
+      expect(await loader.read('minecraft', 'models/builtin/generated.json'), isNull);
+      for (final String name in <String>['hamburger', 'smoked_ham']) {
+        final MtnMinecraftResourceItem item = (await loader.loadItem(
+          environment: environment('26.2'),
+          request: MtnMinecraftResourceItemRequest(
+            item: MtnMinecraftInfoItemIdentity.parse('farmersdelight:$name'),
+          ),
+        ))!;
+        expect(item.isComplete, isTrue);
+        expect(item.issues, isEmpty);
+        expect(item.pngList.single, png);
+        final MtnMinecraftResourceModel model =
+            item.itemModelGraph!.bindings.single.model!;
+        expect(model.resource.source, same(mod));
+        final MtnMinecraftResourceModel vanillaParent = model.parent!;
+        expect(vanillaParent.resource.source, same(vanilla));
+        final MtnMinecraftResourceModel generated =
+            name == 'hamburger' ? vanillaParent : vanillaParent.parent!;
+        expect(generated.location.toString(), 'minecraft:item/generated');
+        expect(generated.parentLocation.toString(), 'minecraft:builtin/generated');
+        expect(generated.parent, isNull);
+        expect(item.textures.single.image!.resource.source, same(mod));
+      }
+    });
+
+    test('unknown builtin parent remains unresolved rather than treated as generated', () async {
+      final File vanillaJar = await writeJar('unknown-builtin-client.jar', <String, List<int>>{
+        'assets/minecraft/models/item/custom.json': jsonBytes(<String, Object?>{
+          'parent': 'minecraft:builtin/unknown',
+        }),
+      });
+      final MtnMinecraftResourceSourceVanilla vanilla =
+          await MtnMinecraftResourceSourceVanilla.open(clientJar: vanillaJar);
+      final MtnMinecraftResourceModelResolution resolved =
+          await const MtnMinecraftResourceModelResolver().resolve(
+        MtnMinecraftResourceLoader(sources: <MtnMinecraftResourceSourceAbs>[vanilla]),
+        MtnMinecraftResourceLocation.parse('minecraft:item/custom'),
+      );
+      expect(resolved.model, isNotNull);
+      expect(resolved.model!.parentLocation.toString(), 'minecraft:builtin/unknown');
+      expect(resolved.model!.parent, isNull);
+      expect(resolved.issues.map((MtnMinecraftResourceIssue issue) => issue.kind),
+          <MtnMinecraftResourceIssueKind>[MtnMinecraftResourceIssueKind.missingParent]);
+    });
   });
 }
