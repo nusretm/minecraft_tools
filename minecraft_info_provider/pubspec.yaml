@@ -4,10 +4,14 @@ version: 1.0.0-dev.32
 publish_to: none
 
 environment:
-  sdk: '>=3.3.0 <4.0.0'
+  sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
   archive: ^4.3.0
+  minecraft_models:
+    git:
+      url: https://github.com/nusretm/minecraft_models.git
+      ref: 26563c3d498a976701503906c6514cfa06c3f789
   path: ^1.9.1
   toml: ^0.16.0
 

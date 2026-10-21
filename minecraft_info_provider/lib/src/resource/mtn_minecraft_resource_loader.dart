@@ -1,4 +1,11 @@
+import 'helper/mtn_minecraft_resource_helper_abs.dart';
+import 'helper/mtn_minecraft_resource_helper_item_model_component.dart';
+import 'helper/mtn_minecraft_resource_helper_legacy.dart';
+import 'helper/mtn_minecraft_resource_helper_modern.dart';
 import 'mtn_minecraft_resource_data.dart';
+import 'mtn_minecraft_resource_environment.dart';
+import 'mtn_minecraft_resource_item_entry.dart';
+import 'mtn_minecraft_resource_item_request.dart';
 import 'mtn_minecraft_resource_source_abs.dart';
 
 /// Ordered authority for effective and candidate Minecraft resource reads.
@@ -9,14 +16,66 @@ final class MtnMinecraftResourceLoader {
   MtnMinecraftResourceLoader({
     Iterable<MtnMinecraftResourceSourceAbs> sources =
         const <MtnMinecraftResourceSourceAbs>[],
+    Iterable<MtnMinecraftResourceHelperAbs> helpers =
+        const <MtnMinecraftResourceHelperAbs>[],
+    bool registerBuiltInHelpers = true,
   }) {
     for (final MtnMinecraftResourceSourceAbs source in sources) {
       registerSource(source);
+    }
+    if (registerBuiltInHelpers) {
+      registerHelper(MtnMinecraftResourceHelperLegacy());
+      registerHelper(MtnMinecraftResourceHelperItemModelComponent());
+      registerHelper(MtnMinecraftResourceHelperModern());
+    }
+    for (final MtnMinecraftResourceHelperAbs helper in helpers) {
+      registerHelper(helper);
     }
   }
 
   final List<MtnMinecraftResourceSourceAbs> _sources =
       <MtnMinecraftResourceSourceAbs>[];
+
+  final List<MtnMinecraftResourceHelperAbs> _helpers =
+      <MtnMinecraftResourceHelperAbs>[];
+
+  /// Snapshot of helpers in registration order (last has highest priority).
+  List<MtnMinecraftResourceHelperAbs> get helpers =>
+      List<MtnMinecraftResourceHelperAbs>.unmodifiable(_helpers);
+
+  /// Registers at highest dispatch priority; duplicate names are invalid.
+  void registerHelper(MtnMinecraftResourceHelperAbs helper) {
+    if (_helpers.any((MtnMinecraftResourceHelperAbs current) => current.name == helper.name)) {
+      throw StateError('Resource helper "${helper.name}" is already registered.');
+    }
+    _helpers.add(helper);
+  }
+
+  /// Unregisters the same instance only, not another helper with similar data.
+  bool unregisterHelper(MtnMinecraftResourceHelperAbs helper) {
+    final int index = _helpers.indexWhere((MtnMinecraftResourceHelperAbs current) => identical(current, helper));
+    if (index < 0) return false;
+    _helpers.removeAt(index);
+    return true;
+  }
+
+  void clearHelpers() => _helpers.clear();
+
+  /// Selects a matching helper in descending registration priority.
+  ///
+  /// Null results allow the next compatible helper to be tried.
+  /// Source failures propagate and do not silently select a lower source.
+  Future<MtnMinecraftResourceItemEntry?> loadItemEntry({
+    required MtnMinecraftResourceEnvironment environment,
+    required MtnMinecraftResourceItemRequest request,
+  }) async {
+    for (final MtnMinecraftResourceHelperAbs helper in _helpers.reversed) {
+      if (!helper.supports(environment)) continue;
+      final MtnMinecraftResourceItemEntry? result = await helper.loadItemEntry(this, request);
+      if (result != null) return result;
+    }
+    return null;
+  }
 
   /// Snapshot ordered from lowest to highest precedence.
   List<MtnMinecraftResourceSourceAbs> get sources =>

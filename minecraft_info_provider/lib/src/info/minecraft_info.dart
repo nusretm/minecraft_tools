@@ -1,5 +1,13 @@
+export '../resource/helper/mtn_minecraft_resource_helper_abs.dart';
+export '../resource/helper/mtn_minecraft_resource_helper_item_model_component.dart';
+export '../resource/helper/mtn_minecraft_resource_helper_legacy.dart';
+export '../resource/helper/mtn_minecraft_resource_helper_modern.dart';
 export '../resource/mtn_minecraft_resource_data.dart';
+export '../resource/mtn_minecraft_resource_environment.dart';
+export '../resource/mtn_minecraft_resource_item_entry.dart';
+export '../resource/mtn_minecraft_resource_item_request.dart';
 export '../resource/mtn_minecraft_resource_loader.dart';
+export '../resource/mtn_minecraft_resource_location.dart';
 export '../resource/mtn_minecraft_resource_source_abs.dart';
 
 export 'effect/info_mob_effect.dart';
