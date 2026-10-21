@@ -18,6 +18,7 @@ final class MtnMinecraftResourceModelResolver {
     MtnMinecraftResourceLoader loader,
     MtnMinecraftResourceLocation location, {
     MtnMinecraftResourceData? rootResource,
+    bool allowTextureObjects = false,
   }) async {
     final List<MtnMinecraftResourceIssue> issues = <MtnMinecraftResourceIssue>[];
     final MtnMinecraftResourceModel? model = await _resolveModel(
@@ -26,6 +27,7 @@ final class MtnMinecraftResourceModelResolver {
       <MtnMinecraftResourceLocation>{},
       issues,
       knownResource: rootResource,
+      allowTextureObjects: allowTextureObjects,
     );
     return MtnMinecraftResourceModelResolution(model: model, issues: issues);
   }
@@ -36,6 +38,7 @@ final class MtnMinecraftResourceModelResolver {
     Set<MtnMinecraftResourceLocation> active,
     List<MtnMinecraftResourceIssue> issues, {
     MtnMinecraftResourceData? knownResource,
+    required bool allowTextureObjects,
   }) async {
     if (!active.add(location)) {
       issues.add(MtnMinecraftResourceIssue(
@@ -78,22 +81,38 @@ final class MtnMinecraftResourceModelResolver {
           ));
         }
         if (parentLocation != null) {
-          parent = await _resolveModel(loader, parentLocation, active, issues);
+          parent = await _resolveModel(loader, parentLocation, active, issues, allowTextureObjects: allowTextureObjects);
         }
       }
 
       final Map<String, String> textureReferences =
           <String, String>{...?parent?.textureReferences};
+      final Map<String, Object?> textureDeclarations =
+          <String, Object?>{...?parent?.textureDeclarations};
       final Object? localTextures = json['textures'];
       if (localTextures != null) {
         if (localTextures is! Map<String, dynamic>) {
           throw FormatException('Model "$location" has invalid textures.');
         }
         for (final MapEntry<String, dynamic> entry in localTextures.entries) {
-          if (entry.value is! String || entry.key.isEmpty) {
+          if (entry.key.isEmpty) {
+            throw FormatException('Model "$location" contains an empty texture symbol.');
+          }
+          final Object? declaration = entry.value;
+          if (declaration is String) {
+            textureReferences[entry.key] = declaration;
+            textureDeclarations[entry.key] = declaration;
+          } else if (allowTextureObjects && declaration is Map<String, dynamic>) {
+            final Object? sprite = declaration['sprite'];
+            final Object? translucent = declaration['force_translucent'];
+            if (sprite is! String || sprite.isEmpty || (translucent != null && translucent is! bool)) {
+              throw FormatException('Model "$location" contains an invalid structured texture.');
+            }
+            textureReferences[entry.key] = sprite;
+            textureDeclarations[entry.key] = Map<String, Object?>.unmodifiable(declaration);
+          } else {
             throw FormatException('Model "$location" contains an invalid texture binding.');
           }
-          textureReferences[entry.key] = entry.value as String;
         }
       }
 
@@ -127,6 +146,7 @@ final class MtnMinecraftResourceModelResolver {
         parentLocation: parentLocation,
         parent: parent,
         textureReferences: textureReferences,
+        textureDeclarations: textureDeclarations,
         effectiveProperties: properties,
       );
     } finally {

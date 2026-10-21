@@ -12,9 +12,11 @@ final class MtnMinecraftResourceModel {
     required this.parentLocation,
     required this.parent,
     required Map<String, String> textureReferences,
+    Map<String, Object?> textureDeclarations = const <String, Object?>{},
     required Map<String, Object?> effectiveProperties,
   })  : json = Map<String, Object?>.unmodifiable(json),
         textureReferences = Map<String, String>.unmodifiable(textureReferences),
+        textureDeclarations = Map<String, Object?>.unmodifiable(textureDeclarations),
         effectiveProperties = Map<String, Object?>.unmodifiable(effectiveProperties);
 
   final MtnMinecraftResourceLocation location;
@@ -23,6 +25,8 @@ final class MtnMinecraftResourceModel {
   final MtnMinecraftResourceModel? parent;
   final Map<String, Object?> json;
   final Map<String, String> textureReferences;
+  /// Optional original 26.1 texture object declarations and their render hints.
+  final Map<String, Object?> textureDeclarations;
   final Map<String, Object?> effectiveProperties;
 }
 
@@ -36,6 +40,8 @@ enum MtnMinecraftResourceIssueKind {
   invalidTextureReference,
   missingTexture,
   unsupportedItemDefinition,
+  unknownItemModelNode,
+  unsupportedSpecialRenderer,
   runtimeOverridesNotEvaluated,
 }
 

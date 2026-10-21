@@ -8,6 +8,7 @@ final class MtnMinecraftResourceTexture {
     required this.reference,
     required this.location,
     required this.image,
+    this.forceTranslucent = false,
   });
 
   /// Effective model symbol, e.g. layer0 or particle.
@@ -18,4 +19,6 @@ final class MtnMinecraftResourceTexture {
   final MtnMinecraftResourceLocation? location;
   /// Backing PNG and source provenance, if found.
   final MtnMinecraftResourceImage? image;
+  /// 26.1 block-model texture hint; no blending is performed in Pure Dart.
+  final bool forceTranslucent;
 }
