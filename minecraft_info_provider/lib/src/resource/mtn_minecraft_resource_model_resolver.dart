@@ -32,6 +32,9 @@ final class MtnMinecraftResourceModelResolver {
     return MtnMinecraftResourceModelResolution(model: model, issues: issues);
   }
 
+  static bool _isGeneratedBuiltInParent(MtnMinecraftResourceLocation location) =>
+      location.namespace == 'minecraft' && location.path == 'builtin/generated';
+
   Future<MtnMinecraftResourceModel?> _resolveModel(
     MtnMinecraftResourceLoader loader,
     MtnMinecraftResourceLocation location,
@@ -80,7 +83,10 @@ final class MtnMinecraftResourceModelResolver {
             reference: parentValue,
           ));
         }
-        if (parentLocation != null) {
+        // Minecraft's builtin/generated is an engine-provided sentinel,
+        // not assets/minecraft/models/builtin/generated.json. Preserve the
+        // parent identity for later rendering, but do not perform a file read.
+        if (parentLocation != null && !_isGeneratedBuiltInParent(parentLocation)) {
           parent = await _resolveModel(loader, parentLocation, active, issues, allowTextureObjects: allowTextureObjects);
         }
       }

@@ -15,9 +15,8 @@ final class MtnMinecraftResourceSourceVanilla extends MtnMinecraftResourceSource
   MtnMinecraftResourceSourceVanilla._({
     required this.clientJar,
     required Set<String> assetPaths,
-    required Iterable<String> namespaces,
-  })  : _assetPaths = Set<String>.unmodifiable(assetPaths),
-        super(namespaces: namespaces);
+    required super.namespaces,
+  }) : _assetPaths = Set<String>.unmodifiable(assetPaths);
 
   /// Opens an existing, already-downloaded Minecraft client JAR.
   ///
