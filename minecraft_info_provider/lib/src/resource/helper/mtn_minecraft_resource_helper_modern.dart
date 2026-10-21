@@ -1,5 +1,11 @@
 import 'package:minecraft_models/minecraft_models.dart';
 
+import '../mtn_minecraft_resource_environment.dart';
+import '../mtn_minecraft_resource_item.dart';
+import '../mtn_minecraft_resource_item_model_resolver.dart';
+import '../mtn_minecraft_resource_item_request.dart';
+import '../mtn_minecraft_resource_loader.dart';
+
 import '../mtn_minecraft_resource_item_entry.dart';
 import 'mtn_minecraft_resource_helper_abs.dart';
 
@@ -24,4 +30,23 @@ final class MtnMinecraftResourceHelperModern extends MtnMinecraftResourceHelperA
   @override
   MtnMinecraftResourceItemEntryKind get entryKind =>
       MtnMinecraftResourceItemEntryKind.itemDefinition;
+
+  /// Resolve modern item graph only; the shared helper remains authoritative
+  /// for entry selection, normal model inheritance and raw texture reads.
+  @override
+  Future<MtnMinecraftResourceItem?> loadItem(
+    MtnMinecraftResourceLoader loader,
+    MtnMinecraftResourceItemRequest request, {
+    MtnMinecraftResourceEnvironment? environment,
+  }) async {
+    final MtnMinecraftResourceItemEntry? entry = await loadItemEntry(loader, request);
+    if (entry == null) return null;
+    final bool allowTextureObjects = environment != null &&
+        environment.version >= MtnMinecraftVersion.parse(
+          '26.1', type: MtnMinecraftGameVersionType.release,
+        );
+    return const MtnMinecraftResourceItemModelResolver().resolve(
+      loader, this, entry, allowTextureObjects: allowTextureObjects,
+    );
+  }
 }

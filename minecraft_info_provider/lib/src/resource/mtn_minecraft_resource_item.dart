@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'mtn_minecraft_resource_item_entry.dart';
+import 'mtn_minecraft_resource_item_model_node.dart';
 import 'mtn_minecraft_resource_model.dart';
 import 'mtn_minecraft_resource_texture.dart';
 
@@ -11,11 +12,14 @@ final class MtnMinecraftResourceItem {
     required this.model,
     required Iterable<MtnMinecraftResourceTexture> textures,
     required Iterable<MtnMinecraftResourceIssue> issues,
+    this.itemModelGraph,
   })  : textures = List<MtnMinecraftResourceTexture>.unmodifiable(textures),
         issues = List<MtnMinecraftResourceIssue>.unmodifiable(issues);
 
   final MtnMinecraftResourceItemEntry entry;
   final MtnMinecraftResourceModel? model;
+  /// Modern client item-model tree; null for CP3 legacy items.
+  final MtnMinecraftResourceItemModelGraph? itemModelGraph;
   final List<MtnMinecraftResourceTexture> textures;
   final List<MtnMinecraftResourceIssue> issues;
 
