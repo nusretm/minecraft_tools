@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — CP6 static PNG animation first-frame metadata (2026-10-21)
+- Retain full source-backed original PNG bytes while adding an optional pixel `MtnMinecraftResourceImageRegion` to image results.
+- Parse `.png.mcmeta` animation metadata, PNG IHDR dimensions, first logical frame indexes and row-major frame grids with explicit geometry/metadata validation. No playback, PNG pixel decoding, crop or image re-encode.
+- Resolve metadata strictly from the exact source selected for the effective PNG; do not borrow metadata from higher- or lower-priority asset sources.
+- Integrate via shared helper texture loading for legacy and modern items without changing `pngList` semantics; add 14 synthetic/precedence/invalid-metadata tests and an existing Minecraft 26.2 client-JAR smoke example.
+- Windows verification: `dart analyze` clean; focused resource regression tests **42/42 PASS**; full suite **414/414 PASS**; `git diff --check` clean, branch working tree clean and synchronized. Real Minecraft **26.2** client JAR `minecraft:block/lava_still` smoke read **4573 PNG bytes** and returned first-frame **(x=0, y=0, width=16, height=16)**. No `dart format` was requested; checkpoint acceptance, PR and merge remain unapproved.
+
 ## Unreleased — CP5 Vanilla client-JAR resource source (2026-10-21)
 - Add `MtnMinecraftResourceSourceVanilla.open(clientJar: ...)` as a read-only source for safe Vanilla client-JAR `assets` entries, keeping file provenance and existing source registration/precedence authority.
 - Share low-level stream-backed ZIP directory discovery and on-demand entry reads with mod archive providers; preserve embedded JAR reads and existing provider exceptions.

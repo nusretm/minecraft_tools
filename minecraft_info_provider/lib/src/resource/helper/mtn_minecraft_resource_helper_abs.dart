@@ -3,6 +3,7 @@ import 'package:minecraft_models/minecraft_models.dart';
 import '../mtn_minecraft_resource_data.dart';
 import '../mtn_minecraft_resource_environment.dart';
 import '../mtn_minecraft_resource_image.dart';
+import '../mtn_minecraft_resource_image_animation_parser.dart';
 import '../mtn_minecraft_resource_item.dart';
 import '../mtn_minecraft_resource_item_entry.dart';
 import '../mtn_minecraft_resource_item_request.dart';
@@ -126,7 +127,20 @@ abstract class MtnMinecraftResourceHelperAbs {
     final MtnMinecraftResourceData? data =
         await loader.read(location.namespace, 'textures/${location.path}.png');
     if (data == null) return null;
-    return MtnMinecraftResourceImage(location: location, resource: data);
+
+    // Animation metadata belongs to the exact source that provided the PNG.
+    // Never borrow metadata from a lower-priority source/pack.
+    final metadata = await data.source.read(
+      location.namespace, 'textures/${location.path}.png.mcmeta',
+    );
+    final region = metadata == null
+        ? null
+        : const MtnMinecraftResourceImageAnimationParser().parse(
+            png: data.bytes, metadata: metadata,
+          );
+    return MtnMinecraftResourceImage(
+      location: location, resource: data, region: region,
+    );
   }
 
   /// Resolves the static normal-model and texture graph for one item.
