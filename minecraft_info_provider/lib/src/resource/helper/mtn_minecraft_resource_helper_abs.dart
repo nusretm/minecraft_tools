@@ -111,9 +111,11 @@ abstract class MtnMinecraftResourceHelperAbs {
     MtnMinecraftResourceLoader loader,
     MtnMinecraftResourceLocation location, {
     MtnMinecraftResourceData? rootResource,
+    bool allowTextureObjects = false,
   }) =>
       const MtnMinecraftResourceModelResolver().resolve(
         loader, location, rootResource: rootResource,
+        allowTextureObjects: allowTextureObjects,
       );
 
   /// Loads raw PNG bytes by sprite ID from the effective CP1 source stack.
@@ -134,8 +136,9 @@ abstract class MtnMinecraftResourceHelperAbs {
   /// Missing entries return null, while incomplete graphs remain non-null.
   Future<MtnMinecraftResourceItem?> loadItem(
     MtnMinecraftResourceLoader loader,
-    MtnMinecraftResourceItemRequest request,
-  ) async {
+    MtnMinecraftResourceItemRequest request, {
+    MtnMinecraftResourceEnvironment? environment,
+  }) async {
     final MtnMinecraftResourceItemEntry? entry = await loadItemEntry(loader, request);
     if (entry == null) return null;
 
@@ -166,9 +169,26 @@ abstract class MtnMinecraftResourceHelperAbs {
     final List<MtnMinecraftResourceIssue> issues = <MtnMinecraftResourceIssue>[
       ...resolved.issues,
     ];
+    final List<MtnMinecraftResourceTexture> textures =
+        await loadModelTextures(loader, resolved.model, issues);
+
+    return MtnMinecraftResourceItem(
+      entry: entry,
+      model: resolved.model,
+      textures: textures,
+      issues: issues,
+    );
+  }
+
+  /// Shared source/texture resolution for legacy and modern model leaves.
+  Future<List<MtnMinecraftResourceTexture>> loadModelTextures(
+    MtnMinecraftResourceLoader loader,
+    MtnMinecraftResourceModel? model,
+    List<MtnMinecraftResourceIssue> issues,
+  ) async {
     final List<MtnMinecraftResourceTexture> textures = <MtnMinecraftResourceTexture>[];
     final Map<String, String> references =
-        resolved.model?.textureReferences ?? const <String, String>{};
+        model?.textureReferences ?? const <String, String>{};
     final List<String> symbols = references.keys.toList()..sort(_compareTextureSymbols);
 
     for (final String symbol in symbols) {
@@ -182,20 +202,16 @@ abstract class MtnMinecraftResourceHelperAbs {
           reference: location.toString(),
         ));
       }
+      final Object? declaration = model?.textureDeclarations[symbol];
       textures.add(MtnMinecraftResourceTexture(
         symbol: symbol,
         reference: references[symbol]!,
         location: location,
         image: image,
+        forceTranslucent: declaration is Map && declaration['force_translucent'] == true,
       ));
     }
-
-    return MtnMinecraftResourceItem(
-      entry: entry,
-      model: resolved.model,
-      textures: textures,
-      issues: issues,
-    );
+    return textures;
   }
 
   MtnMinecraftResourceLocation? _resolveTextureLocation(

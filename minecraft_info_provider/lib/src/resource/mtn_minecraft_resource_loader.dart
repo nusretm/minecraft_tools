@@ -72,7 +72,7 @@ final class MtnMinecraftResourceLoader {
   }) async {
     for (final MtnMinecraftResourceHelperAbs helper in _helpers.reversed) {
       if (!helper.supports(environment)) continue;
-      final MtnMinecraftResourceItem? result = await helper.loadItem(this, request);
+      final MtnMinecraftResourceItem? result = await helper.loadItem(this, request, environment: environment);
       if (result != null) return result;
     }
     return null;
