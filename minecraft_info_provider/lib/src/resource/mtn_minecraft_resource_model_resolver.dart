@@ -47,7 +47,7 @@ final class MtnMinecraftResourceModelResolver {
 
     try {
       final MtnMinecraftResourceData? resource = knownResource ??
-          await loader.read(location.namespace, 'models/' + location.path + '.json');
+          await loader.read(location.namespace, 'models/${location.path}.json');
       if (resource == null) {
         issues.add(MtnMinecraftResourceIssue(
           kind: MtnMinecraftResourceIssueKind.missingParent,
@@ -58,12 +58,12 @@ final class MtnMinecraftResourceModelResolver {
 
       final Object? decoded = jsonDecode(utf8.decode(resource.bytes));
       if (decoded is! Map<String, dynamic>) {
-        throw FormatException('Model "' + location.toString() + '" must be a JSON object.');
+        throw FormatException('Model "$location" must be a JSON object.');
       }
       final Map<String, Object?> json = Map<String, Object?>.from(decoded);
       final Object? parentValue = json['parent'];
       if (parentValue != null && parentValue is! String) {
-        throw FormatException('Model "' + location.toString() + '" has a non-string parent.');
+        throw FormatException('Model "$location" has a non-string parent.');
       }
 
       MtnMinecraftResourceLocation? parentLocation;
@@ -87,11 +87,11 @@ final class MtnMinecraftResourceModelResolver {
       final Object? localTextures = json['textures'];
       if (localTextures != null) {
         if (localTextures is! Map<String, dynamic>) {
-          throw FormatException('Model "' + location.toString() + '" has invalid textures.');
+          throw FormatException('Model "$location" has invalid textures.');
         }
         for (final MapEntry<String, dynamic> entry in localTextures.entries) {
           if (entry.value is! String || entry.key.isEmpty) {
-            throw FormatException('Model "' + location.toString() + '" contains an invalid texture binding.');
+            throw FormatException('Model "$location" contains an invalid texture binding.');
           }
           textureReferences[entry.key] = entry.value as String;
         }

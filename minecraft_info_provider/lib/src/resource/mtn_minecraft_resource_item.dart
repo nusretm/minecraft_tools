@@ -22,8 +22,22 @@ final class MtnMinecraftResourceItem {
   bool get isComplete => issues.isEmpty;
 
   /// Raw image candidates in layer order; never a flattened final item icon.
-  List<Uint8List> get pngList => List<Uint8List>.unmodifiable(
-        textures.where((MtnMinecraftResourceTexture texture) => texture.image != null)
-            .map((MtnMinecraftResourceTexture texture) => texture.image!.png),
-      );
+  ///
+  /// The particle symbol is not another composited image layer when layer
+  /// bindings are present. The complete symbol list remains in [textures].
+  List<Uint8List> get pngList {
+    final RegExp layerPattern = RegExp(r'^layer[0-9]+
+}
+);
+    final bool hasLayers = textures.any(
+      (MtnMinecraftResourceTexture texture) => layerPattern.hasMatch(texture.symbol),
+    );
+    return List<Uint8List>.unmodifiable(
+      textures.where(
+        (MtnMinecraftResourceTexture texture) =>
+            texture.image != null &&
+            (!hasLayers || layerPattern.hasMatch(texture.symbol)),
+      ).map((MtnMinecraftResourceTexture texture) => texture.image!.png),
+    );
+  }
 }

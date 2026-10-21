@@ -1,21 +1,21 @@
 import 'package:minecraft_models/minecraft_models.dart';
 
 import '../mtn_minecraft_resource_data.dart';
+import '../mtn_minecraft_resource_environment.dart';
 import '../mtn_minecraft_resource_image.dart';
 import '../mtn_minecraft_resource_item.dart';
-import '../mtn_minecraft_resource_model.dart';
-import '../mtn_minecraft_resource_model_resolver.dart';
-import '../mtn_minecraft_resource_texture.dart';
-import '../mtn_minecraft_resource_environment.dart';
 import '../mtn_minecraft_resource_item_entry.dart';
 import '../mtn_minecraft_resource_item_request.dart';
 import '../mtn_minecraft_resource_loader.dart';
 import '../mtn_minecraft_resource_location.dart';
+import '../mtn_minecraft_resource_model.dart';
+import '../mtn_minecraft_resource_model_resolver.dart';
+import '../mtn_minecraft_resource_texture.dart';
 
 /// Shared entry selection and source reads for item-resource helpers.
 ///
 /// Subclasses own version-specific entry identity and directory policy.
-/// Model JSON, textures and runtime branch selection are excluded from CP2.
+/// CP2 owns entry selection; CP3 adds shared static model/texture resolution.
 abstract class MtnMinecraftResourceHelperAbs {
   MtnMinecraftResourceHelperAbs({
     required this.name,
@@ -122,7 +122,7 @@ abstract class MtnMinecraftResourceHelperAbs {
     MtnMinecraftResourceLocation location,
   ) async {
     final MtnMinecraftResourceData? data =
-        await loader.read(location.namespace, 'textures/' + location.path + '.png');
+        await loader.read(location.namespace, 'textures/${location.path}.png');
     if (data == null) return null;
     return MtnMinecraftResourceImage(location: location, resource: data);
   }
@@ -155,7 +155,7 @@ abstract class MtnMinecraftResourceHelperAbs {
 
     final String path = entry.entryLocation.path;
     if (!path.startsWith('models/') || !path.endsWith('.json')) {
-      throw FormatException('Normal model entry has an unexpected path: ' + path);
+      throw FormatException('Normal model entry has an unexpected path: $path');
     }
     final MtnMinecraftResourceLocation root = MtnMinecraftResourceLocation(
       namespace: entry.entryLocation.namespace,
@@ -204,7 +204,7 @@ abstract class MtnMinecraftResourceHelperAbs {
     List<MtnMinecraftResourceIssue> issues,
   ) {
     final Set<String> visited = <String>{};
-    String current = '#' + symbol;
+    String current = '#$symbol';
     while (current.startsWith('#')) {
       final String name = current.substring(1);
       if (!visited.add(name)) {

@@ -49,7 +49,7 @@ final class MtnMinecraftResourceIssue {
   final String reference;
 
   @override
-  String toString() => kind.name + ': ' + reference;
+  String toString() => '${kind.name}: $reference';
 }
 
 final class MtnMinecraftResourceModelResolution {
