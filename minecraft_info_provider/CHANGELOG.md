@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — CP4 modern item-model static graph (2026-10-21)
+- Parse 1.21.4+ `items/*.json` into typed model, composite, condition, select, range_dispatch, special, empty and unknown nodes. Retain original node metadata and top-level fields without choosing runtime branches.
+- Reuse CP1–CP3 source/model/texture/PNG infrastructure for every statically referenced model, retaining per-branch graph bindings and missing/unsupported diagnostics.
+- Support 26.1 structured normal-model textures with an explicit version gate and preserved `force_translucent` metadata.
+- Add CP4 synthetic regression tests; Windows analyzer/full tests and merge remain separate approval gates.
+
+
 ## Unreleased — CP3 legacy normal model and raw-image resources (2026-10-21)
 - Resolve normal Minecraft model JSON, parent inheritance and effective texture symbols across ordered resource sources without assuming namespace ownership.
 - Preserve missing-parent/texture/cycle diagnostics and original model/provenance instead of discarding partial results; malformed effective JSON and source errors propagate.

@@ -1,5 +1,15 @@
 # Minecraft Tools — Current Target
 
+## 2026-10-21 — CP4 modern 1.21.4+ item-model graph implementation; Windows validation pending
+
+- **Approval/branch:** User explicitly approved the CP4 implementation plan. Branch: `feature/item-resource-modern-model-cp4`; base `minecraft_tools/main` `a373e60f01339706ed95383bc609b6c91f217b4a`. CP4 is **not yet validated, accepted or merged**.
+- **Wire specification:** [Minecraft Java 1.21.4 official notes](https://feedback.minecraft.net/hc/en-us/articles/32385811139085-Minecraft-Java-Edition-1-21-4-The-Garden-Awakens) define `items/*.json`; [26.1 official notes](https://feedback.minecraft.net/hc/en-us/articles/44551668333837-Minecraft-Java-Edition-26-1) define item-model `transformation` and normal-model structured textures.
+- **Typed graph:** Add `MtnMinecraftResourceItemModelNodeAbs` with model/composite/condition/select/range_dispatch/special/empty/unknown specializations, typed select cases/range entries, definition, graph and branch-specific bindings. The bounded parser retains original metadata (case matchers, thresholds, tints, transformations, top-level fields) and preserves all candidate branches without deciding runtime state. Malformed known-node shapes and broken JSON propagate as `FormatException`.
+- **Integration:** `MtnMinecraftResourceHelperModern.loadItem()` delegates to `MtnMinecraftResourceItemModelResolver`. CP3 normal-model, parent, texture and PNG loaders are shared by every candidate branch; per-node model/texture provenance remains in graph bindings. `empty` is valid; unknown future node and special renderer remain explicit incomplete results. CP1 source precedence and CP2 effective/conventional identity are unchanged.
+- **26.1:** Explicit opt-in for `MtnMinecraftResourceModelResolver` structured texture declarations (`sprite`, `force_translucent`) only for ordered release >= `26.1`; preserve `MtnMinecraftResourceTexture.forceTranslucent` as metadata, not a rendered effect. Earlier modern releases reject structured model texture declarations.
+- **Excluded:** PNG decode, composition, crop/re-encode, Flutter, runtime condition/select/range evaluation, special renderer implementation, dynamic tint evaluation, atlas/palette pipelines, `.png.mcmeta` first-frame support, animation playback and source-provider integrations.
+- **Tests/validation:** New synthetic `test/minecraft_resource_modern_item_model_test.dart` covers all node types, nested branches, model/texture provenance, special/empty/unknown results, 26.1 texture metadata, explicit effective ID, missing/corrupt JSON and parser bounds. **Windows `dart analyze`, focused/full test runs, `git diff --check` and working-tree validation pending.** Never run `dart format` for Pure Dart. No merge without separate explicit approval.
+
 ## 2026-10-21 — CP3 squash merge and branch cleanup verified
 
 - **PR #83:** [Legacy Minecraft model inheritance and raw texture resources](https://github.com/nusretm/minecraft_tools/pull/83) squash-merged into `minecraft_tools/main` at `055273aae0833a2f610ff44d40b4cf60cbfc8419`, with explicit user approval. GitHub confirmed `merged=true` and `main` pointing to that squash commit.
