@@ -68,7 +68,7 @@ void main() {
       expect(second, png);
       expect(await source.read('minecraft', 'textures/item/absent.png'), isNull);
       expect(await source.read('nonexistent', 'textures/item/default.png'), isNull);
-      expect(await source.read('minecraft', 'META-INF/MANIFEST.MF'), isNull);
+      expect(await source.read('minecraft', 'meta-inf/manifest.mf'), isNull);
       await expectLater(source.read('minecraft', '../secret.txt'), throwsArgumentError);
       await expectLater(source.read('minecraft', '/textures/test.png'), throwsArgumentError);
     });
