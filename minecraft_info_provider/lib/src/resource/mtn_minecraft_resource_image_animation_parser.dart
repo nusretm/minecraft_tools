@@ -54,7 +54,7 @@ final class MtnMinecraftResourceImageAnimationParser {
     int firstFrame = 0;
     if (animation.containsKey('frames')) {
       final Object? framesValue = animation['frames'];
-      if (framesValue is! List || framesValue.isEmpty) {
+      if (framesValue is! List<dynamic> || framesValue.isEmpty) {
         throw const FormatException('PNG animation.frames must be a non-empty list.');
       }
       for (int position = 0; position < framesValue.length; position++) {
