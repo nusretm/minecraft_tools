@@ -15,7 +15,7 @@ void main() {
       );
 
   MtnMinecraftResourceItemRequest request(
-    String id, {String? effective},
+    String id, {String? effective}
   ) => MtnMinecraftResourceItemRequest(
     item: MtnMinecraftInfoItemIdentity.parse(id),
     effectiveItemModel: effective == null ? null : MtnMinecraftResourceLocation.parse(effective),
@@ -253,7 +253,7 @@ void main() {
       expect(modern.itemModelGraph!.root.raw['transformation'], isNotNull);
       expect(modern.textures.single.location.toString(), 'verity:item/torch');
       expect(modern.textures.single.forceTranslucent, isTrue);
-      expect(modern.itemModelGraph!.bindings.single.model!.textureDeclarations['layer0'], isA<Map>());
+      expect(modern.itemModelGraph!.bindings.single.model!.textureDeclarations['layer0'], isA<Map<String, Object?>>());
       expect(modern.isComplete, isTrue);
       await expectLater(
         loader.loadItem(environment: environment('1.21.4'), request: request('verity:torch')),

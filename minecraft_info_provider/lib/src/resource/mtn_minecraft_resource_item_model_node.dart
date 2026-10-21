@@ -121,8 +121,7 @@ final class MtnMinecraftResourceItemModelNodeEmpty extends MtnMinecraftResourceI
 }
 
 final class MtnMinecraftResourceItemModelNodeUnknown extends MtnMinecraftResourceItemModelNodeAbs {
-  MtnMinecraftResourceItemModelNodeUnknown(String type, Map<String, Object?> raw)
-      : super(type, raw);
+  MtnMinecraftResourceItemModelNodeUnknown(super.type, super.raw);
 }
 
 /// The parsed item definition, including top-level animation and future fields.

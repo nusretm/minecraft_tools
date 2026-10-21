@@ -32,24 +32,24 @@ final class MtnMinecraftResourceItemModelParser {
     Object? input, _ItemModelParseCounter count, int depth, String context,
   ) {
     if (depth >= maxDepth || ++count.value > maxNodes) {
-      throw FormatException('Item model graph exceeds structural limit at ' + context);
+      throw FormatException('Item model graph exceeds structural limit at $context');
     }
     if (input is! Map<String, dynamic>) {
-      throw FormatException('Expected item-model object at ' + context);
+      throw FormatException('Expected item-model object at $context');
     }
     final Map<String, Object?> raw = Map<String, Object?>.from(input);
     final Object? rawType = raw['type'];
     if (rawType is! String || rawType.isEmpty) {
-      throw FormatException('Missing item-model type at ' + context);
+      throw FormatException('Missing item-model type at $context');
     }
-    final String type = rawType.contains(':') ? rawType : 'minecraft:' + rawType;
+    final String type = rawType.contains(':') ? rawType : 'minecraft:$rawType';
 
     MtnMinecraftResourceItemModelNodeAbs parseChild(Object? value, String name) =>
-        _parseNode(value, count, depth + 1, context + '.' + name);
+        _parseNode(value, count, depth + 1, '$context.$name');
 
     String requireString(Object? value, String field) {
       if (value is! String || value.isEmpty) {
-        throw FormatException('Expected non-empty ' + field + ' in ' + context);
+        throw FormatException('Expected non-empty $field in $context');
       }
       return value;
     }
@@ -64,10 +64,10 @@ final class MtnMinecraftResourceItemModelParser {
       case 'minecraft:composite':
         final Object? values = raw['models'];
         if (values is! List || values.isEmpty) {
-          throw FormatException('Composite models must be non-empty at ' + context);
+          throw FormatException('Composite models must be non-empty at $context');
         }
         return MtnMinecraftResourceItemModelNodeComposite(raw, <MtnMinecraftResourceItemModelNodeAbs>[
-          for (int i = 0; i < values.length; i++) parseChild(values[i], 'models[' + i.toString() + ']'),
+          for (int i = 0; i < values.length; i++) parseChild(values[i], 'models[$i]'),
         ]);
 
       case 'minecraft:condition':
@@ -79,18 +79,18 @@ final class MtnMinecraftResourceItemModelParser {
 
       case 'minecraft:select':
         final Object? rawCases = raw['cases'];
-        if (rawCases is! List) throw FormatException('Select cases must be a list at ' + context);
+        if (rawCases is! List) throw FormatException('Select cases must be a list at $context');
         final List<MtnMinecraftResourceItemModelSelectCase> cases = <MtnMinecraftResourceItemModelSelectCase>[];
         for (int i = 0; i < rawCases.length; i++) {
           final Object? rawCase = rawCases[i];
-          if (rawCase is! Map<String, dynamic>) throw FormatException('Invalid select case at ' + context);
+          if (rawCase is! Map<String, dynamic>) throw FormatException('Invalid select case at $context');
           final Object? when = rawCase['when'];
           if (when is! String && (when is! List || when.isEmpty || !when.every((Object? v) => v is String))) {
-            throw FormatException('Invalid select matcher at ' + context);
+            throw FormatException('Invalid select matcher at $context');
           }
           cases.add(MtnMinecraftResourceItemModelSelectCase(
             when: when!,
-            model: parseChild(rawCase['model'], 'cases[' + i.toString() + '].model'),
+            model: parseChild(rawCase['model'], 'cases[$i].model'),
           ));
         }
         return MtnMinecraftResourceItemModelNodeSelect(
@@ -100,23 +100,23 @@ final class MtnMinecraftResourceItemModelParser {
 
       case 'minecraft:range_dispatch':
         final Object? rawEntries = raw['entries'];
-        if (rawEntries is! List) throw FormatException('Range entries must be a list at ' + context);
+        if (rawEntries is! List) throw FormatException('Range entries must be a list at $context');
         final List<MtnMinecraftResourceItemModelRangeEntry> entries = <MtnMinecraftResourceItemModelRangeEntry>[];
         for (int i = 0; i < rawEntries.length; i++) {
           final Object? entry = rawEntries[i];
           if (entry is! Map<String, dynamic> || entry['threshold'] is! num) {
-            throw FormatException('Invalid range entry at ' + context);
+            throw FormatException('Invalid range entry at $context');
           }
           final double threshold = (entry['threshold'] as num).toDouble();
-          if (!threshold.isFinite) throw FormatException('Non-finite range threshold at ' + context);
+          if (!threshold.isFinite) throw FormatException('Non-finite range threshold at $context');
           entries.add(MtnMinecraftResourceItemModelRangeEntry(
             threshold: threshold,
-            model: parseChild(entry['model'], 'entries[' + i.toString() + '].model'),
+            model: parseChild(entry['model'], 'entries[$i].model'),
           ));
         }
         final Object? scale = raw['scale'];
         if (scale != null && (scale is! num || !(scale.toDouble().isFinite))) {
-          throw FormatException('Invalid range scale at ' + context);
+          throw FormatException('Invalid range scale at $context');
         }
         return MtnMinecraftResourceItemModelNodeRangeDispatch(
           raw, requireString(raw['property'], 'property'), entries,
@@ -126,7 +126,7 @@ final class MtnMinecraftResourceItemModelParser {
       case 'minecraft:special':
         final Object? renderer = raw['model'];
         if (renderer is! Map<String, dynamic>) {
-          throw FormatException('Invalid special renderer at ' + context);
+          throw FormatException('Invalid special renderer at $context');
         }
         requireString(renderer['type'], 'special renderer type');
         return MtnMinecraftResourceItemModelNodeSpecial(
