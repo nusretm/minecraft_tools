@@ -1,5 +1,13 @@
 # Minecraft Tools — Current Target
 
+## 2026-10-21 — CP6 squash merge and feature branch cleanup verified
+
+- **PR #86:** [PNG animation first-frame metadata (CP6)](https://github.com/nusretm/minecraft_tools/pull/86) was squash-merged into `minecraft_tools/main` after separate explicit user approval. GitHub confirms merged/closed PR, squash commit `2e0898656e69cc9b612685a7a60e36be042cc2c0`, and `main` advanced to this SHA before the current documentation-only closure commit.
+- **Windows acceptance:** `dart analyze` clean; focused CP3–CP6/mod asset tests **42/42 PASS**; full `dart test` **414/414 PASS**; `git diff --check origin/main...HEAD` clean and original feature working tree synchronized. Actual Minecraft **26.2** Vanilla client JAR smoke: `minecraft:block/lava_still` delivered 4573 raw PNG bytes and first-frame region `(x=0, y=0, width=16, height=16)`. No `dart format` was run.
+- **Branch cleanup:** User fast-forwarded local `main` to `2e08986`, deleted local and remote `feature/item-resource-png-mcmeta-cp6`, ran `git fetch --prune origin`, and reported `git status -sb` as `## main...origin/main`. GitHub branch search independently confirms that no remote CP6 feature branch remains.
+- **Final scope:** CP1 resource core, CP2 version-aware item entry, CP3 model/texture/raw PNG, CP4 modern item-model graph, CP5 file-backed Vanilla source and CP6 first logical animated PNG frame region are all accepted, merged and branch-cleaned. The historic CP6 status note below saying "squash merge pending" is superseded by this closure.
+- **Next candidate (planning only):** Evaluate item-icon drawing/rendering requirements and boundaries using the existing typed model graph, texture/source provenance, raw PNG bytes and optional region. Resolve how to compose layers, map UV and tints, represent unresolved runtime branches and provide a UI-friendly output **before any CP7 implementation**. The next design and coding need separate approval; do not assume static model resolution already produces rendered icons.
+
 ## 2026-10-21 — CP6 first logical PNG animation frame: Windows validated and user accepted; squash merge pending
 
 - **Authorization and branch:** User explicitly approved the CP6 `.png.mcmeta` first-logical-frame plan on 2026-10-21. Branch `feature/item-resource-png-mcmeta-cp6` was created from clean `minecraft_tools/main` `d133b84800cf4ba52a4077d453d7bcfd1b349896`. Implementation, tests and a real-profile example are committed; Windows acceptance evidence was reviewed and **CP6 checkpoint explicitly accepted by the user on 2026-10-21**. Draft PR creation is authorized, but squash merge requires a separate explicit approval.
