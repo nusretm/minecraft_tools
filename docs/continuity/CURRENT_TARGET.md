@@ -1,5 +1,13 @@
 # Minecraft Tools — Current Target
 
+## 2026-10-21 — CP4 squash merge and branch cleanup verified
+
+- **PR #84:** [Modern Minecraft item-model graphs](https://github.com/nusretm/minecraft_tools/pull/84) was squash-merged into `minecraft_tools/main` with explicit user approval. GitHub confirmed `merged=true`, closed PR, and `main` HEAD `248676cae056215cf70871066021b9659457c76b`.
+- **Windows acceptance:** User confirmed clean `dart analyze`, **40/40** focused CP1–CP4/mod-asset tests, **394/394** full-suite tests, clean `git diff --check origin/main...HEAD`, and synchronized feature working tree before merge. No `dart format` was run.
+- **Branch cleanup:** User fast-forwarded local `main` to `248676c`, deleted the local and remote `feature/item-resource-modern-model-cp4`, ran `git fetch --prune origin`, and reported `git status -sb` as `## main...origin/main`. GitHub branch search independently confirms no CP4 feature branch remains.
+- **Closed scope:** CP1 resource core, CP2 item-entry/version helper routing, CP3 legacy model/parent/raw PNG resolution and CP4 modern typed item-model graph/static branch resolution are all merged. The CP4 development checkpoint is closed. The older CP4 note below saying "squash merge approval pending" is superseded by this closure.
+- **Future work (not implemented/approved):** Real Vanilla client resource-source integration and real-profile smoke tests; `.png.mcmeta` static first-frame region metadata; later rendering/Flutter composition. The historic resource plan's checkpoint labels do not supersede the current completed CP1–CP4 mapping. Any next checkpoint requires a separate design and user approval.
+
 ## 2026-10-21 — CP4 modern item-model graph: Windows validated; user accepted; squash merge approval pending
 
 - **Approval/branch:** User explicitly approved the CP4 implementation plan. Branch: `feature/item-resource-modern-model-cp4`; base `minecraft_tools/main` `a373e60f01339706ed95383bc609b6c91f217b4a`. CP4 passed Windows validation and was **accepted by the user on 2026-10-21**; squash merge is **not yet approved**.
