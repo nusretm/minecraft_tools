@@ -6,14 +6,12 @@ import 'package:test/test.dart';
 
 class TestResourceHelper extends MtnMinecraftResourceHelperAbs {
   TestResourceHelper({
-    required String name,
-    String directory = 'custom',
+    required super.name,
+    this.directory = 'custom',
     MtnMinecraftVersion? min,
     MtnMinecraftVersion? max,
     Set<MtnMinecraftLoaderType>? types,
-  })  : directory = directory,
-        super(
-          name: name,
+  }) : super(
           title: name,
           versionMin: min,
           versionMax: max,

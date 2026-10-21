@@ -44,7 +44,7 @@ abstract class MtnMinecraftResourceHelperAbs {
   final MtnMinecraftVersion? versionMax;
   final Set<MtnMinecraftLoaderType>? loaderTypes;
 
-  /// Directory inside assets/<namespace> where this format's entry lives.
+  /// Directory inside `assets/<namespace>/` where this format's entry lives.
   String get entryDirectory;
 
   /// Whether entry identity comes from effective minecraft:item_model.
@@ -86,7 +86,7 @@ abstract class MtnMinecraftResourceHelperAbs {
 
     final MtnMinecraftResourceLocation entry = MtnMinecraftResourceLocation(
       namespace: modelIdentity.namespace,
-      path: '$entryDirectory/' + modelIdentity.path + '.json',
+      path: '$entryDirectory/${modelIdentity.path}.json',
     );
     final MtnMinecraftResourceData? resource = await loader.read(entry.namespace, entry.path);
     if (resource == null) return null;

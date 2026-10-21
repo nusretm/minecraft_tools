@@ -1,6 +1,6 @@
 # Minecraft Tools — Current Target
 
-## 2026-10-21 — Resource item-entry CP2 implementation (Windows verification pending)
+## 2026-10-21 — Resource item-entry CP2 Windows tests PASS, analyzer lint cleanup pending
 
 - **Approved scope:** The user explicitly approved CP2 implementation after `minecraft_models` Version Foundation was accepted, squash-merged and branch-cleaned. Feature: `feature/item-resource-version-aware-cp2`, based on `minecraft_tools/main` `7cf689642b97d9dcb9fde9629c9765aebc40f63e`. **Not merged, no CP2 acceptance/merge approval.**
 - **Canonical version:** `minecraft_info_provider/pubspec.yaml` adds pinned Git dependency `minecraft_models` at merged SHA `26563c3d498a976701503906c6514cfa06c3f789` and aligns min SDK to Dart 3.5 (upstream dependency minimum). Reuse exported `MtnMinecraftVersion`, `MtnMinecraftGameVersionType` and `MtnMinecraftLoaderType`; do not invent another enum or version parser.
@@ -8,7 +8,7 @@
 - **Helper system:** Abstract `MtnMinecraftResourceHelperAbs` owns shared validation, release-only version bounds, `supports` and `loadItemEntry` source lookup. Three concrete built-ins: `Legacy` ≤1.21.1, `ItemModelComponent` 1.21.2–1.21.3, `Modern` ≥1.21.4. The existing `MtnMinecraftResourceLoader` owns helper registry and dispatch: built-ins register via same API; custom helpers register after built-ins and are tried first; duplicate names rejected; immutable snapshots; unregister/clear supported; custom null result permits fallback to another matching helper. Helpers are loader-agnostic by default, with optional canonical loader-type restrictions. Snapshot/pre-release ordering is **not guessed**.
 - **Filesystem entry:** Legacy registry identity → `models/item/<path>.json`; transition effective model ID → `models/item/<path>.json`; modern effective model ID → `items/<path>.json`. Transition/modern caller-missing effective model ID may use a visibly marked conventional registry fallback. Full effective source stack `read()` precedence/error propagation from CP1 is preserved.
 - **Boundary:** No model JSON parsing, modern item graph, texture resolution, parent inheritance, PNG rendering, Flutter code or `mtn_launcher` migration. No `dart format`.
-- **Validation:** Focused `test/minecraft_resource_item_entry_test.dart` and existing CP1 regression tests authored; GitHub branch code written, **Windows `dart pub get`, `dart analyze`, focused/full `dart test`, `git diff --check` not run yet**. Acceptance and squash merge require separate approvals. CP3 needs another explicit checkpoint approval.
+- **Windows evidence (user-run):** `dart pub get` PASS, canonical `minecraft_models` pinned at `26563c3`; focused CP2+CP1+mod asset tests **25/25 PASS**; complete `dart test` **379/379 PASS**; `git diff --check origin/main...HEAD` clean; branch synchronized and working tree clean. Initial `dart analyze` produced exactly five info-level lints (`directives_ordering`, `unintended_html_in_doc_comment`, `prefer_interpolation_to_compose_strings`, `use_super_parameters`, `prefer_initializing_formals`). Their style-only corrections are included in the next commit; **post-fix Windows analyzer and focused test recheck remain pending**. No `dart format`. User acceptance and squash merge require separate approvals; CP3 is separately gated.
 
 ## 2026-10-21 — CP1 merged and branch cleanup verified
 
