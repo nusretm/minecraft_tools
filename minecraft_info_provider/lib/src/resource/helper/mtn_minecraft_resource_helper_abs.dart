@@ -235,7 +235,9 @@ abstract class MtnMinecraftResourceHelperAbs {
     }
   }
 
-  static final RegExp _layerName = RegExp(r'^layer([0-9]+)  static int _compareTextureSymbols(String a, String b) {
+  static final RegExp _layerName = RegExp(r'^layer([0-9]+)$');
+
+  static int _compareTextureSymbols(String a, String b) {
     final RegExpMatch? ma = _layerName.firstMatch(a);
     final RegExpMatch? mb = _layerName.firstMatch(b);
     if (ma != null && mb != null) {

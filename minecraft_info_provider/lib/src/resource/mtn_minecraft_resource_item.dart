@@ -26,7 +26,8 @@ final class MtnMinecraftResourceItem {
   /// The particle symbol is not another composited image layer when layer
   /// bindings are present. The complete symbol list remains in [textures].
   List<Uint8List> get pngList {
-    final RegExp layerPattern = RegExp(r'^layer[0-9]+    final bool hasLayers = textures.any(
+    final RegExp layerPattern = RegExp(r'^layer[0-9]+$');
+    final bool hasLayers = textures.any(
       (MtnMinecraftResourceTexture texture) => layerPattern.hasMatch(texture.symbol),
     );
     return List<Uint8List>.unmodifiable(
