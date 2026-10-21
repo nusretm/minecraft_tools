@@ -1,5 +1,12 @@
 # Minecraft Tools — Current Target
 
+## 2026-10-21 — CP3 squash merge and branch cleanup verified
+
+- **PR #83:** [Legacy Minecraft model inheritance and raw texture resources](https://github.com/nusretm/minecraft_tools/pull/83) squash-merged into `minecraft_tools/main` at `055273aae0833a2f610ff44d40b4cf60cbfc8419`, with explicit user approval. GitHub confirmed `merged=true` and `main` pointing to that squash commit.
+- **Windows acceptance evidence:** Before merge, `dart analyze` returned **No issues found!**; CP3/CP2/CP1/mod-asset focused tests **33/33 PASS**, full `dart test` **387/387 PASS**, and `git diff --check` clean. CP3 was explicitly accepted by the user.
+- **Cleanup evidence:** User fast-forwarded local `main` to `055273a`, deleted local and remote `feature/item-resource-legacy-model-cp3`, ran `git fetch --prune origin`, and reported final `git status -sb`: `## main...origin/main`. GitHub branch search confirms the feature branch is absent.
+- **State:** CP1, CP2 and CP3 closed. This closure supersedes the historical CP3 record below saying "merge approval pending." CP4 (modern `items/*.json` item-model graph) has **not** been implemented or approved yet. Preserve the Pure Dart resource-layer boundary; no PNG decoding, flattening or Flutter rendering in the provider.
+
 ## 2026-10-21 — Item resources CP3 legacy model + raw PNG foundation (user accepted; merge approval pending)
 
 - **Approval and branch:** User expressly authorized proceeding with CP3 after confirming merged/clean CP2. Feature `feature/item-resource-legacy-model-cp3` based on `minecraft_tools/main` `7d888536096e397165cfa13d72e905a5350c6fc7`. CP3 checkpoint accepted by user on 2026-10-21; no squash merge approval yet.
