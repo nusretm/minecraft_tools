@@ -1,5 +1,13 @@
 # Minecraft Tools — Current Target
 
+## 2026-10-21 — CP5 squash merge and branch cleanup verified
+
+- **PR #85:** [Vanilla client-JAR resource source integration](https://github.com/nusretm/minecraft_tools/pull/85) was squash-merged into `minecraft_tools/main` with separate explicit user approval. GitHub confirmed `merged=true`, PR closed, squash commit `255407eb149073f1d36d6f5e7ee3a5ec4e58d393`, and `main` HEAD pointing to that commit.
+- **Windows acceptance evidence:** `dart analyze` clean, focused source/CP1–CP5/mod-archive tests **33/33 PASS**, full `dart test` **400/400 PASS**, and `git diff --check origin/main...HEAD` clean. Real Minecraft **26.2** client JAR + Fabric Farmer's Delight smoke resolved `farmersdelight:hamburger` and `farmersdelight:smoked_ham` with Vanilla `item/generated`/`item/handheld` parent ancestry, original mod PNG bytes (440 and 406), and `isComplete=true`; the built-in `minecraft:builtin/generated` terminal no longer produces a missing-parent issue.
+- **Branch cleanup:** User fast-forwarded local `main` to `255407e`, deleted local and remote `feature/item-resource-vanilla-source-cp5`, ran `git fetch --prune origin`, and reported final `git status -sb`: `## main...origin/main`. GitHub branch search confirms that the remote CP5 feature branch no longer exists.
+- **Final state:** CP1 resource core, CP2 item-entry helper routing, CP3 legacy normal-model/raw PNG resolution, CP4 modern item-model graph, and CP5 file-backed Vanilla resource integration have all been accepted, squash-merged and branch-cleaned. The CP5 historical section below that says "squash merge pending" is superseded by this closure.
+- **Next planning candidate — CP6 (not started/approved):** Parse `.png.mcmeta` animation metadata to identify one first *logical* texture frame; preserve original PNG bytes with an optional frame region. No animation playback, PNG decoding/re-encoding, cropping/composition, resource-pack implementation or Flutter rendering. Design and implementation need separate user approval; read the existing item-rendering plan before scoping.
+
 ## 2026-10-21 — CP5 Vanilla source: Windows/26.2 smoke validated, user accepted; squash merge pending
 
 - **Authorization and branch:** User explicitly approved implementing the planned CP5 Vanilla source. Branch `feature/item-resource-vanilla-source-cp5`, based on closed CP4 `minecraft_tools/main` `7804f308c763e6e3b2ecc708ccf6b7f5f15ebeae`. CP5 has passed local Windows and real Minecraft 26.2 smoke validation; **accepted by the user on 2026-10-21**; Draft PR preparation is authorized, but squash merge requires a separate explicit approval.
