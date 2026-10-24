@@ -1,5 +1,34 @@
 # Minecraft Tools — Current Target
 
+## 2026-10-24 — Content item activation / auto-update independence (Windows smoke pending)
+
+- Authorized from the MTN Launcher App report: disabling a Hypixel mod in Game
+  Package editor left its managed JAR loaded on the next Play.
+- Branch `feature/content-item-runtime-activation` (based on `main` `054d61a`);
+  paired app branch `feature/content-disabled-runtime-activation`.
+- `MtnMinecraftContentInstallationActivationFileSystem.synchronize` operates
+  only on files recorded in the Content Service installation manifest. It
+  reversibly renames managed mods/resourcepacks/shaderpacks from their normal
+  scanned directory to `.mtn-disabled/<type>/...`, or back, preserving bytes,
+  file identity, provider version and exact package lock.
+- The operation uses the existing content filesystem root lease, validates
+  manifest paths, checks source integrity and refuses overwrite of an unmanaged
+  destination. Publishes updated artifact paths through the existing manifest
+  publication authority; tries to roll back file moves on failure.
+- Installed desired/dependency versions remain unchanged, and the launcher
+  computes active version keys from **enabled direct roots and their resolved
+  dependencies**. Shared dependencies required by an enabled root stay active.
+- Auto-update discovery and automatic selection are no longer gated by
+  `item.enabled`: `autoUpdate` is an independent preference. Disabled
+  content can receive a newer version without being loaded by Minecraft.
+- A narrowly scoped manifest move/re-enable/collision test and a disabled
+  update-candidate test were added. No game-directory cleanup, schema change,
+  unmanaged-content deletion or new network/downloader architecture.
+- Windows `dart analyze`, focused tests and Hypixel launcher smoke are
+  **pending**, and neither PR will be merged without separate approval.
+  Pure Dart: do not run `dart format`.
+
+
 ## 2026-10-24 — Hypixel Late Winter event boundaries — WINDOWS VALIDATED / SQUASH MERGED
 
 - User supplied a real **Hypixel Year 521 Late Winter** in-game event-calendar screenshot and the MTN Launcher App timeline showing overlapping `Season of Jerry` / `Defend Jerry's Workshop` and incorrect 60-minute workshop season. Approved correction **only** in `hypixel_api` event calendar and focused tests. Branch: `fix/hypixel-late-winter-event-boundaries`.
