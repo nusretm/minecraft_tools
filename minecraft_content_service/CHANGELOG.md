@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased — Managed content enable/disable at runtime (Windows smoke pending)
+
+- Synchronize manifest-managed mods, resource packs and shader packs outside
+  Minecraft's scanned directories when inactive, and restore exact bytes by
+  rename when re-enabled. Keep dependency locks, version pins and shared
+  dependency reachability intact without redownloading unchanged artifacts.
+- Preserve activation independently from the `autoUpdate` preference. Disabled
+  direct items remain eligible for version checks and staged automatic updates
+  when their update permission and preference allow it.
+- Use the existing content-root coordination and manifest publication
+  authorities; refuse unmanaged destination collisions. Add focused
+  activation round-trip and update-preference tests. Windows validation pending.
+
 ## Unreleased — CP-12 centralized HTTP cache (Windows validated, merge pending)
 
 - Route Modrinth and CurseForge metadata HTTP calls through a shared response-cache transport instead of performing repeated `http.Client.get/post` calls in providers.

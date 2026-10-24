@@ -94,12 +94,35 @@ MtnMinecraftContentPackage makeUpdatePackage() => MtnMinecraftContentPackage(
     MtnMinecraftContentPackageItem(
       provider: 'updates', projectId: 'sample', type: MtnMinecraftContentType.mod,
       title: 'Sample Mod', direct: true, selectedVersionId: 'current',
-      permissions: const <MtnMinecraftContentItemPermission>[MtnMinecraftContentItemPermission.update],
+      permissions: const <MtnMinecraftContentItemPermission>[
+        MtnMinecraftContentItemPermission.enable,
+        MtnMinecraftContentItemPermission.disable,
+        MtnMinecraftContentItemPermission.update,
+      ],
     ),
   ],
 );
 
 void main() {
+  test('disabled item still tracks updates when auto-update stays enabled', () async {
+    final client = MockClient((request) async => http.Response('{}', 200));
+    final service = MtnMinecraftContentService(
+      providers: <MtnMinecraftContentProvider>[UpdatesProviderFake(client)],
+    );
+    final package = makeUpdatePackage();
+    final item = package.getItem('updates:sample')!;
+    item.enabled = false;
+    expect(item.enabled, isFalse);
+    expect(item.autoUpdate, isTrue);
+    expect(package.hasUpdateEligibleItems, isTrue);
+    await package.checkUpdates(service: service);
+    expect(package.updateList.values.single.key, 'updates:newest');
+    final restored = MtnMinecraftContentPackage.fromLocalMap(package.toLocalMap());
+    expect(restored.getItem('updates:sample')!.enabled, isFalse);
+    expect(restored.getItem('updates:sample')!.autoUpdate, isTrue);
+    expect(restored.updateList.values.single.key, 'updates:newest');
+  });
+
   test('package checks later pages, reuses six-hour HTTP cache and bypasses it when forced', () async {
     var calls = 0;
     final client = MockClient((request) async {
