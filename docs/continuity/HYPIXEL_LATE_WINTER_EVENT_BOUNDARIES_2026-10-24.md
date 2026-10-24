@@ -5,7 +5,7 @@
 - The user compared **a live Hypixel in-game Year 521, Late Winter calendar screenshot** with the MTN Launcher App daily timeline. The app showed `Defend Jerry's Workshop` and `Season of Jerry` at identical times, and `Season of Jerry` lasted only one real hour.
 - Calendar source inspection located the bug in `hypixel_api/lib/src/skyblock/events/hypixel_skyblock_event_calendar.dart`: both Jerry entries used `Late Winter 24` through three days later, and the New Year event used `Late Winter 29` through three days later.
 - User explicitly approved correction limited to the existing Hypixel API calendar and tests. **No Launcher UI work**, new event type, separate short one-hour Season of Jerry or runtime date-offset overrides.
-- Feature branch `fix/hypixel-late-winter-event-boundaries`; tests and Windows validation **pending**. Merge requires separate explicit approval.
+- Feature branch `fix/hypixel-late-winter-event-boundaries`. **Windows validation passed:** `dart analyze` No issues found, focused SkyBlock event tests **6/6 PASS**, full Hypixel API suite **56/56 PASS**, `git diff --check main...HEAD` clean. **User approved merge and PR [#87](https://github.com/nusretm/minecraft_tools/pull/87) was squash-merged** to `main` at `7f0a99ddf202133519c20248ecefc49be08a9ab2`. Two generated tracked `.dart_tool` entries remain modified on the user's local feature branch after testing. Local/remote branch cleanup and post-merge MTN Launcher UI smoke are pending.
 
 ## Authoritative requested meanings and boundaries
 
@@ -23,10 +23,10 @@
 
 ## Acceptance criteria
 
-- `dart analyze` for `hypixel_api` clean.
-- `dart test test/skyblock_events_test.dart -r expanded` PASS, including Year 521 event start/end, duration, parent relation, and no inclusion at exclusive boundaries.
-- `dart test` full Hypixel API package PASS.
-- `git diff --check main...HEAD` clean and feature working tree clean.
+- `dart analyze` for `hypixel_api` **PASS** (No issues found).
+- `dart test test/skyblock_events_test.dart -r expanded` **6/6 PASS**, including Year 521 event start/end, duration, parent relation, and no inclusion at exclusive boundaries.
+- `dart test` full Hypixel API package **56/56 PASS**.
+- `git diff --check main...HEAD` clean; local feature working tree contained *only* two changed tracked generated `.dart_tool` paths after testing, which require selective cleanup before final clean status.
 - Optional user UI smoke: repeat the original Late Winter period in MTN Launcher App to see `Season of Jerry` span all Late Winter, `Defend` only days 25–26, and `New Year` only days 30–31. **No UI integration work is authorized here.**
 
 ## Windows commands
