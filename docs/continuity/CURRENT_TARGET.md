@@ -1,6 +1,6 @@
 # Minecraft Tools — Current Target
 
-## 2026-10-24 — Content item activation / auto-update independence (Windows accepted; merge authorized)
+## 2026-10-24 — Content item activation / auto-update independence (merged PR #88)
 
 - Authorized from the MTN Launcher App report: disabling a Hypixel mod in Game
   Package editor left its managed JAR loaded on the next Play.
@@ -29,12 +29,13 @@
   passed (**8/8**). The companion app ran `flutter analyze --no-pub`
   with **No issues found** (9.1s), built and launched Windows Debug,
   and the user confirmed the disabled Hypixel mod no longer ran.
-- User explicitly approved merge and cleanup on 2026-10-24. PR #88
-  will squash-merge to Content Service `main` first; the app PR #56
-  must then switch its temporary dependency branch ref back to `main`
-  and lock the new squash commit. Re-enable/recovery checks were not
-  separately reported, so do not present them as live-smoke passes.
-  Pure Dart: no `dart format` was run.
+- PR #88 squash-merged to `minecraft_tools/main` as
+  `beee1a3661b45f9c258227a38b25faef474428ee`, after user approval.
+  Companion app PR #56 also squash-merged as `7ca1fff`; it has restored
+  Content Service dependency `ref: main` and locked to the merged commit.
+  Remote/local feature branch cleanup remains a user-side Git operation.
+  Re-enable/recovery checks were not separately reported. No `dart format`
+  was run.
 
 
 ## 2026-10-24 — Hypixel Late Winter event boundaries — WINDOWS VALIDATED / SQUASH MERGED
