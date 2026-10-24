@@ -48,8 +48,10 @@ class HypixelSkyBlockEventCalendar {
     final spooky = at(8, 29);
     final electionOver = at(3, 27);
     final electionOpen = at(6, 27);
-    final jerry = at(12, 24);
-    final newYear = at(12, 29);
+    final lateWinter = at(12, 1);
+    final defendJerry = at(12, 25);
+    final newYear = at(12, 30);
+    final nextYear = calendar.toDateTime(year: year + 1, month: 1, day: 1);
 
     return <HypixelSkyBlockEvent>[
       HypixelSkyBlockEvent(
@@ -105,23 +107,23 @@ class HypixelSkyBlockEventCalendar {
         type: HypixelSkyBlockEventType.seasonOfJerry,
         name: 'Season of Jerry',
         category: HypixelSkyBlockEventCategory.calendar,
-        startAt: jerry,
-        endAt: afterDays(jerry, 3),
+        startAt: lateWinter,
+        endAt: nextYear,
       ),
       HypixelSkyBlockEvent(
         type: HypixelSkyBlockEventType.defendJerrysWorkshop,
         name: "Defend Jerry's Workshop",
         category: HypixelSkyBlockEventCategory.calendar,
         parentType: HypixelSkyBlockEventType.seasonOfJerry,
-        startAt: jerry,
-        endAt: afterDays(jerry, 3),
+        startAt: defendJerry,
+        endAt: afterDays(defendJerry, 2),
       ),
       HypixelSkyBlockEvent(
         type: HypixelSkyBlockEventType.newYearCelebration,
         name: 'New Year Celebration',
         category: HypixelSkyBlockEventCategory.calendar,
         startAt: newYear,
-        endAt: afterDays(newYear, 3),
+        endAt: nextYear,
       ),
     ];
   }
