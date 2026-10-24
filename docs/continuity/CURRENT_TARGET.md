@@ -1,5 +1,11 @@
 # Minecraft Tools — Current Target
 
+## 2026-10-24 — Hypixel Late Winter event boundaries — IMPLEMENTED / WINDOWS VALIDATION PENDING
+
+- User supplied a real **Hypixel Year 521 Late Winter** in-game event-calendar screenshot and the MTN Launcher App timeline showing overlapping `Season of Jerry` / `Defend Jerry's Workshop` and incorrect 60-minute workshop season. Approved correction **only** in `hypixel_api` event calendar and focused tests. Branch: `fix/hypixel-late-winter-event-boundaries`.
+- Preserve existing `seasonOfJerry` name/type as the **entire Late Winter Jerry's Workshop open window**, from month 12 day 1 to next year's month 1 day 1 (31 days, 10h20m). `defendJerrysWorkshop` is Late Winter 25–26 (40m), retains parent; `newYearCelebration` is 30–31 (40m). All end boundaries exclusive. No duplicate short Season of Jerry or new event types.
+- Windows `hypixel_api` analyzer/tests and live Launcher display check are not yet verified; no merge. Handoff: `docs/continuity/HYPIXEL_LATE_WINTER_EVENT_BOUNDARIES_2026-10-24.md`. Separate merge approval required.
+
 ## 2026-10-21 — CP6 squash merge and feature branch cleanup verified
 
 - **PR #86:** [PNG animation first-frame metadata (CP6)](https://github.com/nusretm/minecraft_tools/pull/86) was squash-merged into `minecraft_tools/main` after separate explicit user approval. GitHub confirms merged/closed PR, squash commit `2e0898656e69cc9b612685a7a60e36be042cc2c0`, and `main` advanced to this SHA before the current documentation-only closure commit.
