@@ -1,10 +1,10 @@
 # Minecraft Tools — Current Target
 
-## 2026-10-24 — Hypixel Late Winter event boundaries — IMPLEMENTED / WINDOWS VALIDATION PENDING
+## 2026-10-24 — Hypixel Late Winter event boundaries — WINDOWS VALIDATED / SQUASH MERGED
 
 - User supplied a real **Hypixel Year 521 Late Winter** in-game event-calendar screenshot and the MTN Launcher App timeline showing overlapping `Season of Jerry` / `Defend Jerry's Workshop` and incorrect 60-minute workshop season. Approved correction **only** in `hypixel_api` event calendar and focused tests. Branch: `fix/hypixel-late-winter-event-boundaries`.
 - Preserve existing `seasonOfJerry` name/type as the **entire Late Winter Jerry's Workshop open window**, from month 12 day 1 to next year's month 1 day 1 (31 days, 10h20m). `defendJerrysWorkshop` is Late Winter 25–26 (40m), retains parent; `newYearCelebration` is 30–31 (40m). All end boundaries exclusive. No duplicate short Season of Jerry or new event types.
-- Windows `hypixel_api` analyzer/tests and live Launcher display check are not yet verified; no merge. Handoff: `docs/continuity/HYPIXEL_LATE_WINTER_EVENT_BOUNDARIES_2026-10-24.md`. Separate merge approval required.
+- **Windows verification:** `dart pub get` PASS; `dart analyze` **No issues found**; focused `skyblock_events_test.dart` **6/6 PASS**; full `hypixel_api` suite **56/56 PASS**; `git diff --check main...HEAD` clean. Only two tracked generated `.dart_tool` files changed after tests; user needs to restore just these local files before final clean-tree verification. **PR [#87](https://github.com/nusretm/minecraft_tools/pull/87) squash-merged to `main`** at `7f0a99ddf202133519c20248ecefc49be08a9ab2` after explicit approval. The live MTN Launcher App display has **not** yet been rechecked after merge; local/remote feature-branch cleanup pending. Handoff: `docs/continuity/HYPIXEL_LATE_WINTER_EVENT_BOUNDARIES_2026-10-24.md`.
 
 ## 2026-10-21 — CP6 squash merge and feature branch cleanup verified
 
