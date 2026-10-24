@@ -1,6 +1,6 @@
 # Minecraft Tools — Current Target
 
-## 2026-10-24 — Content item activation / auto-update independence (Windows smoke pending)
+## 2026-10-24 — Content item activation / auto-update independence (Windows accepted; merge authorized)
 
 - Authorized from the MTN Launcher App report: disabling a Hypixel mod in Game
   Package editor left its managed JAR loaded on the next Play.
@@ -24,9 +24,17 @@
 - A narrowly scoped manifest move/re-enable/collision test and a disabled
   update-candidate test were added. No game-directory cleanup, schema change,
   unmanaged-content deletion or new network/downloader architecture.
-- Windows `dart analyze`, focused tests and Hypixel launcher smoke are
-  **pending**, and neither PR will be merged without separate approval.
-  Pure Dart: do not run `dart format`.
+- Windows user validation (2026-10-24): `dart pub get` succeeded;
+  `dart analyze` reported **No issues found**; the two focused test files
+  passed (**8/8**). The companion app ran `flutter analyze --no-pub`
+  with **No issues found** (9.1s), built and launched Windows Debug,
+  and the user confirmed the disabled Hypixel mod no longer ran.
+- User explicitly approved merge and cleanup on 2026-10-24. PR #88
+  will squash-merge to Content Service `main` first; the app PR #56
+  must then switch its temporary dependency branch ref back to `main`
+  and lock the new squash commit. Re-enable/recovery checks were not
+  separately reported, so do not present them as live-smoke passes.
+  Pure Dart: no `dart format` was run.
 
 
 ## 2026-10-24 — Hypixel Late Winter event boundaries — WINDOWS VALIDATED / SQUASH MERGED
