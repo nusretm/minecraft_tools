@@ -1,5 +1,109 @@
 # Minecraft Tools — Current Target
 
+## 2026-10-25 — Hypixel storage concurrency (Stage 2 implementation / Windows validation pending)
+
+- User explicitly authorized Stage 2 development after Stage 1 reproduced
+  three Windows `PathAccessException errno=32` failures at shared
+  `.json.tmp` → `.json` renames; baseline sequential tests passed.
+  Continue in `feature/hypixel-storage-concurrency-repro` and Draft PR #89;
+  merge still requires **separate explicit user approval**.
+- New internal `HypixelFileOperationQueue` serializes operations by
+  absolute file path, shared among all cache/store instances **within the
+  same Dart isolate**. Entries are removed after the last operation; both
+  successful and failed callbacks release their successors. No external
+  dependencies or provider/launcher logic added.
+- `HypixelFileCache.read/write/clearExpired` coordinate per cache entry,
+  preventing two same-key writers from simultaneously using the same
+  `.json.tmp`. Different cache keys remain independently executable.
+  `clear()` is unchanged and should not run concurrently with active
+  cache operations; cross-process/isolate coordination is **not** claimed.
+- `HypixelDataStore.readHistory/writeHistory` share that same per-file
+  queue. New `updateHistory(name, synchronousTransform)` holds the
+  queue through the *entire* read/transform/write, avoiding lost updates
+  even when multiple instances address the same history path.
+  Direct `writeHistory` retains replace/last-writer-wins semantics.
+  The existing Windows delete-then-rename disk sequence remains as-is;
+  'atomic' here means serialized in-process transaction visibility,
+  **not an OS-atomic cross-process replacement guarantee**.
+- All six `HypixelSkyBlockHistory` persistence writers now use
+  `updateHistory`: news, player Bingo, special states, scheduled events,
+  Mayor observations, and election rounds. Read helpers are reused for
+  both public readers and transactional mutation callbacks. Existing
+  history field format, ordering and first-observed metadata retained.
+- The three original Stage 1 red tests are kept unchanged; three new
+  tests cover two cache instances writing the same file, two history
+  stores performing 40 concurrent increments without lost updates, and
+  queue recovery after a synchronous transform exception. All tests
+  are offline and use unique disposable temp directories.
+- **No tests or analyzer run by assistant.** User Windows checks required:
+  `cd D:\development\cross-platform\minecraft_tools`;
+  `git pull --ff-only origin feature/hypixel-storage-concurrency-repro`;
+  `cd hypixel_api`; `dart pub get`; `dart analyze`;
+  `dart test test/hypixel_storage_concurrency_test.dart -r expanded`;
+  `dart test test/hypixel_http_cache_test.dart test/skyblock_history_test.dart`;
+  `dart test`; `cd ..`; `git diff --check`; `git status -sb`.
+  Restore only known generated `.dart_tool` drift after inspection.
+  Do not use `dart format` on pure Dart.
+- Launcher `mtn_launcher_app` has **not** been changed or smoke-tested
+  with this revision; dependency update and cold-start check require
+  subsequent approved integration after Stage 2 validation.
+  Do not mark Stage 2 green or merge until user reports results.
+
+## 2026-10-25 — Hypixel storage concurrency reproduction (Stage 1 / Windows reproduced / Draft PR #89)
+
+- **Authorization and scope:** User approved Stage 1 diagnosis/tests only.
+  Branch `feature/hypixel-storage-concurrency-repro`, based on
+  `minecraft_tools/main` `d7d5564662f8767635874a0f7c2e7c18b6733cba`.
+  Draft PR #89 remains unmerged. No production file, launcher repository,
+  cache policy, history semantics or dependency changed.
+- **Windows reproduction CONFIRMED (user, 2026-10-25):**
+  `dart pub get` succeeded and `dart analyze` reported
+  **No issues found**. The new concurrency test file ran all three
+  scenarios, and **all three failed** with Windows
+  `PathAccessException`, `errno=32` (file in use), during
+  `.json.tmp` to `.json` rename:
+  - Cache same-key parallel writes: `HypixelFileCache.write`,
+    `hypixel_file_cache.dart:67`.
+  - History same-name parallel writes: `HypixelDataStore.writeHistory`,
+    `hypixel_data_store.dart:44`.
+  - Twelve parallel election observations: same history rename failure
+    via `HypixelSkyBlockHistory._observeMayor`. The exception occurs
+    **before** a complete observation-set comparison; distinct-term
+    **lost updates have not yet been independently demonstrated**.
+- Existing sequential baseline tests
+  `dart test test/hypixel_http_cache_test.dart
+  test/skyblock_history_test.dart` **all passed (3 tests)**.
+  This distinguishes the new concurrent access failure from the normal
+  serial HTTP cache/history behavior. Failures are intentional red
+  concurrency contract tests; Stage 1 is a successful reproduction,
+  **not a passing test suite** or a code fix.
+- **Source mechanism:** `HypixelFileCache.write` uses a fixed
+  `<cache-key>.json.tmp`; `HypixelDataStore.writeHistory` a fixed
+  `<history-name>.json.tmp`. Both issue asynchronous write, existing
+  target delete, and rename with no same-key synchronization. This
+  explains the Windows temp/rename collision reproduced offline.
+  The prior launcher `notifications` / `events` `kind=storage`
+  failures are consistent with it, but the original log alone does
+  not prove the exact original file/operation.
+- **Local worktree:** user reported precisely two modified tracked
+  generated files after `dart pub get`/`dart test`:
+  `hypixel_api/.dart_tool/package_config.json` and
+  `hypixel_api/.dart_tool/test/incremental_kernel.Ly9AZGFydD0zLjM=`.
+  Inspect/preserve any other local work; restore only these exact
+  generated paths if they contain no intentional changes. The
+  `git diff --check` LF/CRLF warning comes from a generated file.
+- **Stage 2 proposal — requires fresh explicit user approval:**
+  coordinate concurrent writes by cache key and history identity,
+  and protect the *whole* election/history read-modify-write
+  transaction, not just the rename. Preserve complete JSON and
+  observation history on Windows. Include the red tests plus existing
+  baselines in validation; after an approved dependency update,
+  retest simultaneous launcher Home/notification startup loads.
+  No `dart format` on pure Dart.
+- Keep PR #89 Draft until the user separately authorizes the intended
+  merge strategy (test-only red PR versus pairing the regression
+  tests with the Stage 2 fix). Do not merge red tests by default.
+
 ## 2026-10-24 — Content item activation / auto-update independence (merged PR #88)
 
 - Authorized from the MTN Launcher App report: disabling a Hypixel mod in Game

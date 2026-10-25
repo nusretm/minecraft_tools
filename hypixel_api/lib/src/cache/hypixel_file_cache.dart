@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import '../storage/hypixel_file_operation_queue.dart';
+
 class HypixelCacheEntry {
   const HypixelCacheEntry({
     required this.cachedAt,
@@ -22,21 +24,23 @@ class HypixelFileCache {
 
   final Directory directory;
 
-  Future<HypixelCacheEntry?> read(String key) async {
+  Future<HypixelCacheEntry?> read(String key) {
     final file = File(_pathFor(key));
-    if (!await file.exists()) return null;
-    try {
-      final raw = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-      return HypixelCacheEntry(
-        cachedAt: DateTime.fromMillisecondsSinceEpoch(raw['cachedAt'] as int, isUtc: true),
-        expiresAt: DateTime.fromMillisecondsSinceEpoch(raw['expiresAt'] as int, isUtc: true),
-        statusCode: raw['statusCode'] as int,
-        body: Map<String, dynamic>.from(raw['body'] as Map),
-      );
-    } catch (_) {
-      await file.delete().catchError((_) => file);
-      return null;
-    }
+    return HypixelFileOperationQueue.run<HypixelCacheEntry?>(file.path, () async {
+      if (!await file.exists()) return null;
+      try {
+        final raw = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+        return HypixelCacheEntry(
+          cachedAt: DateTime.fromMillisecondsSinceEpoch(raw['cachedAt'] as int, isUtc: true),
+          expiresAt: DateTime.fromMillisecondsSinceEpoch(raw['expiresAt'] as int, isUtc: true),
+          statusCode: raw['statusCode'] as int,
+          body: Map<String, dynamic>.from(raw['body'] as Map),
+        );
+      } catch (_) {
+        await file.delete().catchError((_) => file);
+        return null;
+      }
+    });
   }
 
   Future<void> write({
@@ -48,23 +52,25 @@ class HypixelFileCache {
     required DateTime expiresAt,
     required int statusCode,
     required Map<String, dynamic> body,
-  }) async {
-    await directory.create(recursive: true);
+  }) {
     final file = File(_pathFor(key));
-    final temp = File('${file.path}.tmp');
-    await temp.writeAsString(jsonEncode({
-      'version': 1,
-      'key': key,
-      'method': method,
-      'path': path,
-      'query': query,
-      'cachedAt': cachedAt.millisecondsSinceEpoch,
-      'expiresAt': expiresAt.millisecondsSinceEpoch,
-      'statusCode': statusCode,
-      'body': body,
-    }), flush: true);
-    if (await file.exists()) await file.delete();
-    await temp.rename(file.path);
+    return HypixelFileOperationQueue.run<void>(file.path, () async {
+      await directory.create(recursive: true);
+      final temp = File('${file.path}.tmp');
+      await temp.writeAsString(jsonEncode({
+        'version': 1,
+        'key': key,
+        'method': method,
+        'path': path,
+        'query': query,
+        'cachedAt': cachedAt.millisecondsSinceEpoch,
+        'expiresAt': expiresAt.millisecondsSinceEpoch,
+        'statusCode': statusCode,
+        'body': body,
+      }), flush: true);
+      if (await file.exists()) await file.delete();
+      await temp.rename(file.path);
+    });
   }
 
   Future<void> clear() async {
@@ -76,17 +82,23 @@ class HypixelFileCache {
     var removed = 0;
     await for (final entity in directory.list()) {
       if (entity is! File || !entity.path.endsWith('.json')) continue;
-      try {
-        final raw = jsonDecode(await entity.readAsString()) as Map<String, dynamic>;
-        final expiresAt = raw['expiresAt'] as int?;
-        if (expiresAt == null || expiresAt <= DateTime.now().toUtc().millisecondsSinceEpoch) {
-          await entity.delete();
-          removed++;
+      await HypixelFileOperationQueue.run<void>(entity.path, () async {
+        // A cache writer may have replaced this entry after directory.list().
+        if (!await entity.exists()) return;
+        try {
+          final raw = jsonDecode(await entity.readAsString()) as Map<String, dynamic>;
+          final expiresAt = raw['expiresAt'] as int?;
+          if (expiresAt == null || expiresAt <= DateTime.now().toUtc().millisecondsSinceEpoch) {
+            await entity.delete();
+            removed++;
+          }
+        } catch (_) {
+          if (await entity.exists()) {
+            await entity.delete();
+            removed++;
+          }
         }
-      } catch (_) {
-        await entity.delete();
-        removed++;
-      }
+      });
     }
     return removed;
   }
