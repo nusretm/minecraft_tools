@@ -1,5 +1,55 @@
 # Minecraft Tools — Current Target
 
+## 2026-10-25 — Hypixel storage concurrency reproduction (Stage 1 / Draft, Windows pending)
+
+- User approved **Stage 1 only**: reproduce intermittent startup
+  `Information refresh failed: feature=notifications provider=hypixel
+  kind=storage` (and prior `events` scope storage failure) with
+  concurrency tests. Do not implement cache/history fixes or update the
+  launcher dependency in this checkpoint. Two Windows launcher starts
+  reproduced the notification-scope storage classification after INFO-6
+  had been merged and validated with 33/33 focused tests.
+- Branch `feature/hypixel-storage-concurrency-repro`, based on
+  `minecraft_tools/main` `d7d5564662f8767635874a0f7c2e7c18b6733cba`.
+  Work restricted to `hypixel_api/test/` and this continuity note.
+  Draft PR is a **test-only diagnosis**, not production remediation;
+  user validation and separate merge approval remain required.
+- Source inspection: `HypixelFileCache.write` uses a fixed
+  `<cache-key>.json.tmp` path; `HypixelDataStore.writeHistory`
+  uses a fixed `<history-name>.json.tmp`. Both do asynchronous writes,
+  delete an existing target and rename the shared temporary file without
+  coordination. This proves the *risk* of concurrent temp-file collisions,
+  but the log's exact failing file/operation is still unknown.
+  `HypixelSkyBlockHistory.observeElection` also performs separate
+  read/modify/write operations that may lose independent observations.
+- Added `hypixel_api/test/hypixel_storage_concurrency_test.dart` with
+  three contract tests, using isolated system-temp folders and no real
+  Hypixel requests: (1) repeated 16-writer bursts to one HTTP cache key,
+  asserting no error, valid complete JSON and no dangling `.tmp`;
+  (2) repeated 16-writer bursts to one history name, asserting the same
+  guarantees; (3) 12 concurrent different mayor/election observations,
+  asserting all distinct terms/rounds remain present.
+- These tests intentionally express desired concurrency guarantees and
+  **may fail against the unchanged implementation**. An actual failure
+  or specific exception must be observed on Windows before describing
+  the race as dynamically reproduced. Passing one run does not prove
+  absence of a scheduling-dependent race; rerun if necessary. Do not
+  change production code merely to make the stage-one test run green.
+- Verification pending on user's Windows environment:
+  `cd D:\development\cross-platform\minecraft_tools`,
+  `cd hypixel_api`, `dart pub get`, `dart analyze`,
+  `dart test test/hypixel_storage_concurrency_test.dart -r expanded`;
+  record which cases pass/fail and any precise `FileSystemException`
+  operation, without exposing personal disk paths or secrets.
+  Also run existing `dart test test/hypixel_http_cache_test.dart
+  test/skyblock_history_test.dart` for baseline non-concurrent behavior.
+  `dart format` must not run for pure Dart code.
+- Next proposed Stage 2 (requires **new explicit user approval**):
+  choose synchronization ownership for per-cache-key updates and
+  atomic per-history-name read/modify/write, while retaining clean
+  caching/history semantics and cross-platform file guarantees.
+  `mtn_launcher_app/main` and unrelated launcher PRs remain untouched.
+
 ## 2026-10-24 — Content item activation / auto-update independence (merged PR #88)
 
 - Authorized from the MTN Launcher App report: disabling a Hypixel mod in Game
