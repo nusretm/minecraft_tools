@@ -127,4 +127,64 @@ void main() {
       if (await directory.exists()) await directory.delete(recursive: true);
     }
   });
+  test('separate store instances preserve one shared transaction history', () async {
+    final directory = await Directory.systemTemp.createTemp('hypixel_history_shared_');
+    try {
+      final first = HypixelDataStore(folder: directory.path);
+      final second = HypixelDataStore(folder: directory.path);
+      await Future.wait<void>(<Future<void>>[
+        for (int index = 0; index < 40; index++)
+          (index.isEven ? first : second).updateHistory('counter', (previous) =>
+              <String, dynamic>{'count': ((previous?['count'] as int?) ?? 0) + 1}),
+      ]);
+      final saved = await first.readHistory('counter');
+      expect(saved?['count'], 40,
+        reason: 'Store instances targeting the same file must share a read-modify-write gate.');
+    } finally {
+      if (await directory.exists()) await directory.delete(recursive: true);
+    }
+  });
+
+  test('separate cache instances do not collide on the same key', () async {
+    final directory = await Directory.systemTemp.createTemp('hypixel_cache_shared_');
+    try {
+      final folder = Directory('${directory.path}${Platform.pathSeparator}cache');
+      final first = HypixelFileCache(directory: folder);
+      final second = HypixelFileCache(directory: folder);
+      final now = DateTime.now().toUtc();
+      await Future.wait<void>(<Future<void>>[
+        for (int index = 0; index < 24; index++)
+          (index.isEven ? first : second).write(
+            key: 'shared', method: 'GET', path: '/election',
+            query: const <String, String>{},
+            cachedAt: now,
+            expiresAt: now.add(const Duration(minutes: 5)),
+            statusCode: 200,
+            body: <String, dynamic>{'writer': index},
+          ),
+      ]);
+      final saved = await second.read('shared');
+      expect(saved, isNotNull);
+      expect(saved!.body['writer'], isA<int>());
+    } finally {
+      if (await directory.exists()) await directory.delete(recursive: true);
+    }
+  });
+
+  test('failed history mutation releases the file queue for the next writer', () async {
+    final directory = await Directory.systemTemp.createTemp('hypixel_history_failure_');
+    try {
+      final store = HypixelDataStore(folder: directory.path);
+      await expectLater(
+        store.updateHistory('records', (_) => throw StateError('synthetic failure')),
+        throwsStateError,
+      );
+      await store.updateHistory('records', (_) => <String, dynamic>{'count': 1});
+      expect((await store.readHistory('records'))?['count'], 1,
+        reason: 'An operation error must not poison later writes to the same file.');
+    } finally {
+      if (await directory.exists()) await directory.delete(recursive: true);
+    }
+  });
+
 }
