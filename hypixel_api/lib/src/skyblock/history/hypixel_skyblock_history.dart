@@ -33,90 +33,87 @@ class HypixelSkyBlockHistory {
   Future<void> observeNews(
     List<HypixelSkyBlockNewsItem> items, {
     DateTime? observedAt,
-  }) async {
+  }) {
     final observed = (observedAt ?? DateTime.now()).toUtc();
-    final existing = await news();
-    final byId = <String, HypixelSkyBlockNewsHistoryEntry>{
-      for (final entry in existing) entry.item.id: entry,
-    };
+    return _store.updateHistory('skyblock_news', (raw) {
+      final existing = _newsEntries(raw);
+      final byId = <String, HypixelSkyBlockNewsHistoryEntry>{
+        for (final entry in existing) entry.item.id: entry,
+      };
 
-    final currentIds = <String>{};
-    final currentEntries = <HypixelSkyBlockNewsHistoryEntry>[];
-    for (final item in items) {
-      currentIds.add(item.id);
-      final previous = byId[item.id];
-      currentEntries.add(HypixelSkyBlockNewsHistoryEntry(
-        item: item,
-        firstObservedAt: previous?.firstObservedAt ?? observed,
-        lastObservedAt: observed,
-      ));
-    }
+      final currentIds = <String>{};
+      final currentEntries = <HypixelSkyBlockNewsHistoryEntry>[];
+      for (final item in items) {
+        currentIds.add(item.id);
+        final previous = byId[item.id];
+        currentEntries.add(HypixelSkyBlockNewsHistoryEntry(
+          item: item,
+          firstObservedAt: previous?.firstObservedAt ?? observed,
+          lastObservedAt: observed,
+        ));
+      }
 
-    // Keep the official endpoint order for the current feed, then append news
-    // that has dropped out of the endpoint but remains part of our history.
-    final entries = <HypixelSkyBlockNewsHistoryEntry>[
-      ...currentEntries,
-      ...existing.where((entry) => !currentIds.contains(entry.item.id)),
-    ];
-    await _store.writeHistory('skyblock_news', {
-      'version': 1,
-      'entries': entries.map((entry) => entry.toJson()).toList(),
+      // Preserve endpoint order, followed by historical items no longer in
+      // the current feed. The read and write share one history transaction.
+      final entries = <HypixelSkyBlockNewsHistoryEntry>[
+        ...currentEntries,
+        ...existing.where((entry) => !currentIds.contains(entry.item.id)),
+      ];
+      return <String, dynamic>{
+        'version': 1,
+        'entries': entries.map((entry) => entry.toJson()).toList(),
+      };
     });
   }
 
-  Future<List<HypixelSkyBlockNewsHistoryEntry>> news() async {
-    final raw = await _store.readHistory('skyblock_news');
-    final entries = ((raw?['entries'] as List?) ?? const [])
-        .whereType<Map>()
-        .map((entry) => HypixelSkyBlockNewsHistoryEntry.fromJson(
-              Map<String, dynamic>.from(entry),
-            ))
-        .toList();
-    return entries;
-  }
+  Future<List<HypixelSkyBlockNewsHistoryEntry>> news() async =>
+      _newsEntries(await _store.readHistory('skyblock_news'));
+
+  static List<HypixelSkyBlockNewsHistoryEntry> _newsEntries(Map<String, dynamic>? raw) =>
+      ((raw?['entries'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((entry) => HypixelSkyBlockNewsHistoryEntry.fromJson(
+                Map<String, dynamic>.from(entry),
+              ))
+          .toList();
 
   Future<void> observePlayerBingo({
     required String uuid,
     required HypixelSkyBlockPlayerBingoData data,
     DateTime? observedAt,
-  }) async {
+  }) {
     final canonicalUuid = _canonicalUuid(uuid);
     final observed = (observedAt ?? DateTime.now()).toUtc();
-    final entries = await bingoHistory(uuid: canonicalUuid);
-    final byEventId = <int, HypixelSkyBlockBingoHistoryEntry>{
-      for (final entry in entries) entry.eventId: entry,
-    };
+    return _store.updateHistory('skyblock_bingo_players', (raw) {
+      final previous = _bingoEntries(raw);
+      final byEventId = <int, HypixelSkyBlockBingoHistoryEntry>{
+        for (final entry in previous)
+          if (entry.uuid == canonicalUuid) entry.eventId: entry,
+      };
 
-    for (final event in data.events) {
-      final existing = byEventId[event.key];
-      byEventId[event.key] = HypixelSkyBlockBingoHistoryEntry(
-        uuid: canonicalUuid,
-        eventId: event.key,
-        points: event.points,
-        completedGoals: event.completedGoals,
-        firstObservedAt: existing?.firstObservedAt ?? observed,
-        lastObservedAt: observed,
-      );
-    }
+      for (final event in data.events) {
+        final existing = byEventId[event.key];
+        byEventId[event.key] = HypixelSkyBlockBingoHistoryEntry(
+          uuid: canonicalUuid,
+          eventId: event.key,
+          points: event.points,
+          completedGoals: event.completedGoals,
+          firstObservedAt: existing?.firstObservedAt ?? observed,
+          lastObservedAt: observed,
+        );
+      }
 
-    final allRaw = await _store.readHistory('skyblock_bingo_players');
-    final allEntries = ((allRaw?['entries'] as List?) ?? const [])
-        .whereType<Map>()
-        .map((e) => HypixelSkyBlockBingoHistoryEntry.fromJson(
-              Map<String, dynamic>.from(e),
-            ))
-        .where((entry) => entry.uuid != canonicalUuid)
-        .toList();
-    allEntries.addAll(byEventId.values);
-    allEntries.sort((a, b) {
-      final byUuid = a.uuid.compareTo(b.uuid);
-      if (byUuid != 0) return byUuid;
-      return a.eventId.compareTo(b.eventId);
-    });
+      final allEntries = previous.where((entry) => entry.uuid != canonicalUuid).toList();
+      allEntries.addAll(byEventId.values);
+      allEntries.sort((a, b) {
+        final byUuid = a.uuid.compareTo(b.uuid);
+        return byUuid != 0 ? byUuid : a.eventId.compareTo(b.eventId);
+      });
 
-    await _store.writeHistory('skyblock_bingo_players', {
-      'version': 1,
-      'entries': allEntries.map((e) => e.toJson()).toList(),
+      return <String, dynamic>{
+        'version': 1,
+        'entries': allEntries.map((e) => e.toJson()).toList(),
+      };
     });
   }
 
@@ -124,17 +121,20 @@ class HypixelSkyBlockHistory {
     required String uuid,
   }) async {
     final canonicalUuid = _canonicalUuid(uuid);
-    final raw = await _store.readHistory('skyblock_bingo_players');
-    final entries = ((raw?['entries'] as List?) ?? const [])
-        .whereType<Map>()
-        .map((e) => HypixelSkyBlockBingoHistoryEntry.fromJson(
-              Map<String, dynamic>.from(e),
-            ))
+    final entries = _bingoEntries(await _store.readHistory('skyblock_bingo_players'))
         .where((entry) => entry.uuid == canonicalUuid)
         .toList();
     entries.sort((a, b) => a.eventId.compareTo(b.eventId));
     return entries;
   }
+
+  static List<HypixelSkyBlockBingoHistoryEntry> _bingoEntries(Map<String, dynamic>? raw) =>
+      ((raw?['entries'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((entry) => HypixelSkyBlockBingoHistoryEntry.fromJson(
+                Map<String, dynamic>.from(entry),
+              ))
+          .toList();
 
   Future<HypixelSkyBlockBingoStats> bingoStats({
     required String uuid,
@@ -146,21 +146,29 @@ class HypixelSkyBlockHistory {
     );
   }
 
-  Future<List<HypixelSkyBlockMayorHistoryEntry>> mayors() async {
-    final raw = await _store.readHistory('skyblock_mayors');
+  Future<List<HypixelSkyBlockMayorHistoryEntry>> mayors() async =>
+      _mayorEntries(await _store.readHistory('skyblock_mayors'));
+
+  static List<HypixelSkyBlockMayorHistoryEntry> _mayorEntries(Map<String, dynamic>? raw) {
     final entries = ((raw?['entries'] as List?) ?? const [])
         .whereType<Map>()
-        .map((e) => HypixelSkyBlockMayorHistoryEntry.fromJson(Map<String, dynamic>.from(e)))
+        .map((entry) => HypixelSkyBlockMayorHistoryEntry.fromJson(
+              Map<String, dynamic>.from(entry),
+            ))
         .toList();
     entries.sort((a, b) => a.termYear.compareTo(b.termYear));
     return entries;
   }
 
-  Future<List<HypixelSkyBlockElectionHistoryEntry>> elections() async {
-    final raw = await _store.readHistory('skyblock_elections');
+  Future<List<HypixelSkyBlockElectionHistoryEntry>> elections() async =>
+      _electionEntries(await _store.readHistory('skyblock_elections'));
+
+  static List<HypixelSkyBlockElectionHistoryEntry> _electionEntries(Map<String, dynamic>? raw) {
     final entries = ((raw?['entries'] as List?) ?? const [])
         .whereType<Map>()
-        .map((e) => HypixelSkyBlockElectionHistoryEntry.fromJson(Map<String, dynamic>.from(e)))
+        .map((entry) => HypixelSkyBlockElectionHistoryEntry.fromJson(
+              Map<String, dynamic>.from(entry),
+            ))
         .toList();
     entries.sort((a, b) => a.year.compareTo(b.year));
     return entries;
@@ -240,39 +248,44 @@ class HypixelSkyBlockHistory {
   }
 
 
-  Future<void> observeSpecialState(HypixelSkyBlockSpecialState state) async {
-    final entries = await specialStates();
-    final index = entries.indexWhere((e) => e.id == state.id);
-    if (index < 0) {
-      entries.add(state);
-    } else {
-      final existing = entries[index];
-      entries[index] = HypixelSkyBlockSpecialState(
-        id: state.id,
-        kind: state.kind,
-        sourceMayor: state.sourceMayor,
-        sourceTermYear: state.sourceTermYear,
-        name: state.name,
-        activeFrom: state.activeFrom,
-        activeUntil: state.activeUntil,
-        firstObservedAt: existing.firstObservedAt,
-        lastObservedAt: state.lastObservedAt,
-        effectiveMayor: state.effectiveMayor,
-        metadata: state.metadata,
-      );
-    }
-    entries.sort((a, b) => a.activeFrom.compareTo(b.activeFrom));
-    await _store.writeHistory('skyblock_special_states', {
-      'version': 1,
-      'entries': entries.map((e) => e.toJson()).toList(),
-    });
-  }
+  Future<void> observeSpecialState(HypixelSkyBlockSpecialState state) =>
+      _store.updateHistory('skyblock_special_states', (raw) {
+        final entries = _specialStateEntries(raw);
+        final index = entries.indexWhere((entry) => entry.id == state.id);
+        if (index < 0) {
+          entries.add(state);
+        } else {
+          final existing = entries[index];
+          entries[index] = HypixelSkyBlockSpecialState(
+            id: state.id,
+            kind: state.kind,
+            sourceMayor: state.sourceMayor,
+            sourceTermYear: state.sourceTermYear,
+            name: state.name,
+            activeFrom: state.activeFrom,
+            activeUntil: state.activeUntil,
+            firstObservedAt: existing.firstObservedAt,
+            lastObservedAt: state.lastObservedAt,
+            effectiveMayor: state.effectiveMayor,
+            metadata: state.metadata,
+          );
+        }
+        entries.sort((a, b) => a.activeFrom.compareTo(b.activeFrom));
+        return <String, dynamic>{
+          'version': 1,
+          'entries': entries.map((entry) => entry.toJson()).toList(),
+        };
+      });
 
-  Future<List<HypixelSkyBlockSpecialState>> specialStates() async {
-    final raw = await _store.readHistory('skyblock_special_states');
+  Future<List<HypixelSkyBlockSpecialState>> specialStates() async =>
+      _specialStateEntries(await _store.readHistory('skyblock_special_states'));
+
+  static List<HypixelSkyBlockSpecialState> _specialStateEntries(Map<String, dynamic>? raw) {
     final entries = ((raw?['entries'] as List?) ?? const [])
         .whereType<Map>()
-        .map((e) => HypixelSkyBlockSpecialState.fromJson(Map<String, dynamic>.from(e)))
+        .map((entry) => HypixelSkyBlockSpecialState.fromJson(
+              Map<String, dynamic>.from(entry),
+            ))
         .toList();
     entries.sort((a, b) => a.activeFrom.compareTo(b.activeFrom));
     return entries;
@@ -328,38 +341,43 @@ class HypixelSkyBlockHistory {
     return state;
   }
 
-  Future<void> observeScheduledEvent(HypixelSkyBlockScheduledEventHistoryEntry event) async {
-    final entries = await scheduledEvents();
-    final index = entries.indexWhere((e) => e.id == event.id);
-    if (index < 0) {
-      entries.add(event);
-    } else {
-      final existing = entries[index];
-      entries[index] = HypixelSkyBlockScheduledEventHistoryEntry(
-        id: event.id,
-        sourceMayor: event.sourceMayor,
-        sourceTermYear: event.sourceTermYear,
-        type: event.type,
-        name: event.name,
-        startAt: event.startAt,
-        endAt: event.endAt,
-        firstObservedAt: existing.firstObservedAt,
-        lastObservedAt: event.lastObservedAt,
-        metadata: event.metadata,
-      );
-    }
-    entries.sort((a, b) => a.startAt.compareTo(b.startAt));
-    await _store.writeHistory('skyblock_scheduled_events', {
-      'version': 1,
-      'entries': entries.map((e) => e.toJson()).toList(),
-    });
-  }
+  Future<void> observeScheduledEvent(HypixelSkyBlockScheduledEventHistoryEntry event) =>
+      _store.updateHistory('skyblock_scheduled_events', (raw) {
+        final entries = _scheduledEventEntries(raw);
+        final index = entries.indexWhere((entry) => entry.id == event.id);
+        if (index < 0) {
+          entries.add(event);
+        } else {
+          final existing = entries[index];
+          entries[index] = HypixelSkyBlockScheduledEventHistoryEntry(
+            id: event.id,
+            sourceMayor: event.sourceMayor,
+            sourceTermYear: event.sourceTermYear,
+            type: event.type,
+            name: event.name,
+            startAt: event.startAt,
+            endAt: event.endAt,
+            firstObservedAt: existing.firstObservedAt,
+            lastObservedAt: event.lastObservedAt,
+            metadata: event.metadata,
+          );
+        }
+        entries.sort((a, b) => a.startAt.compareTo(b.startAt));
+        return <String, dynamic>{
+          'version': 1,
+          'entries': entries.map((entry) => entry.toJson()).toList(),
+        };
+      });
 
-  Future<List<HypixelSkyBlockScheduledEventHistoryEntry>> scheduledEvents() async {
-    final raw = await _store.readHistory('skyblock_scheduled_events');
+  Future<List<HypixelSkyBlockScheduledEventHistoryEntry>> scheduledEvents() async =>
+      _scheduledEventEntries(await _store.readHistory('skyblock_scheduled_events'));
+
+  static List<HypixelSkyBlockScheduledEventHistoryEntry> _scheduledEventEntries(Map<String, dynamic>? raw) {
     final entries = ((raw?['entries'] as List?) ?? const [])
         .whereType<Map>()
-        .map((e) => HypixelSkyBlockScheduledEventHistoryEntry.fromJson(Map<String, dynamic>.from(e)))
+        .map((entry) => HypixelSkyBlockScheduledEventHistoryEntry.fromJson(
+              Map<String, dynamic>.from(entry),
+            ))
         .toList();
     entries.sort((a, b) => a.startAt.compareTo(b.startAt));
     return entries;
@@ -629,32 +647,34 @@ class HypixelSkyBlockHistory {
         : inferredTermYear;
   }
 
-  Future<void> _observeMayor(HypixelSkyBlockElection snapshot, DateTime observedAt) async {
+  Future<void> _observeMayor(HypixelSkyBlockElection snapshot, DateTime observedAt) {
     final termYear = _termYearForSnapshot(snapshot, observedAt);
     final termStartAt = _calendar.toDateTime(year: termYear, month: 3, day: 27);
     final termEndAt = _calendar.toDateTime(year: termYear + 1, month: 3, day: 27);
 
-    final entries = await mayors();
-    final index = entries.indexWhere((e) => e.termYear == termYear);
-    final firstObservedAt = index < 0 ? observedAt : entries[index].firstObservedAt;
-    final entry = HypixelSkyBlockMayorHistoryEntry(
-      termYear: termYear,
-      mayor: snapshot.mayor,
-      termStartAt: termStartAt,
-      termEndAt: termEndAt,
-      firstObservedAt: firstObservedAt,
-      lastObservedAt: observedAt,
-      sourceLastUpdated: snapshot.lastUpdated,
-    );
-    if (index < 0) {
-      entries.add(entry);
-    } else {
-      entries[index] = entry;
-    }
-    entries.sort((a, b) => a.termYear.compareTo(b.termYear));
-    await _store.writeHistory('skyblock_mayors', {
-      'version': 1,
-      'entries': entries.map((e) => e.toJson()).toList(),
+    return _store.updateHistory('skyblock_mayors', (raw) {
+      final entries = _mayorEntries(raw);
+      final index = entries.indexWhere((entry) => entry.termYear == termYear);
+      final firstObservedAt = index < 0 ? observedAt : entries[index].firstObservedAt;
+      final entry = HypixelSkyBlockMayorHistoryEntry(
+        termYear: termYear,
+        mayor: snapshot.mayor,
+        termStartAt: termStartAt,
+        termEndAt: termEndAt,
+        firstObservedAt: firstObservedAt,
+        lastObservedAt: observedAt,
+        sourceLastUpdated: snapshot.lastUpdated,
+      );
+      if (index < 0) {
+        entries.add(entry);
+      } else {
+        entries[index] = entry;
+      }
+      entries.sort((a, b) => a.termYear.compareTo(b.termYear));
+      return <String, dynamic>{
+        'version': 1,
+        'entries': entries.map((entry) => entry.toJson()).toList(),
+      };
     });
   }
 
@@ -662,27 +682,29 @@ class HypixelSkyBlockHistory {
     HypixelSkyBlockElectionRound round,
     DateTime sourceLastUpdated,
     DateTime observedAt,
-  ) async {
-    if (round.year <= 0) return;
-    final entries = await elections();
-    final index = entries.indexWhere((e) => e.year == round.year);
-    final firstObservedAt = index < 0 ? observedAt : entries[index].firstObservedAt;
-    final entry = HypixelSkyBlockElectionHistoryEntry(
-      year: round.year,
-      election: round,
-      firstObservedAt: firstObservedAt,
-      lastObservedAt: observedAt,
-      sourceLastUpdated: sourceLastUpdated,
-    );
-    if (index < 0) {
-      entries.add(entry);
-    } else {
-      entries[index] = entry;
-    }
-    entries.sort((a, b) => a.year.compareTo(b.year));
-    await _store.writeHistory('skyblock_elections', {
-      'version': 1,
-      'entries': entries.map((e) => e.toJson()).toList(),
+  ) {
+    if (round.year <= 0) return Future<void>.value();
+    return _store.updateHistory('skyblock_elections', (raw) {
+      final entries = _electionEntries(raw);
+      final index = entries.indexWhere((entry) => entry.year == round.year);
+      final firstObservedAt = index < 0 ? observedAt : entries[index].firstObservedAt;
+      final entry = HypixelSkyBlockElectionHistoryEntry(
+        year: round.year,
+        election: round,
+        firstObservedAt: firstObservedAt,
+        lastObservedAt: observedAt,
+        sourceLastUpdated: sourceLastUpdated,
+      );
+      if (index < 0) {
+        entries.add(entry);
+      } else {
+        entries[index] = entry;
+      }
+      entries.sort((a, b) => a.year.compareTo(b.year));
+      return <String, dynamic>{
+        'version': 1,
+        'entries': entries.map((entry) => entry.toJson()).toList(),
+      };
     });
   }
 
