@@ -82,17 +82,23 @@ class HypixelFileCache {
     var removed = 0;
     await for (final entity in directory.list()) {
       if (entity is! File || !entity.path.endsWith('.json')) continue;
-      try {
-        final raw = jsonDecode(await entity.readAsString()) as Map<String, dynamic>;
-        final expiresAt = raw['expiresAt'] as int?;
-        if (expiresAt == null || expiresAt <= DateTime.now().toUtc().millisecondsSinceEpoch) {
-          await entity.delete();
-          removed++;
+      await HypixelFileOperationQueue.run<void>(entity.path, () async {
+        // A cache writer may have replaced this entry after directory.list().
+        if (!await entity.exists()) return;
+        try {
+          final raw = jsonDecode(await entity.readAsString()) as Map<String, dynamic>;
+          final expiresAt = raw['expiresAt'] as int?;
+          if (expiresAt == null || expiresAt <= DateTime.now().toUtc().millisecondsSinceEpoch) {
+            await entity.delete();
+            removed++;
+          }
+        } catch (_) {
+          if (await entity.exists()) {
+            await entity.delete();
+            removed++;
+          }
         }
-      } catch (_) {
-        await entity.delete();
-        removed++;
-      }
+      });
     }
     return removed;
   }
