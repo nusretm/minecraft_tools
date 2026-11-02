@@ -6,7 +6,9 @@ import 'dart:io';
 Future<void> main(List<String> arguments) async {
   if (arguments.length != 1) throw ArgumentError('Expected a lock file path.');
   final handle = await File(arguments.single).open(mode: FileMode.append);
-  await handle.lock(FileLock.exclusive);
+  stdout.writeln('attempting');
+  await stdout.flush();
+  await handle.lock(FileLock.blockingExclusive);
   try {
     stdout.writeln('locked');
     await stdout.flush();

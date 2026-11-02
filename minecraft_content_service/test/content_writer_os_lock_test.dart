@@ -50,6 +50,29 @@ void main() {
       await store.rollback(publication);
     });
 
+    test('service writer holds OS ownership against another process', () async {
+      final root = await Directory.systemTemp.createTemp('mtn-lock-');
+      addTearDown(() => root.delete(recursive: true));
+      final store = MtnMinecraftContentInstallationManifestFileSystem();
+      final publication = await store.publish(installationRoot: root.absolute, manifest: _manifest());
+      final (child, messages) = await _startHolder(root);
+      addTearDown(() => _stop(child));
+      bool childAcquired = false;
+      final acquisition = messages.moveNext().then((hasLine) {
+        expect(hasLine, isTrue);
+        expect(messages.current, 'locked');
+        childAcquired = true;
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      expect(childAcquired, isFalse);
+      await store.rollback(publication);
+      await acquisition.timeout(const Duration(seconds: 10));
+      await messages.cancel();
+      child.stdin.writeln('release');
+      await child.stdin.flush();
+      expect(await child.exitCode.timeout(const Duration(seconds: 10)), 0);
+    });
+
     test('killed process releases lock; publication can acquire it again', () async {
       final root = await Directory.systemTemp.createTemp('mtn-lock-');
       addTearDown(() => root.delete(recursive: true));
@@ -61,6 +84,20 @@ void main() {
       final publication = await store.publish(installationRoot: root.absolute, manifest: _manifest())
           .timeout(const Duration(seconds: 10));
       await store.rollback(publication);
+    });
+
+    test('case-mismatched lock alias fails closed with Windows identity policy', () async {
+      final root = await Directory.systemTemp.createTemp('mtn-lock-');
+      addTearDown(() => root.delete(recursive: true));
+      await File(p.join(root.path, '.MTN-CONTENT.LOCK')).create();
+      final store = MtnMinecraftContentInstallationManifestFileSystem(
+        policy: const MtnMinecraftContentMaterializationFileSystemPolicy(
+          platform: MtnMinecraftContentMaterializationFileSystemPlatform.windows,
+          caseSensitive: false,
+        ),
+      );
+      await expectLater(store.publish(installationRoot: root.absolute, manifest: _manifest()), throwsStateError);
+      expect(await File(p.join(root.path, '.mtn-content', 'installation.json')).exists(), isFalse);
     });
 
     test('occupied, nonempty and linked lock paths fail closed', () async {
@@ -96,15 +133,23 @@ MtnMinecraftContentInstallationManifest _manifest() =>
       MtnMinecraftContentInstallationState(artifacts: const <MtnMinecraftContentInstallationArtifact>[]),
     );
 
-Future<Process> _holder(Directory root) async {
+Future<(Process, StreamIterator<String>)> _startHolder(Directory root) async {
   final child = await Process.start(
     Platform.resolvedExecutable,
     <String>['run', 'test/support/content_writer_lock_holder.dart', p.join(root.path, '.mtn-content.lock')],
     workingDirectory: Directory.current.path,
   );
-  final ready = await child.stdout.transform(utf8.decoder).transform(const LineSplitter()).first
-      .timeout(const Duration(seconds: 45));
-  expect(ready, 'locked');
+  final lines = StreamIterator<String>(child.stdout.transform(utf8.decoder).transform(const LineSplitter()));
+  expect(await lines.moveNext().timeout(const Duration(seconds: 45)), isTrue);
+  expect(lines.current, 'attempting');
+  return (child, lines);
+}
+
+Future<Process> _holder(Directory root) async {
+  final (child, lines) = await _startHolder(root);
+  expect(await lines.moveNext().timeout(const Duration(seconds: 45)), isTrue);
+  expect(lines.current, 'locked');
+  await lines.cancel();
   return child;
 }
 
