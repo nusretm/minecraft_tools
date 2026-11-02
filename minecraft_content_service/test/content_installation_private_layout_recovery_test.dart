@@ -41,9 +41,9 @@ void main() {
         generation: 1,
         phase: phase,
         legacyManifestLength: 20,
-        legacyManifestSha256: 'a' * 64,
+        legacyManifestSha256: List<String>.filled(64, 'a').join(),
         modernManifestLength: 24,
-        modernManifestSha256: 'b' * 64,
+        modernManifestSha256: List<String>.filled(64, 'b').join(),
         moves: moves ?? <MtnMinecraftContentInstallationManifestFileSystemJournalMove>[],
         copiedSourcePaths: copied,
       );
@@ -54,7 +54,7 @@ void main() {
         sourceRelativePath: '.mtn-disabled/mods/sample.jar',
         destinationRelativePath: '.mtn/disabled/mods/sample.jar',
         sourceLength: 42,
-        sourceSha256: 'c' * 64,
+        sourceSha256: List<String>.filled(64, 'c').join(),
       );
       final original = await validJournal(
         phase: MtnMinecraftContentInstallationManifestFileSystemJournalPhase.copying,
@@ -64,7 +64,7 @@ void main() {
       final decoded = MtnMinecraftContentInstallationManifestFileSystemJournal.fromJson(original.toJson());
       expect(decoded.toJson(), original.toJson());
       expect(decoded.phase, MtnMinecraftContentInstallationManifestFileSystemJournalPhase.copying);
-      expect(decoded.moves.single.sourceSha256, 'c' * 64);
+      expect(decoded.moves.single.sourceSha256, List<String>.filled(64, 'c').join());
       expect(decoded.copiedSourcePaths.single, '.mtn-disabled/mods/sample.jar');
       expect(() => decoded.moves.clear(), throwsUnsupportedError);
       expect(() => decoded.copiedSourcePaths.clear(), throwsUnsupportedError);
@@ -99,7 +99,7 @@ void main() {
             sourceRelativePath: '.mtn-disabled/mods/$file',
             destinationRelativePath: '.mtn/disabled/mods/$file',
             sourceLength: 1,
-            sourceSha256: 'a' * 64,
+            sourceSha256: List<String>.filled(64, 'a').join(),
           ),
           throwsFormatException,
         );
@@ -107,21 +107,21 @@ void main() {
       final one = MtnMinecraftContentInstallationManifestFileSystemJournalMove(
         sourceRelativePath: '.mtn-disabled/mods/Alpha.jar',
         destinationRelativePath: '.mtn/disabled/mods/Alpha.jar',
-        sourceLength: 1, sourceSha256: 'a' * 64,
+        sourceLength: 1, sourceSha256: List<String>.filled(64, 'a').join(),
       );
       final other = MtnMinecraftContentInstallationManifestFileSystemJournalMove(
         sourceRelativePath: '.mtn-disabled/mods/alpha.jar',
         destinationRelativePath: '.mtn/disabled/mods/alpha.jar',
-        sourceLength: 1, sourceSha256: 'b' * 64,
+        sourceLength: 1, sourceSha256: List<String>.filled(64, 'b').join(),
       );
       expect(
         () => MtnMinecraftContentInstallationManifestFileSystemJournal(
           migrationId: 'migration_20261102',
-          rootIdentitySha256: 'a' * 64,
+          rootIdentitySha256: List<String>.filled(64, 'a').join(),
           generation: 1,
           phase: MtnMinecraftContentInstallationManifestFileSystemJournalPhase.prepared,
-          legacyManifestLength: 1, legacyManifestSha256: 'a' * 64,
-          modernManifestLength: 1, modernManifestSha256: 'b' * 64,
+          legacyManifestLength: 1, legacyManifestSha256: List<String>.filled(64, 'a').join(),
+          modernManifestLength: 1, modernManifestSha256: List<String>.filled(64, 'b').join(),
           moves: <MtnMinecraftContentInstallationManifestFileSystemJournalMove>[one, other],
           copiedSourcePaths: const <String>[],
         ),
@@ -133,14 +133,14 @@ void main() {
       final move = MtnMinecraftContentInstallationManifestFileSystemJournalMove(
         sourceRelativePath: '.mtn-disabled/mods/x.jar',
         destinationRelativePath: '.mtn/disabled/mods/x.jar',
-        sourceLength: 1, sourceSha256: 'c' * 64,
+        sourceLength: 1, sourceSha256: List<String>.filled(64, 'c').join(),
       );
       expect(
         () => MtnMinecraftContentInstallationManifestFileSystemJournal(
-          migrationId: 'migration_20261102', rootIdentitySha256: 'a' * 64,
+          migrationId: 'migration_20261102', rootIdentitySha256: List<String>.filled(64, 'a').join(),
           generation: 1, phase: MtnMinecraftContentInstallationManifestFileSystemJournalPhase.prepared,
-          legacyManifestLength: 1, legacyManifestSha256: 'a' * 64,
-          modernManifestLength: 1, modernManifestSha256: 'b' * 64,
+          legacyManifestLength: 1, legacyManifestSha256: List<String>.filled(64, 'a').join(),
+          modernManifestLength: 1, modernManifestSha256: List<String>.filled(64, 'b').join(),
           moves: <MtnMinecraftContentInstallationManifestFileSystemJournalMove>[move],
           copiedSourcePaths: const <String>['.mtn-disabled/mods/x.jar'],
         ),
@@ -223,7 +223,7 @@ void main() {
     });
 
     test('journal at a different package root is blocked', () async {
-      final journal = await validJournal(rootSha: 'f' * 64);
+      final journal = await validJournal(rootSha: List<String>.filled(64, 'f').join());
       final file = await put('.mtn/migration/journal.json', journal.toJson());
       final result = await store.inspectPrivateLayoutRecovery(installationRoot: root.absolute);
       expect(result.status, MtnMinecraftContentInstallationManifestFileSystemRecoveryStatus.blocked);
