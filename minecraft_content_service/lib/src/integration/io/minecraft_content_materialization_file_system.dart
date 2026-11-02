@@ -23,6 +23,7 @@ part 'minecraft_content_materialization_file_system_transaction_operations.dart'
 part 'minecraft_content_installation_manifest_file_system.dart';
 part 'minecraft_content_installation_private_layout_plan.dart';
 part 'minecraft_content_installation_private_layout_journal.dart';
+part 'minecraft_content_installation_private_layout_recovery_inspection.dart';
 part 'minecraft_content_installation_activation_file_system.dart';
 part 'minecraft_content_materialization_file_system_coordination.dart';
 

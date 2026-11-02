@@ -159,6 +159,12 @@ class MtnMinecraftContentInstallationManifestFileSystem {
     );
   }
 
+  /// Inspect journal/recovery state without creating, moving or deleting files.
+  /// Normal writers are not yet journal-gated (PRIVATE-1C2).
+  Future<MtnMinecraftContentInstallationManifestFileSystemRecoveryInspection> inspectPrivateLayoutRecovery({
+    required Directory installationRoot,
+  }) => _detectPrivateLayoutRecovery(installationRoot);
+
   /// Build an immutable migration preflight, without altering either layout.
   /// The resulting snapshot must be revalidated under an exclusive lease
   /// before PRIVATE-1C may execute any migration.

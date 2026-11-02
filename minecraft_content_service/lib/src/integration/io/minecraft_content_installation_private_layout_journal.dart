@@ -201,7 +201,7 @@ bool _journalValidDigest(String value) => RegExp(r'^[0-9a-f]{64}$').hasMatch(val
 
 bool _journalSafeFileName(String name) =>
     name.isNotEmpty && name != '.' && name != '..' && !name.endsWith(' ') &&
-    !name.endsWith('.') && !name.contains(r'\') && !name.contains(':') &&
+    !name.endsWith('.') && !name.contains(String.fromCharCode(92)) && !name.contains(':') &&
     !name.codeUnits.any((unit) => unit < 32) &&
     !RegExp(r'^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\..*)?$', caseSensitive: false).hasMatch(name);
 
