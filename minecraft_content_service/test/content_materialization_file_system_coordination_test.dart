@@ -166,7 +166,7 @@ void main() {
     test('corrupt manifest fails closed without creating content files', () async {
       final fixture = await _fixture();
       addTearDown(fixture.dispose);
-      await fixture.writeFile('.mtn-content/installation.json', 'corrupt');
+      await fixture.writeFile('.mtn/content/installation.json', 'corrupt');
       final version = _version('a:v1', 'a', 'a.jar');
       final source = await fixture.source('a.jar', 'hello');
       final plan = await _plan(_emptyState(), <MtnMinecraftContentVersion>[version], <String, String>{'a:v1': 'mods/a.jar'});
@@ -181,27 +181,27 @@ void main() {
         throwsA(isA<MtnMinecraftContentMaterializationFileSystemCoordinationException>()),
       );
       expect(await fixture.fileExists('mods/a.jar'), isFalse);
-      expect(await fixture.readFile('.mtn-content/installation.json'), 'corrupt');
+      expect(await fixture.readFile('.mtn/content/installation.json'), 'corrupt');
     });
 
     test('changed manifest after initial snapshot rolls back applied managed files', () async {
       final fixture = await _fixture();
       addTearDown(fixture.dispose);
-      await fixture.writeFile('.mtn-content/notes.txt', 'caller');
+      await fixture.writeFile('.mtn/content/notes.txt', 'caller');
       final version = _version('a:v1', 'a', 'a.jar');
       final source = await fixture.source('a.jar', 'hello');
       final plan = await _plan(_emptyState(), <MtnMinecraftContentVersion>[version], <String, String>{'a:v1': 'mods/a.jar'});
       final preflight = await fixture.fileSystem.preflight(plan: plan, installationRoot: fixture.root.absolute);
       final sources = _MutationOnIteration(
         MtnMinecraftContentMaterializationFileSystemTransactionSource(target: plan.installs.single.target, source: source),
-        () => Directory(p.join(fixture.root.path, '.mtn-content', 'installation.json')).createSync(),
+        () => Directory(p.join(fixture.root.path, '.mtn', 'content', 'installation.json')).createSync(),
       );
       await expectLater(
         fixture.coordinator.begin(preflight: preflight, sources: sources),
         throwsA(isA<MtnMinecraftContentMaterializationFileSystemCoordinationException>()),
       );
       expect(await fixture.fileExists('mods/a.jar'), isFalse);
-      expect(await fixture.readFile('.mtn-content/notes.txt'), 'caller');
+      expect(await fixture.readFile('.mtn/content/notes.txt'), 'caller');
     });
 
     test('later content source integrity failure rolls back previously published files', () async {
@@ -248,7 +248,7 @@ void main() {
         ],
       );
 
-      final target = File(p.join(fixture.root.path, '.mtn-content', 'installation.json'));
+      final target = File(p.join(fixture.root.path, '.mtn', 'content', 'installation.json'));
       final originalNew = await target.readAsBytes();
       await target.writeAsString('tamper');
       await expectLater(
@@ -257,7 +257,7 @@ void main() {
       );
       expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.pending);
       expect(
-        (await Directory(p.join(fixture.root.path, '.mtn-content')).list().toList())
+        (await Directory(p.join(fixture.root.path, '.mtn', 'content')).list().toList())
             .any((entity) => p.basename(entity.path).startsWith('.mtn-content-manifest-backup-')),
         isTrue,
       );
@@ -289,7 +289,7 @@ void main() {
       );
       expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.pending);
       expect(
-        (await Directory(p.join(fixture.root.path, '.mtn-content')).list().toList())
+        (await Directory(p.join(fixture.root.path, '.mtn', 'content')).list().toList())
             .any((entity) => p.basename(entity.path).startsWith('.mtn-content-manifest-backup-')),
         isTrue,
       );
@@ -315,7 +315,7 @@ void main() {
         ],
       );
 
-      final published = File(p.join(fixture.root.path, '.mtn-content', 'installation.json'));
+      final published = File(p.join(fixture.root.path, '.mtn', 'content', 'installation.json'));
       final correct = await published.readAsBytes();
       await published.writeAsString('tampered');
       await expectLater(
@@ -348,7 +348,7 @@ void main() {
         sources: const <MtnMinecraftContentMaterializationFileSystemTransactionSource>[],
       );
 
-      final manifestDirectory = Directory(p.join(fixture.root.path, '.mtn-content'));
+      final manifestDirectory = Directory(p.join(fixture.root.path, '.mtn', 'content'));
       final backups = await manifestDirectory.list(followLinks: false).where(
         (entity) => p.basename(entity.path).startsWith('.mtn-content-manifest-backup-'),
       ).toList();
@@ -606,14 +606,14 @@ void main() {
       final plan = await _plan(state, const <MtnMinecraftContentVersion>[], const <String, String>{});
       final preflight = await fixture.fileSystem.preflight(plan: plan, installationRoot: fixture.root.absolute);
       final tx = await fixture.coordinator.begin(preflight: preflight, sources: const <MtnMinecraftContentMaterializationFileSystemTransactionSource>[]);
-      final raw = await File(p.join(fixture.root.path, '.mtn-content', 'installation.json')).readAsBytes();
-      await fixture.writeFile('.mtn-content/installation.json', 'modified');
+      final raw = await File(p.join(fixture.root.path, '.mtn', 'content', 'installation.json')).readAsBytes();
+      await fixture.writeFile('.mtn/content/installation.json', 'modified');
       await expectLater(
         fixture.coordinator.rollback(tx),
         throwsA(isA<MtnMinecraftContentMaterializationFileSystemCoordinationException>()),
       );
       expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.rollbackIncomplete);
-      await File(p.join(fixture.root.path, '.mtn-content', 'installation.json')).writeAsBytes(raw);
+      await File(p.join(fixture.root.path, '.mtn', 'content', 'installation.json')).writeAsBytes(raw);
       await fixture.coordinator.rollback(tx);
       expect(tx.state, MtnMinecraftContentMaterializationFileSystemCoordinatedTransactionState.rolledBack);
       expect(await fixture.readFile('mods/a.jar'), 'old');

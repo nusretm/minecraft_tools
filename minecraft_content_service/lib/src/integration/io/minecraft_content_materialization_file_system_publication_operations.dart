@@ -52,7 +52,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
       );
     }
 
-    final releaseRoot = withinTransaction ? null : await _acquireMaterializationRoot(preflight, exclusive: false);
+    final releaseRoot = withinTransaction ? null : await _acquireMaterializationRoot(preflight, exclusive: true);
     late final void Function() releaseTarget;
     try {
       releaseTarget = await _acquirePublicationTarget(_publicationLockKey(preflight, target.relativePath));
@@ -74,6 +74,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
 
     try {
       await _assertInstallationRootStable(preflight);
+      await _assertModernContentWriteReady(preflight.resolvedInstallationRoot, policy);
       await _assertTargetSnapshot(preflight, target, expectedState);
 
       final parent = await _ensureTargetParent(

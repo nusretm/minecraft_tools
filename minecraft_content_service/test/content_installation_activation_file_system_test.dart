@@ -57,9 +57,9 @@ void main() {
     final inactive = await activation.synchronize(
       installationRoot: root.absolute, enabledVersionKeys: <String>{},
     );
-    expect(inactive.artifacts.single.relativePath, '.mtn-disabled/mods/test.jar');
+    expect(inactive.artifacts.single.relativePath, '.mtn/disabled/mods/test.jar');
     expect(await File(p.join(root.path, 'mods', 'test.jar')).exists(), isFalse);
-    expect(await File(p.join(root.path, '.mtn-disabled', 'mods', 'test.jar')).readAsBytes(), bytes);
+    expect(await File(p.join(root.path, '.mtn', 'disabled', 'mods', 'test.jar')).readAsBytes(), bytes);
     expect((await store.read(installationRoot: root.absolute))!.installationState.artifacts.single.version.key, artifact.version.key);
 
     final same = await activation.synchronize(
@@ -72,7 +72,7 @@ void main() {
     );
     expect(active.artifacts.single.relativePath, 'mods/test.jar');
     expect(await File(p.join(root.path, 'mods', 'test.jar')).readAsBytes(), bytes);
-    expect(await File(p.join(root.path, '.mtn-disabled', 'mods', 'test.jar')).exists(), isFalse);
+    expect(await File(p.join(root.path, '.mtn', 'disabled', 'mods', 'test.jar')).exists(), isFalse);
     expect((await store.read(installationRoot: root.absolute))!.installationState.artifacts.single.relativePath, 'mods/test.jar');
   });
 
@@ -81,7 +81,7 @@ void main() {
     addTearDown(() => root.delete(recursive: true));
     final bytes = <int>[3, 2, 1];
     await _seed(root, _artifact(bytes), bytes);
-    final userFile = File(p.join(root.path, '.mtn-disabled', 'mods', 'test.jar'));
+    final userFile = File(p.join(root.path, '.mtn', 'disabled', 'mods', 'test.jar'));
     await userFile.parent.create(recursive: true);
     await userFile.writeAsBytes(<int>[99]);
     final activation = MtnMinecraftContentInstallationActivationFileSystem();

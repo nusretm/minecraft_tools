@@ -10,7 +10,7 @@ class MtnMinecraftContentInstallationActivationFileSystem {
     _manifest = MtnMinecraftContentInstallationManifestFileSystem(policy: this.policy);
   }
 
-  static const String inactiveDirectoryName = '.mtn-disabled';
+  static const String inactiveDirectoryName = '.mtn/disabled';
 
   final MtnMinecraftContentMaterializationFileSystemPolicy policy;
   late final MtnMinecraftContentMaterializationFileSystem _inspector;
@@ -30,6 +30,7 @@ class MtnMinecraftContentInstallationActivationFileSystem {
         <(File, File, MtnMinecraftContentInstallationArtifact)>[];
     MtnMinecraftContentInstallationManifestFileSystemPublication? publication;
     try {
+      await _assertModernContentWriteReady(root, policy);
       final _ManifestReadSnapshot snapshot = await _manifest._readSnapshotWithinCoordinator(
         installationRoot: installationRoot, lease: lease,
       );

@@ -58,6 +58,7 @@ extension MtnMinecraftContentMaterializationFileSystemTransactionOperations on M
     );
     try {
       await _assertInstallationRootStable(preflight);
+      await _assertModernContentWriteReady(preflight.resolvedInstallationRoot, policy);
       final refreshed = await this.preflight(plan: preflight.plan, installationRoot: preflight.installationRoot);
       if (!refreshed.safe || !_sameTransactionPreflight(preflight, refreshed)) {
         throw StateError('Whole-plan preflight became stale before transaction mutation.');

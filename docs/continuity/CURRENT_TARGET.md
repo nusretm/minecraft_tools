@@ -1,3 +1,57 @@
+## 2026-11-02 — Simplified private-layout migration Windows analyzer and tests PASS
+
+- User updated `feature/content-private-layout-execution` through `e2d0ebe` on Windows. `cd minecraft_content_service; dart analyze`: **No issues found**.
+- Focused command over `content_installation_private_layout_plan_test.dart`, `content_installation_manifest_file_system_test.dart`, `content_installation_activation_file_system_test.dart`, `content_materialization_file_system_coordination_test.dart`, and `content_writer_os_lock_test.dart`: **83/83 passed** (`00:03 +83: All tests passed!`).
+- Launcher integration on its Draft PR #65 also passed `flutter analyze` and 10/10 focused tests after `flutter pub get` resolved Content Service at `e2d0ebe`.
+- These are focused tests, not a full-suite or real package smoke claim. **Next:** try a copy of an existing Windows Game Package with disabled content and a package already on the modern layout; confirm original data, Minecraft launch and .mtn/chat preservation. No changes to game data in these CI-like commands.
+- PR #91 remains Draft, no merge/cleanup until explicit user approval. Existing branch docs below retain the progression history; this section supersedes their earlier 'Windows pending' statements.
+
+## 2026-11-02 — Simplified private layout migration source (Windows verification pending)
+
+- User requested to stop investing in journal/crash-recovery machinery and finish the two-folder change. On Draft PR #91 branch, removed journal codec/recovery inspector and focused tests; retained useful read-only migration planner and validated OS cooperative writer lock.
+- New Content Service uses `.mtn/content/installation.json` for manifest publication and `.mtn/disabled/` for activation. Old manifests remain readable; legacy writes are blocked until an explicit `migratePrivateLayout(installationRoot: ...)` invocation while no game is running.
+- Migration is deliberately small: exclusive root ownership, existing preflight, folder renames within the same Game Package, SHA verification of renamed inactive files, stage/promote rewritten manifest, ordinary in-process rollback on errors. Original file bytes and `.mtn/chat` are not modified. No separate journal, process-crash recovery, or claims of power-loss consistency.
+- Added simple migration regression tests; updated existing modern manifest/activation/coordinator test expectations. This source is NOT analyzer- or Windows-validated yet. Do not merge or update Launcher dependency until Windows tests pass. Launcher Draft PR #64/#65 remain separate.
+
+## 2026-11-02 — PRIVATE-1C1 OS writer lock Windows accepted (138/138), journal durability next
+
+- User fetched `feature/content-private-layout-execution` at `a11cd75` and verified on Windows: `dart analyze` no issues; OS lock tests **6/6**; recovery/journal **17/17**; planner+manifest **48/48**; activation+preflight **14/14**; publication+coordination+transaction **53/53**. **138 focused tests passed** across the user-shown commands.
+- `git diff --check origin/main...HEAD` emitted no errors; `git status -sb` showed only the clean tracking branch. This validates the OS writer lock checkpoint on Windows (same-process and independent-process contention, killed holder and fail-closed path tests).
+- Accepted OS lock mechanics: durable zero-byte `.mtn-content.lock` never unlinked, cooperative exclusive writer ownership layered on the existing root lease. Does not lock running Minecraft games; Launcher must check those in PRIVATE-2. No claim of cross-isolate guarantee on POSIX.
+- Next narrowly scoped design/implementation gate within PRIVATE-1C1: safe disk publication of the **prepared** migration journal under exclusive owner. Must integrate a **journal-aware fail-closed gate for normal Content Service read/write/activation paths before enabling prepared journals**, otherwise existing clients can mutate legacy artifacts while a journal exists. A staged/partial journal candidate must be recognized as blocked and preserved, never silently deleted.
+- Journal publication shall use non-destructive temporary write/flush/digest/readback and verified promotion, preserve original manifest/files, and remain limited to disposable fixtures until Windows interruption tests confirm safety. No journal publication/copy/cutover/cleanup code added by this verification checkpoint.
+- Draft PR #91 remains Draft, no merge or cleanup; Launcher Draft PRs #64/#65 untouched.
+
+## 2026-11-02 — PRIVATE-1C1 OS lock foundation in source (Windows validation pending)
+
+- User approved starting PRIVATE-1C1 with OS-backed writer ownership. Existing in-isolate root gate now obtains a persistent zero-byte `.mtn-content.lock` OS exclusive lock for write operations, and releases in reverse order.
+- Standalone materialization `publish()` now obtains an exclusive root lease; manifest publish, materialization transaction, coordinator and activation already request exclusive ownership. No journal persistence, staging copy, manifest cutover or cleanup implemented.
+- Added `test/content_writer_os_lock_test.dart` and a separate-Dart-process lock holder covering contention, process termination, persistence, and unsafe lock paths. Neither analyzer nor Windows tests have been run from this connector; POSIX process-scoped advisory semantics do not guarantee different isolates in one OS process.
+- PRIVATE-1C1 migration writes remain BLOCKED until Windows lock verification. Draft PR #91 remains Draft; Launcher PR #64/#65 untouched; no merge or cleanup.
+
+## 2026-11-02 — PRIVATE-1C0 Windows accepted (79 tests); PRIVATE-1C1 awaiting approval
+
+- User verified `feature/content-private-layout-execution` at head `7eb675d`: `dart analyze` no issues; 17 journal/recovery tests, 48 planner/manifest tests and 14 activation/preflight regressions passed (79/79 total). `git diff --check origin/main...HEAD` and git working tree clean.
+- PRIVATE-1C0 is complete: versioned journal codec and read-only `inspectPrivateLayoutRecovery()` classify absent/legacy/modern/recoveryRequired/blocked, journal first with fail-closed conflict handling. No journal writing, data copying, automatic recovery, migration cutover, cleanup, or changed manifest read/publish/activation paths.
+- PRIVATE-1C1 entry gate: implement and verify cooperative OS-backed cross-process ownership for every relevant Content Service writer, including safe lock location and Windows contention/failure behavior. Only after this gate may journaled staging on disposable folders be added. Launcher separately checks game sessions.
+- Draft PR #91 remains open and unmerged; Launcher Draft PR #64/#65 unchanged, preserve user pubspec.lock. Plan: docs/continuity/PLANNED_2026-11-02_CONTENT_PRIVATE_LAYOUT_EXECUTION.md.
+
+## 2026-11-02 — PRIVATE-1C0 journal codec and read-only recovery inspection implemented (Windows pending)
+
+- User explicitly approved PRIVATE-1C0 implementation. In `feature/content-private-layout-execution` Draft PR #91, added versioned immutable migration journal model/codec with schema/phase, source and target manifest fingerprints, safe artifact move metadata and payload SHA256 checksum. No production migration writes exist.
+- Added public `MtnMinecraftContentInstallationManifestFileSystem.inspectPrivateLayoutRecovery` with status absent/legacy/modern/recoveryRequired/blocked, using existing coordinated shared root lease, physical path verification and journal-first detection. Valid journal + dual manifests is recoveryRequired, not a silent layout selection; missing/corrupt journal with unexplained layouts is blocked. `.mtn/chat` untouched.
+- 17 new read-only recovery and codec tests added, Windows `dart analyze`/`dart test` NOT YET RUN. No changes to current manifest read/publish/activation and no Launcher dependency update.
+- Cross-process lock is a MUST-HAVE before PRIVATE-1C1 filesystem writes: existing Dart root gate is only in-process. Proposed cooperative OS-backed lock must be used by every Content Service writer and verified on Windows. Launcher must separately assert no running game. See `docs/continuity/PLANNED_2026-11-02_CONTENT_PRIVATE_LAYOUT_EXECUTION.md`.
+- PR #91 remains Draft; PRIVATE-1C1 is not approved. Preserve launcher Draft PR #64/#65 and local pubspec.lock; no merge or cleanup.
+
+## 2026-11-02 — PRIVATE-1C architecture baseline (no implementation yet)
+
+- Content Service PRIVATE-1A/1B were squash merged as PR #90 into main at aaa8b904bc7589d7e9faf5940f0dab9b157db16e; user confirmed local main and origin/main synchronized with clean working tree, both feature branches removed.
+- New branch feature/content-private-layout-execution contains only the design plan docs/continuity/PLANNED_2026-11-02_CONTENT_PRIVATE_LAYOUT_EXECUTION.md. No executable migration code or filesystem mutations yet.
+- Architectural risks: _MaterializationRootGate is an in-process gate, not demonstrated cross-process; current manifest publication tracks rollback/commit in live Dart objects and cannot alone recover a killed process.
+- Plan: durable Content Service .mtn/migration journal, copy-first staged SHA-verified disabled files, verified stage manifest, journal-aware cutover and recovery, modern-path read/publish/activation routing, and strictly verified cleanup. Never touch .mtn/chat.
+- PRIVATE-1C0 is the next explicit approval gate for journal contract and read-only detection only. No real moves/writes until separate approved checkpoints and Windows fault-injection coverage. Launcher Draft PR #64 and #65 and local pubspec.lock remain untouched.
+
 ## 2026-11-02 — PRIVATE-1B Windows verified and closed; PRIVATE-1C is next approval gate
 
 - User pulled Content Service branch at `b5cb3e9`, reran `dart analyze`: **No issues found**; combined focused private-layout and manifest tests: **48/48 passed**. Prior activation/materialization preflight regression tests: **14/14 passed** before the await fix (not repeated in this final run).

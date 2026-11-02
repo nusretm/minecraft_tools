@@ -108,6 +108,7 @@ class MtnMinecraftContentMaterializationFileSystemCoordinator {
 
     try {
       await _manifest._assertRootStable(preflight.installationRoot, root);
+      await _assertModernContentWriteReady(root, policy);
       final current = await _manifest._readSnapshotWithinCoordinator(
         installationRoot: preflight.installationRoot,
         lease: lease,

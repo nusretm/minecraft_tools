@@ -130,6 +130,56 @@ void main() {
       expect(await Directory(p.join(root.path, '.mtn')).exists(), isFalse);
     });
 
+
+    test('simple migration moves folders, rewrites manifest and leaves chat untouched', () async {
+      final legacy = await legacyManifest('.mtn-disabled/mods/sample.jar');
+      final original = await legacy.readAsBytes();
+      final source = await managedFile('.mtn-disabled/mods/sample.jar', 'preserved bytes');
+      final chat = await managedFile('.mtn/chat/latest.chat', 'do not touch');
+      final result = await store.migratePrivateLayout(installationRoot: root.absolute);
+      expect(result.status, MtnMinecraftContentInstallationManifestFileSystemMigrationStatus.ready);
+      final modern = File(p.join(root.path, '.mtn', 'content', 'installation.json'));
+      expect(await modern.exists(), isTrue);
+      expect(await legacy.exists(), isFalse);
+      expect(await source.exists(), isFalse);
+      expect(await File(p.join(root.path, '.mtn', 'disabled', 'mods', 'sample.jar')).readAsString(), 'preserved bytes');
+      expect(await chat.readAsString(), 'do not touch');
+      final loaded = (await store.read(installationRoot: root.absolute))!;
+      expect(loaded.installationState.artifacts.single.relativePath, '.mtn/disabled/mods/sample.jar');
+      expect(loaded.installationState.artifacts.single.version.key, _manifest('.mtn-disabled/mods/sample.jar').installationState.artifacts.single.version.key);
+      expect(await modern.readAsBytes(), isNot(original));
+      expect((await store.migratePrivateLayout(installationRoot: root.absolute)).status,
+          MtnMinecraftContentInstallationManifestFileSystemMigrationStatus.alreadyModern);
+    });
+
+    test('enabled-only legacy package moves manifest without changing enabled files', () async {
+      final legacy = await legacyManifest('mods/sample.jar');
+      final enabled = await managedFile('mods/sample.jar', 'enabled bytes');
+      final result = await store.migratePrivateLayout(installationRoot: root.absolute);
+      expect(result.moves, isEmpty);
+      expect(await legacy.exists(), isFalse);
+      expect(await enabled.readAsString(), 'enabled bytes');
+      expect((await store.read(installationRoot: root.absolute))!.installationState.artifacts.single.relativePath,
+          'mods/sample.jar');
+      expect(await Directory(p.join(root.path, '.mtn', 'disabled')).exists(), isFalse);
+    });
+
+    test('occupied target refuses migration without modifying legacy content', () async {
+      final legacy = await legacyManifest('.mtn-disabled/mods/sample.jar');
+      final source = await managedFile('.mtn-disabled/mods/sample.jar', 'original');
+      final occupant = await managedFile('.mtn/disabled/mods/sample.jar', 'caller owned');
+      await expectLater(store.migratePrivateLayout(installationRoot: root.absolute), throwsStateError);
+      expect(await legacy.exists(), isTrue);
+      expect(await source.readAsString(), 'original');
+      expect(await occupant.readAsString(), 'caller owned');
+    });
+
+    test('missing legacy artifact refuses migration without moving the manifest', () async {
+      final legacy = await legacyManifest('.mtn-disabled/mods/sample.jar');
+      await expectLater(store.migratePrivateLayout(installationRoot: root.absolute), throwsStateError);
+      expect(await legacy.exists(), isTrue);
+      expect(await Directory(p.join(root.path, '.mtn', 'content')).exists(), isFalse);
+    });
     test('case-colliding managed files are rejected under Windows path policy', () async {
       final manifest = File(p.join(root.path, '.mtn-content', 'installation.json'));
       await manifest.parent.create(recursive: true);
