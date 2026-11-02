@@ -85,6 +85,9 @@ extension _PrivateLayoutMigrationPlanner on MtnMinecraftContentInstallationManif
         if (legacyDisabled != null || legacyLocation.directory != null) {
           throw StateError('Modern installation conflicts with legacy Content Service data.');
         }
+        // Even an already-current classification must not normalize a
+        // linked, ambiguous, or non-directory inactive namespace.
+        await _privateLayoutDirectory(private!.path, 'disabled');
         return MtnMinecraftContentInstallationManifestFileSystemMigrationPlan(
           status: MtnMinecraftContentInstallationManifestFileSystemMigrationStatus.alreadyModern,
           resolvedInstallationRoot: root,
@@ -95,6 +98,10 @@ extension _PrivateLayoutMigrationPlanner on MtnMinecraftContentInstallationManif
           moves: const <MtnMinecraftContentInstallationManifestFileSystemMigrationMove>[],
         );
       }
+
+      // A recoverable manifest stage/backup or other unknown legacy file
+      // must not be silently abandoned by a later content migration.
+      await _verifyLegacyManifestInventory(legacyLocation.directory);
 
       // Until PRIVATE-1C provides a journal, even an empty target folder
       // cannot be assumed to belong to this migration.
@@ -223,6 +230,18 @@ extension _PrivateLayoutMigrationPlanner on MtnMinecraftContentInstallationManif
       throw StateError('Private layout path is not a regular directory: $segment');
     }
     return Directory(found.path);
+  }
+
+  Future<void> _verifyLegacyManifestInventory(Directory? directory) async {
+    if (directory == null) {
+      throw StateError('Legacy manifest directory disappeared during preflight.');
+    }
+    final entries = await directory.list(followLinks: false).toList();
+    if (entries.length != 1 ||
+        p.basename(entries.single.path) != manifestFileName ||
+        await FileSystemEntity.type(entries.single.path, followLinks: false) != FileSystemEntityType.file) {
+      throw StateError('Legacy manifest directory contains unowned or recoverable files.');
+    }
   }
 
   Future<void> _verifyLegacyDisabledInventory(
