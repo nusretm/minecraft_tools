@@ -11,19 +11,19 @@ extension _PrivateLayoutMigration on MtnMinecraftContentInstallationManifestFile
       final plan = await _buildPrivateLayoutMigrationPlan(installationRoot, lease: lease);
       if (plan.status != MtnMinecraftContentInstallationManifestFileSystemMigrationStatus.ready) return plan;
 
-      final legacyContent = Directory(p.join(root.path, legacyManifestDirectoryName));
+      final legacyContent = Directory(p.join(root.path, MtnMinecraftContentInstallationManifestFileSystem.legacyManifestDirectoryName));
       final legacyDisabled = Directory(p.join(root.path, '.mtn-disabled'));
-      final privateRoot = Directory(p.join(root.path, privateDirectoryName));
-      final modernContent = Directory(p.join(privateRoot.path, privateContentDirectoryName));
+      final privateRoot = Directory(p.join(root.path, MtnMinecraftContentInstallationManifestFileSystem.privateDirectoryName));
+      final modernContent = Directory(p.join(privateRoot.path, MtnMinecraftContentInstallationManifestFileSystem.privateContentDirectoryName));
       final modernDisabled = Directory(p.join(privateRoot.path, 'disabled'));
-      final original = File(p.join(legacyContent.path, manifestFileName));
+      final original = File(p.join(legacyContent.path, MtnMinecraftContentInstallationManifestFileSystem.manifestFileName));
       final oldBytes = await original.readAsBytes();
       if (oldBytes.length != plan.sourceManifestLength ||
           sha256.convert(oldBytes).toString() != plan.sourceManifestSha256) {
         throw StateError('Legacy manifest changed after migration preflight.');
       }
 
-      final existingPrivate = await _privateLayoutDirectory(root.path, privateDirectoryName);
+      final existingPrivate = await _privateLayoutDirectory(root.path, MtnMinecraftContentInstallationManifestFileSystem.privateDirectoryName);
       if (existingPrivate != null && await _privateLayoutDirectory(existingPrivate.path, 'migration') != null) {
         throw StateError('Existing migration metadata needs manual inspection.');
       }
@@ -34,7 +34,7 @@ extension _PrivateLayoutMigration on MtnMinecraftContentInstallationManifestFile
       bool manifestPromoted = false;
       final backup = File(p.join(modernContent.path, '.installation.json.old'));
       final staged = File(p.join(modernContent.path, '.installation.json.new'));
-      final modernManifest = File(p.join(modernContent.path, manifestFileName));
+      final modernManifest = File(p.join(modernContent.path, MtnMinecraftContentInstallationManifestFileSystem.manifestFileName));
       try {
         if (existingPrivate == null) await privateRoot.create();
         if (await legacyDisabled.exists()) {
