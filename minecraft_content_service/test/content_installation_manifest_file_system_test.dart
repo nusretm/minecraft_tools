@@ -399,8 +399,10 @@ void main() {
         } on FileSystemException {
           return; // Native case-insensitive filesystem cannot create variants.
         }
-        if (await first.resolveSymbolicLinks() == await second.resolveSymbolicLinks()) {
-          return; // Same physical directory: no ambiguity exists on disk.
+        final physicalSiblings = await root.list(followLinks: false).where((entity) =>
+            p.basename(entity.path).toLowerCase() == '.mtn').toList();
+        if (physicalSiblings.length < 2) {
+          return; // Native filesystem exposes only one physical child.
         }
         const windows = MtnMinecraftContentMaterializationFileSystemPolicy(
           platform: MtnMinecraftContentMaterializationFileSystemPlatform.windows,
@@ -411,6 +413,27 @@ void main() {
               .inspectLayout(installationRoot: root.absolute),
           throwsStateError,
         );
+      });
+
+      test('linked modern manifest file is rejected without reading external bytes', () async {
+        final root = await _root();
+        final outside = await _root();
+        addTearDown(() => root.delete(recursive: true));
+        addTearDown(() => outside.delete(recursive: true));
+        final externalFile = File(p.join(outside.path, 'installation.json'));
+        await externalFile.writeAsString(_manifest('outside:v1').toJson());
+        final target = Link(p.join(root.path, '.mtn', 'content', 'installation.json'));
+        await target.parent.create(recursive: true);
+        try {
+          await target.create(externalFile.path);
+        } on FileSystemException {
+          return; // Windows host may forbid symlink creation.
+        }
+        await expectLater(
+          MtnMinecraftContentInstallationManifestFileSystem().inspectLayout(installationRoot: root.absolute),
+          throwsStateError,
+        );
+        expect(await externalFile.readAsString(), _manifest('outside:v1').toJson());
       });
 
       test('modern non-directory ancestors and non-file targets are rejected', () async {
@@ -428,7 +451,6 @@ void main() {
         expect(await target.exists(), isTrue);
       });
     });
-
   });
 }
 
