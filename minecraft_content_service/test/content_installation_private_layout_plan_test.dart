@@ -22,10 +22,11 @@ void main() {
     Future<File> legacyManifest(
       String relativePath, {
       int? expectedSize,
+      List<MtnMinecraftContentFileHash>? hashes,
     }) async {
       final target = File(p.join(root.path, '.mtn-content', 'installation.json'));
       await target.parent.create(recursive: true);
-      final manifest = _manifest(relativePath, expectedSize: expectedSize);
+      final manifest = _manifest(relativePath, expectedSize: expectedSize, hashes: hashes);
       await target.writeAsString(manifest.toJson());
       return target;
     }
@@ -128,6 +129,22 @@ void main() {
           throwsA(isA<Exception>()));
       expect(await manifest.exists(), isTrue);
       expect(await source.readAsString(), 'short');
+    });
+
+    test('declared SHA256 mismatch refuses the source without touching files', () async {
+      final manifest = await legacyManifest('.mtn-disabled/mods/sample.jar',
+        hashes: <MtnMinecraftContentFileHash>[
+          MtnMinecraftContentFileHash(
+            algorithm: 'sha256',
+            value: '0000000000000000000000000000000000000000000000000000000000000000',
+          ),
+        ],
+      );
+      final source = await managedFile('.mtn-disabled/mods/sample.jar', 'actual content');
+      await expectLater(store.planPrivateLayoutMigration(installationRoot: root.absolute),
+          throwsA(isA<Exception>()));
+      expect(await manifest.exists(), isTrue);
+      expect(await source.readAsString(), 'actual content');
     });
 
     test('unknown file in inactive directory is not silently discarded', () async {
@@ -246,11 +263,13 @@ void main() {
 MtnMinecraftContentInstallationManifest _manifest(
   String relativePath, {
   int? expectedSize,
+  List<MtnMinecraftContentFileHash>? hashes,
 }) {
   final content = MtnMinecraftContentMod(key: 'sample', name: 'Sample');
   final file = MtnMinecraftContentFile(
     fileName: 'sample.jar',
     size: expectedSize,
+    hashes: hashes,
     primary: true,
     available: true,
     downloadUrl: 'https://cdn.example/sample.jar',
