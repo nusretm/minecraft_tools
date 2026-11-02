@@ -125,7 +125,7 @@ class MtnMinecraftContentInstallationManifestFileSystem {
     final release = await _acquireMaterializationRootFor(root, policy, exclusive: false);
     try {
       await _assertRootStable(installationRoot, root);
-      return _inspectLayoutWithinCoordinator(root);
+      return await _inspectLayoutWithinCoordinator(root);
     } finally {
       release();
     }
