@@ -4,7 +4,7 @@ Date: 2026-11-02
 Repository: nusretm/minecraft_tools
 Branch: feature/content-private-layout-execution
 Base: main at aaa8b904bc7589d7e9faf5940f0dab9b157db16e (PRIVATE-1A/1B merged as PR #90)
-Status: architecture-only checkpoint, no production implementation authorized yet.
+Status: PRIVATE-1C0 journal codec and READ-ONLY recovery inspection implemented in source (Windows analyze/tests PENDING). Migration copying, lock acquisition, cutover, cleanup and modern production read/write routing NOT implemented.
 Related: Launcher Draft PR #64 Logs/Chat and Draft PR #65 .mtn path contract remain untouched.
 
 ## Target layout and invariants
@@ -81,7 +81,7 @@ Cleanup is a separate retryable step: remove only verified journal-listed old ar
 
 ## Implementation slices and explicit gates
 
-PRIVATE-1C0 (first proposed implementation, awaits user approval):
+PRIVATE-1C0 (implemented, Windows verification pending):
   Durable journal model/codec, read-only journal/phase detection, safe path and unexpected-state classification, and proof/decision for cross-process ownership. No file copies, directory creation, manifest writes or moves.
 
 PRIVATE-1C1:
@@ -96,8 +96,18 @@ PRIVATE-1C3:
 PRIVATE-2 in Launcher repository, separate gate:
   After Content Service validation, update git dependency; block migration while any game for package runs; test old/new packages in Windows. Keep Launcher PR #64 and #65 independent.
 
+## PRIVATE-1C0 implementation checkpoint (2026-11-02; Windows validation pending)
+
+- User authorized PRIVATE-1C0. Added `MtnMinecraftContentInstallationManifestFileSystemJournal` and `...JournalMove` in `minecraft_content_installation_private_layout_journal.dart`, with immutable move/copied-source arrays, explicit schema v1 and phase enum, deterministic SHA256 of the JSON payload (checksum, not authentication), original and expected manifest length+SHA256, canonical root identity SHA256, generation/migration ID, source/destination relative paths and per-source length/SHA256. Disallow unsupported/malicious path segments, missing/extra keys, wrong phase, duplicate case aliases and unacknowledged completed copy references.
+- Added `MtnMinecraftContentInstallationManifestFileSystem.inspectPrivateLayoutRecovery(installationRoot: ...)` via read-only recovery part. It uses the existing shared coordinated root lease and existing physical child/case/symlink inspection. No writes, directory creation, file copies or cleanup. It detects absent, legacy, modern, recoveryRequired and blocked states. The package-root identity and 1 MiB journal size ceiling are checked before returning recoveryRequired.
+- A valid journal is examined BEFORE normal dual-layout inspection. Thus simultaneous live manifests (or temporarily neither) with a valid journal yield `recoveryRequired`, not an arbitrary selection. Without a journal, dual manifests, orphan old/new folders and empty/unexpected migration directories fail closed with `blocked`. Symlinked journal/parent and unknown siblings are refused; `.mtn/chat` is never accessed or modified.
+- **Important boundary:** `recoveryRequired` means an inspected, checksum-valid journal exists; it DOES NOT prove physical manifest/file integrity or guarantee automatic recovery. PRIVATE-1C2 must revalidate all physical states and journal phase transitions under exclusive ownership. A journal SHA256 checksum detects accidental alteration, not malicious forgery.
+- The normal manifest `read()`, `publish()`, activation and materialization callers are NOT yet journal-gated or changed to modern locations. Therefore no production writer should be permitted to migrate until PRIVATE-1C2 integrates this detection. This is a read-only diagnostic interface, not migration execution.
+- Cross-process locking strategy decision: require a COOPERATIVE OS-backed lock (e.g. Dart RandomAccessFile.lock or a verified native equivalent) shared by **all** Content Service writers, in addition to the existing in-process root gate. Lock file location, symlink-safe creation, Windows/macOS/Linux semantics, timeout/error handling and separate-process contention need validation before PRIVATE-1C1 writes anything. Launcher game-process gate is independently required. This document does NOT claim an OS lock has been implemented or tested.
+- Added `test/content_installation_private_layout_recovery_test.dart` with 17 focused cases covering journal roundtrip/integrity/version, invalid relative paths, prepared/copy state, no-op/chat-only state, modern/legacy, dual manifests with and without journal, invalid root/checksum, orphan paths, unknown occupants and symlink refusal. Tests build throwaway fixture folders; production inspection stays read-only. These tests have NOT been run on Windows yet.
+- **Approval checkpoint:** PRIVATE-1C0 tests/analyzer and diff check must pass before preparing PRIVATE-1C1. PRIVATE-1C1 remains separately gated; no merge/cleanup or Launcher dependency change.
 ## Verification discipline
 
 Follow AGENTS.md and docs/WORKING_RULES.md; no dart format for pure Dart unless requested. Each implementation slice requires dart analyze, focused dart test, manifest/materialization/activation regression, git diff --check, and Windows test evidence. Real Game Package data must not be mutated until disposable-fixture and process-kill recovery checks pass.
 
-This branch is currently DOCS ONLY. No executable migration is approved by merely accepting this plan; approval is required for PRIVATE-1C0 implementation. No merge or cleanup at this checkpoint.
+This branch contains PRIVATE-1C0 read-only journal/recovery code and focused tests, but no executable migration. PRIVATE-1C1 mutation and subsequent cutover remain separate approval gates. No merge or cleanup at this checkpoint.

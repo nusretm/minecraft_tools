@@ -1,3 +1,11 @@
+## 2026-11-02 — PRIVATE-1C0 journal codec and read-only recovery inspection implemented (Windows pending)
+
+- User explicitly approved PRIVATE-1C0 implementation. In `feature/content-private-layout-execution` Draft PR #91, added versioned immutable migration journal model/codec with schema/phase, source and target manifest fingerprints, safe artifact move metadata and payload SHA256 checksum. No production migration writes exist.
+- Added public `MtnMinecraftContentInstallationManifestFileSystem.inspectPrivateLayoutRecovery` with status absent/legacy/modern/recoveryRequired/blocked, using existing coordinated shared root lease, physical path verification and journal-first detection. Valid journal + dual manifests is recoveryRequired, not a silent layout selection; missing/corrupt journal with unexplained layouts is blocked. `.mtn/chat` untouched.
+- 17 new read-only recovery and codec tests added, Windows `dart analyze`/`dart test` NOT YET RUN. No changes to current manifest read/publish/activation and no Launcher dependency update.
+- Cross-process lock is a MUST-HAVE before PRIVATE-1C1 filesystem writes: existing Dart root gate is only in-process. Proposed cooperative OS-backed lock must be used by every Content Service writer and verified on Windows. Launcher must separately assert no running game. See `docs/continuity/PLANNED_2026-11-02_CONTENT_PRIVATE_LAYOUT_EXECUTION.md`.
+- PR #91 remains Draft; PRIVATE-1C1 is not approved. Preserve launcher Draft PR #64/#65 and local pubspec.lock; no merge or cleanup.
+
 ## 2026-11-02 — PRIVATE-1C architecture baseline (no implementation yet)
 
 - Content Service PRIVATE-1A/1B were squash merged as PR #90 into main at aaa8b904bc7589d7e9faf5940f0dab9b157db16e; user confirmed local main and origin/main synchronized with clean working tree, both feature branches removed.
