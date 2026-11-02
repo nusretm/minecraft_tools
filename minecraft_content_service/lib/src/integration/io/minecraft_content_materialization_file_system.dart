@@ -18,6 +18,7 @@ part 'minecraft_content_materialization_file_system_preflight.dart';
 part 'minecraft_content_materialization_file_system_publication.dart';
 part 'minecraft_content_materialization_file_system_publication_operations.dart';
 part 'minecraft_content_materialization_file_system_transaction_lock.dart';
+part 'minecraft_content_materialization_file_system_os_lock.dart';
 part 'minecraft_content_materialization_file_system_transaction.dart';
 part 'minecraft_content_materialization_file_system_transaction_operations.dart';
 part 'minecraft_content_installation_manifest_file_system.dart';

@@ -121,3 +121,10 @@ PRIVATE-2 in Launcher repository, separate gate:
 Follow AGENTS.md and docs/WORKING_RULES.md; no dart format for pure Dart unless requested. Each implementation slice requires dart analyze, focused dart test, manifest/materialization/activation regression, git diff --check, and Windows test evidence. Real Game Package data must not be mutated until disposable-fixture and process-kill recovery checks pass.
 
 This branch contains PRIVATE-1C0 read-only journal/recovery code and focused tests, but no executable migration. PRIVATE-1C1 mutation and subsequent cutover remain separate approval gates. No merge or cleanup at this checkpoint.
+
+## PRIVATE-1C1 OS writer lock checkpoint (unverified source, 2026-11-02)
+
+- A persistent `.mtn-content.lock` at the installation root is used for OS cooperative exclusive writer ownership after the in-isolate lease. The file is never unlinked, is empty, and is outside Launcher-owned `.mtn/chat`. Unsafe symlink/directory/case-alias/nonempty occupancy blocks ownership. It is a coordination file, not a journal.
+- Standalone managed publication is now root-exclusive. Manifest publication, activation, standalone materialization transactions and coordinator already use the shared exclusive gate; the gate adds OS ownership to each path. OS lock retries nonblocking for at most 30 seconds and releases synchronously with its root lease.
+- Added focused same-process and independent-process tests, including killed-holder release and unsafe lock paths. Source NOT yet Windows-validated; Linux/macOS process-scoped advisory locking needs further isolate/platform proof. Read-only operations are not yet cross-process gated. No staging/journal writes, cutover, cleanup or game process lock exists.
+- **Next gate:** user runs Windows analyzer and tests, then the OS ownership checkpoint is reviewed before any PRIVATE-1C1 mutation work.

@@ -23,11 +23,39 @@ Future<void Function()> _acquireMaterializationRootFor(
 }) {
   final key = _materializationRootKeyFor(resolvedInstallationRoot, policy);
   final gate = _materializationRootGates.putIfAbsent(key, () => _MaterializationRootGate());
-  return gate.acquire(exclusive: exclusive, onEmpty: () {
+  return _acquireMaterializationRootWithOsOwnership(gate, key, resolvedInstallationRoot, policy, exclusive);
+}
+
+Future<void Function()> _acquireMaterializationRootWithOsOwnership(
+  _MaterializationRootGate gate,
+  String key,
+  Directory root,
+  MtnMinecraftContentMaterializationFileSystemPolicy policy,
+  bool exclusive,
+) async {
+  // All writers must acquire the Dart gate before OS ownership.
+  final releaseGate = await gate.acquire(exclusive: exclusive, onEmpty: () {
     if (identical(_materializationRootGates[key], gate)) {
       _materializationRootGates.remove(key);
     }
   });
+  if (!exclusive) return releaseGate;
+  try {
+    final releaseOs = await _acquireMaterializationOsRootLock(root, policy);
+    bool released = false;
+    return () {
+      if (released) return;
+      released = true;
+      try {
+        releaseOs();
+      } finally {
+        releaseGate();
+      }
+    };
+  } catch (_) {
+    releaseGate();
+    rethrow;
+  }
 }
 
 class _MaterializationRootGate {

@@ -1,3 +1,10 @@
+## 2026-11-02 — PRIVATE-1C1 OS lock foundation in source (Windows validation pending)
+
+- User approved starting PRIVATE-1C1 with OS-backed writer ownership. Existing in-isolate root gate now obtains a persistent zero-byte `.mtn-content.lock` OS exclusive lock for write operations, and releases in reverse order.
+- Standalone materialization `publish()` now obtains an exclusive root lease; manifest publish, materialization transaction, coordinator and activation already request exclusive ownership. No journal persistence, staging copy, manifest cutover or cleanup implemented.
+- Added `test/content_writer_os_lock_test.dart` and a separate-Dart-process lock holder covering contention, process termination, persistence, and unsafe lock paths. Neither analyzer nor Windows tests have been run from this connector; POSIX process-scoped advisory semantics do not guarantee different isolates in one OS process.
+- PRIVATE-1C1 migration writes remain BLOCKED until Windows lock verification. Draft PR #91 remains Draft; Launcher PR #64/#65 untouched; no merge or cleanup.
+
 ## 2026-11-02 — PRIVATE-1C0 Windows accepted (79 tests); PRIVATE-1C1 awaiting approval
 
 - User verified `feature/content-private-layout-execution` at head `7eb675d`: `dart analyze` no issues; 17 journal/recovery tests, 48 planner/manifest tests and 14 activation/preflight regressions passed (79/79 total). `git diff --check origin/main...HEAD` and git working tree clean.
