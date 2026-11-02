@@ -66,6 +66,33 @@ class MtnMinecraftContentInstallationManifestFileSystemPublication {
   }
 }
 
+/// Location of an installation manifest discovered without changing disk.
+enum MtnMinecraftContentInstallationManifestFileSystemLayoutKind {
+  absent,
+  legacy,
+  modern,
+}
+
+/// Immutable read-only inspection of an existing manifest location.
+///
+/// The ordinary read/publish contract remains legacy-only until coordinated
+/// migration can update both the manifest and inactive managed artifact paths.
+final class MtnMinecraftContentInstallationManifestFileSystemLayoutInspection {
+  const MtnMinecraftContentInstallationManifestFileSystemLayoutInspection({
+    required this.kind,
+    this.manifest,
+    this.manifestFile,
+    this.length,
+    this.sha256,
+  });
+
+  final MtnMinecraftContentInstallationManifestFileSystemLayoutKind kind;
+  final MtnMinecraftContentInstallationManifest? manifest;
+  final File? manifestFile;
+  final int? length;
+  final String? sha256;
+}
+
 class MtnMinecraftContentInstallationManifestFileSystem {
   MtnMinecraftContentInstallationManifestFileSystem({
     MtnMinecraftContentMaterializationFileSystemPolicy? policy,
@@ -74,6 +101,8 @@ class MtnMinecraftContentInstallationManifestFileSystem {
   }
 
   static const String manifestDirectoryName = '.mtn-content';
+  static const String privateDirectoryName = '.mtn';
+  static const String privateContentDirectoryName = 'content';
   static const String manifestFileName = 'installation.json';
 
   final MtnMinecraftContentMaterializationFileSystemPolicy policy;
@@ -82,6 +111,60 @@ class MtnMinecraftContentInstallationManifestFileSystem {
   Future<MtnMinecraftContentInstallationManifest?> read({
     required Directory installationRoot,
   }) async => (await _readSnapshotCore(installationRoot: installationRoot)).manifest;
+
+  /// Read-only, dual-location discovery for migration preflight.
+  ///
+  /// Both branches are inspected under the existing shared root coordinator.
+  /// If manifests exist in both layouts, or any inspected ancestor/target is
+  /// linked, inaccessible, or ambiguous, inspection fails without fallback.
+  /// This method never creates folders, publishes or moves any files.
+  Future<MtnMinecraftContentInstallationManifestFileSystemLayoutInspection> inspectLayout({
+    required Directory installationRoot,
+  }) async {
+    final root = await _resolveRoot(installationRoot);
+    final release = await _acquireMaterializationRootFor(root, policy, exclusive: false);
+    try {
+      await _assertRootStable(installationRoot, root);
+      return await _inspectLayoutWithinCoordinator(root);
+    } finally {
+      release();
+    }
+  }
+
+  Future<MtnMinecraftContentInstallationManifestFileSystemLayoutInspection> _inspectLayoutWithinCoordinator(
+    Directory root,
+  ) async {
+    final legacy = await _inspectLocation(root);
+    final modern = await _inspectLocationSegments(
+      root, const <String>[privateDirectoryName, privateContentDirectoryName],
+    );
+    if (legacy.exists && modern.exists) {
+      throw StateError('Legacy and modern installation manifests both exist; migration requires explicit conflict recovery.');
+    }
+    final location = modern.exists ? modern : legacy;
+    if (!location.exists) {
+      return const MtnMinecraftContentInstallationManifestFileSystemLayoutInspection(
+        kind: MtnMinecraftContentInstallationManifestFileSystemLayoutKind.absent,
+      );
+    }
+    final bytes = await location.target.readAsBytes();
+    return MtnMinecraftContentInstallationManifestFileSystemLayoutInspection(
+      kind: modern.exists
+          ? MtnMinecraftContentInstallationManifestFileSystemLayoutKind.modern
+          : MtnMinecraftContentInstallationManifestFileSystemLayoutKind.legacy,
+      manifest: MtnMinecraftContentInstallationManifest.decode(bytes),
+      manifestFile: location.target,
+      length: bytes.length,
+      sha256: sha256.convert(bytes).toString(),
+    );
+  }
+
+  /// Build an immutable migration preflight, without altering either layout.
+  /// The resulting snapshot must be revalidated under an exclusive lease
+  /// before PRIVATE-1C may execute any migration.
+  Future<MtnMinecraftContentInstallationManifestFileSystemMigrationPlan> planPrivateLayoutMigration({
+    required Directory installationRoot,
+  }) => _buildPrivateLayoutMigrationPlan(installationRoot);
 
   Future<_ManifestReadSnapshot> _readSnapshotWithinCoordinator({
     required Directory installationRoot,
@@ -403,31 +486,43 @@ class MtnMinecraftContentInstallationManifestFileSystem {
     return policy.caseSensitive ? canonical : canonical.toLowerCase();
   }
 
-  Future<_ManifestFileLocation> _inspectLocation(Directory root) async {
-    final directoryMatch = await _inspector._resolveChild(root.path, manifestDirectoryName);
-    if (directoryMatch.inaccessible || directoryMatch.matches.length > 1) {
-      throw StateError('Manifest directory is inaccessible or ambiguous.');
+  Future<_ManifestFileLocation> _inspectLocation(Directory root) =>
+      _inspectLocationSegments(root, const <String>[manifestDirectoryName]);
+
+  /// Resolve every ancestor separately using the materialization inspector's
+  /// platform-sensitive case policy. Never resolve links or guess a path
+  /// when case aliases make a physical child ambiguous.
+  Future<_ManifestFileLocation> _inspectLocationSegments(
+    Directory root,
+    List<String> directoryNames,
+  ) async {
+    var current = root;
+    for (final directoryName in directoryNames) {
+      final match = await _inspector._resolveChild(current.path, directoryName);
+      if (match.inaccessible || match.matches.length > 1) {
+        throw StateError('Manifest directory is inaccessible or ambiguous.');
+      }
+      if (match.matches.isEmpty) {
+        return _ManifestFileLocation(
+          directory: null,
+          target: File(p.joinAll(<String>[root.path, ...directoryNames, manifestFileName])),
+          exists: false,
+        );
+      }
+      final found = match.matches.single;
+      if (found.type != FileSystemEntityType.directory) {
+        throw StateError('Manifest directory must be a regular directory, not a link or file.');
+      }
+      current = Directory(found.path);
     }
-    if (directoryMatch.matches.isEmpty) {
-      return _ManifestFileLocation(
-        directory: null,
-        target: File(p.join(root.path, manifestDirectoryName, manifestFileName)),
-        exists: false,
-      );
-    }
-    final matchedDirectory = directoryMatch.matches.single;
-    if (matchedDirectory.type != FileSystemEntityType.directory) {
-      throw StateError('Manifest directory must be a regular directory, not a link or file.');
-    }
-    final directory = Directory(matchedDirectory.path);
-    final fileMatch = await _inspector._resolveChild(directory.path, manifestFileName);
+    final fileMatch = await _inspector._resolveChild(current.path, manifestFileName);
     if (fileMatch.inaccessible || fileMatch.matches.length > 1) {
       throw StateError('Manifest file is inaccessible or ambiguous.');
     }
     if (fileMatch.matches.isEmpty) {
       return _ManifestFileLocation(
-        directory: directory,
-        target: File(p.join(directory.path, manifestFileName)),
+        directory: current,
+        target: File(p.join(current.path, manifestFileName)),
         exists: false,
       );
     }
@@ -435,7 +530,7 @@ class MtnMinecraftContentInstallationManifestFileSystem {
     if (matchedFile.type != FileSystemEntityType.file) {
       throw StateError('Manifest must be a regular file, not a link or directory.');
     }
-    return _ManifestFileLocation(directory: directory, target: File(matchedFile.path), exists: true);
+    return _ManifestFileLocation(directory: current, target: File(matchedFile.path), exists: true);
   }
 
   Future<void> _validateRootAndParent(MtnMinecraftContentInstallationManifestFileSystemPublication publication) async {
