@@ -1,3 +1,12 @@
+## 2026-11-02 — PRIVATE-1C1 OS writer lock Windows accepted (138/138), journal durability next
+
+- User fetched `feature/content-private-layout-execution` at `a11cd75` and verified on Windows: `dart analyze` no issues; OS lock tests **6/6**; recovery/journal **17/17**; planner+manifest **48/48**; activation+preflight **14/14**; publication+coordination+transaction **53/53**. **138 focused tests passed** across the user-shown commands.
+- `git diff --check origin/main...HEAD` emitted no errors; `git status -sb` showed only the clean tracking branch. This validates the OS writer lock checkpoint on Windows (same-process and independent-process contention, killed holder and fail-closed path tests).
+- Accepted OS lock mechanics: durable zero-byte `.mtn-content.lock` never unlinked, cooperative exclusive writer ownership layered on the existing root lease. Does not lock running Minecraft games; Launcher must check those in PRIVATE-2. No claim of cross-isolate guarantee on POSIX.
+- Next narrowly scoped design/implementation gate within PRIVATE-1C1: safe disk publication of the **prepared** migration journal under exclusive owner. Must integrate a **journal-aware fail-closed gate for normal Content Service read/write/activation paths before enabling prepared journals**, otherwise existing clients can mutate legacy artifacts while a journal exists. A staged/partial journal candidate must be recognized as blocked and preserved, never silently deleted.
+- Journal publication shall use non-destructive temporary write/flush/digest/readback and verified promotion, preserve original manifest/files, and remain limited to disposable fixtures until Windows interruption tests confirm safety. No journal publication/copy/cutover/cleanup code added by this verification checkpoint.
+- Draft PR #91 remains Draft, no merge or cleanup; Launcher Draft PRs #64/#65 untouched.
+
 ## 2026-11-02 — PRIVATE-1C1 OS lock foundation in source (Windows validation pending)
 
 - User approved starting PRIVATE-1C1 with OS-backed writer ownership. Existing in-isolate root gate now obtains a persistent zero-byte `.mtn-content.lock` OS exclusive lock for write operations, and releases in reverse order.
