@@ -13,7 +13,7 @@ void main() {
       addTearDown(() => root.delete(recursive: true));
       final store = MtnMinecraftContentInstallationManifestFileSystem();
       expect(await store.read(installationRoot: root.absolute), isNull);
-      expect(await Directory(p.join(root.path, '.mtn-content')).exists(), isFalse);
+      expect(await Directory(p.join(root.path, '.mtn', 'content')).exists(), isFalse);
     });
 
     test('first publication is reversible, read-only after commit and idempotent', () async {
@@ -25,7 +25,7 @@ void main() {
 
       expect(published.state, MtnMinecraftContentInstallationManifestFileSystemPublicationState.pending);
       expect(published.previousTargetExisted, isFalse);
-      expect(await File(p.join(root.path, '.mtn-content', 'installation.json')).readAsString(), manifest.toJson());
+      expect(await File(p.join(root.path, '.mtn', 'content', 'installation.json')).readAsString(), manifest.toJson());
       await store.commit(published);
       await store.commit(published);
       expect(published.state, MtnMinecraftContentInstallationManifestFileSystemPublicationState.committed);
@@ -44,7 +44,7 @@ void main() {
       await store.rollback(publication);
       expect(publication.state, MtnMinecraftContentInstallationManifestFileSystemPublicationState.rolledBack);
       expect(await store.read(installationRoot: root.absolute), isNull);
-      expect(await Directory(p.join(root.path, '.mtn-content')).exists(), isFalse);
+      expect(await Directory(p.join(root.path, '.mtn', 'content')).exists(), isFalse);
       await expectLater(store.commit(publication), throwsStateError);
     });
 
@@ -97,7 +97,7 @@ void main() {
     test('directory or link at manifest target cannot be adopted', () async {
       final root = await _root();
       addTearDown(() => root.delete(recursive: true));
-      final target = File(p.join(root.path, '.mtn-content', 'installation.json'));
+      final target = File(p.join(root.path, '.mtn', 'content', 'installation.json'));
       await Directory(target.path).create(recursive: true);
       final store = MtnMinecraftContentInstallationManifestFileSystem();
       await expectLater(store.read(installationRoot: root.absolute), throwsStateError);
@@ -110,7 +110,7 @@ void main() {
       final outside = await _root();
       addTearDown(() => root.delete(recursive: true));
       addTearDown(() => outside.delete(recursive: true));
-      final link = Link(p.join(root.path, '.mtn-content'));
+      final link = Link(p.join(root.path, '.mtn', 'content'));
       try {
         await link.create(outside.path);
       } on FileSystemException {
@@ -228,11 +228,11 @@ void main() {
       addTearDown(() => root.delete(recursive: true));
       final store = MtnMinecraftContentInstallationManifestFileSystem();
       final publication = await store.publish(installationRoot: root.absolute, manifest: _manifest('a:v1'));
-      final unrelated = File(p.join(root.path, '.mtn-content', 'notes.txt'));
+      final unrelated = File(p.join(root.path, '.mtn', 'content', 'notes.txt'));
       await unrelated.writeAsString('caller-owned');
       await store.rollback(publication);
       expect(await unrelated.readAsString(), 'caller-owned');
-      expect(await File(p.join(root.path, '.mtn-content', 'installation.json')).exists(), isFalse);
+      expect(await File(p.join(root.path, '.mtn', 'content', 'installation.json')).exists(), isFalse);
     });
 
     test('reserved namespace detection uses the configured Windows case identity', () async {
@@ -315,7 +315,7 @@ void main() {
         expect(await Directory(p.join(root.path, '.mtn')).exists(), isFalse);
       });
 
-      test('modern manifest can be decoded without altering legacy writer', () async {
+      test('modern manifest is the primary production read location', () async {
         final root = await _root();
         addTearDown(() => root.delete(recursive: true));
         final modern = File(p.join(root.path, '.mtn', 'content', 'installation.json'));
@@ -327,8 +327,7 @@ void main() {
         expect(result.kind, MtnMinecraftContentInstallationManifestFileSystemLayoutKind.modern);
         expect(result.manifest!.installationState.artifacts.single.version.key, 'modern:v2');
         expect(result.manifestFile!.path, modern.path);
-        expect(await inspector.read(installationRoot: root.absolute), isNull,
-            reason: 'Production reads must retain legacy behavior until migration is ready.');
+        expect((await inspector.read(installationRoot: root.absolute))!.toJson(), raw);
         expect(await modern.readAsString(), raw);
         expect(await Directory(p.join(root.path, '.mtn-content')).exists(), isFalse);
       });

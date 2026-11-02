@@ -1,3 +1,10 @@
+## 2026-11-02 — Simplified private layout migration source (Windows verification pending)
+
+- User requested to stop investing in journal/crash-recovery machinery and finish the two-folder change. On Draft PR #91 branch, removed journal codec/recovery inspector and focused tests; retained useful read-only migration planner and validated OS cooperative writer lock.
+- New Content Service uses `.mtn/content/installation.json` for manifest publication and `.mtn/disabled/` for activation. Old manifests remain readable; legacy writes are blocked until an explicit `migratePrivateLayout(installationRoot: ...)` invocation while no game is running.
+- Migration is deliberately small: exclusive root ownership, existing preflight, folder renames within the same Game Package, SHA verification of renamed inactive files, stage/promote rewritten manifest, ordinary in-process rollback on errors. Original file bytes and `.mtn/chat` are not modified. No separate journal, process-crash recovery, or claims of power-loss consistency.
+- Added simple migration regression tests; updated existing modern manifest/activation/coordinator test expectations. This source is NOT analyzer- or Windows-validated yet. Do not merge or update Launcher dependency until Windows tests pass. Launcher Draft PR #64/#65 remain separate.
+
 ## 2026-11-02 — PRIVATE-1C1 OS writer lock Windows accepted (138/138), journal durability next
 
 - User fetched `feature/content-private-layout-execution` at `a11cd75` and verified on Windows: `dart analyze` no issues; OS lock tests **6/6**; recovery/journal **17/17**; planner+manifest **48/48**; activation+preflight **14/14**; publication+coordination+transaction **53/53**. **138 focused tests passed** across the user-shown commands.

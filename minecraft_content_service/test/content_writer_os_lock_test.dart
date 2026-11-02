@@ -97,7 +97,7 @@ void main() {
         ),
       );
       await expectLater(store.publish(installationRoot: root.absolute, manifest: _manifest()), throwsStateError);
-      expect(await File(p.join(root.path, '.mtn-content', 'installation.json')).exists(), isFalse);
+      expect(await File(p.join(root.path, '.mtn', 'content', 'installation.json')).exists(), isFalse);
     });
 
     test('occupied, nonempty and linked lock paths fail closed', () async {
@@ -123,7 +123,7 @@ void main() {
       }
       await expectLater(store.publish(installationRoot: root.absolute, manifest: _manifest()), throwsStateError);
       expect(await outside.readAsString(), 'safe');
-      expect(await File(p.join(root.path, '.mtn-content', 'installation.json')).exists(), isFalse);
+      expect(await File(p.join(root.path, '.mtn', 'content', 'installation.json')).exists(), isFalse);
     });
   });
 }
