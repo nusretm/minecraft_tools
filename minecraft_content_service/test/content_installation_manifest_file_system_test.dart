@@ -286,6 +286,149 @@ void main() {
         isTrue,
       );
     });
+    group('PRIVATE-1A read-only layout inspection', () {
+      test('missing locations are absent and do not create .mtn paths', () async {
+        final root = await _root();
+        addTearDown(() => root.delete(recursive: true));
+        final inspector = MtnMinecraftContentInstallationManifestFileSystem();
+        final result = await inspector.inspectLayout(installationRoot: root.absolute);
+        expect(result.kind, MtnMinecraftContentInstallationManifestFileSystemLayoutKind.absent);
+        expect(result.manifest, isNull);
+        expect(result.manifestFile, isNull);
+        expect(await root.list().toList(), isEmpty);
+      });
+
+      test('existing legacy manifest is found and read without mutation', () async {
+        final root = await _root();
+        addTearDown(() => root.delete(recursive: true));
+        final file = await _manifestFile(root);
+        final raw = _manifest('legacy:v1').toJson();
+        await file.writeAsString(raw);
+        final result = await MtnMinecraftContentInstallationManifestFileSystem()
+            .inspectLayout(installationRoot: root.absolute);
+        expect(result.kind, MtnMinecraftContentInstallationManifestFileSystemLayoutKind.legacy);
+        expect(result.manifest!.installationState.artifacts.single.version.key, 'legacy:v1');
+        expect(result.manifestFile!.path, file.path);
+        expect(result.length, utf8.encode(raw).length);
+        expect(result.sha256, isNotEmpty);
+        expect(await file.readAsString(), raw);
+        expect(await Directory(p.join(root.path, '.mtn')).exists(), isFalse);
+      });
+
+      test('modern manifest can be decoded without altering legacy writer', () async {
+        final root = await _root();
+        addTearDown(() => root.delete(recursive: true));
+        final modern = File(p.join(root.path, '.mtn', 'content', 'installation.json'));
+        await modern.parent.create(recursive: true);
+        final raw = _manifest('modern:v2').toJson();
+        await modern.writeAsString(raw);
+        final inspector = MtnMinecraftContentInstallationManifestFileSystem();
+        final result = await inspector.inspectLayout(installationRoot: root.absolute);
+        expect(result.kind, MtnMinecraftContentInstallationManifestFileSystemLayoutKind.modern);
+        expect(result.manifest!.installationState.artifacts.single.version.key, 'modern:v2');
+        expect(result.manifestFile!.path, modern.path);
+        expect(await inspector.read(installationRoot: root.absolute), isNull,
+            reason: 'Production reads must retain legacy behavior until migration is ready.');
+        expect(await modern.readAsString(), raw);
+        expect(await Directory(p.join(root.path, '.mtn-content')).exists(), isFalse);
+      });
+
+      test('both manifest locations are a fail-closed conflict', () async {
+        final root = await _root();
+        addTearDown(() => root.delete(recursive: true));
+        final legacy = await _manifestFile(root);
+        final modern = File(p.join(root.path, '.mtn', 'content', 'installation.json'));
+        await modern.parent.create(recursive: true);
+        await legacy.writeAsString(_manifest('legacy:v1').toJson());
+        await modern.writeAsString(_manifest('modern:v2').toJson());
+        final store = MtnMinecraftContentInstallationManifestFileSystem();
+        await expectLater(store.inspectLayout(installationRoot: root.absolute), throwsStateError);
+        expect(await legacy.exists(), isTrue);
+        expect(await modern.exists(), isTrue);
+      });
+
+      test('corrupted modern manifest is not ignored in favor of legacy or null', () async {
+        final root = await _root();
+        addTearDown(() => root.delete(recursive: true));
+        final modern = File(p.join(root.path, '.mtn', 'content', 'installation.json'));
+        await modern.parent.create(recursive: true);
+        await modern.writeAsString('{not json');
+        final inspector = MtnMinecraftContentInstallationManifestFileSystem();
+        await expectLater(inspector.inspectLayout(installationRoot: root.absolute), throwsFormatException);
+        expect(await modern.readAsString(), '{not json');
+      });
+
+      test('only .mtn/chat exists: no manifest and no directory changes', () async {
+        final root = await _root();
+        addTearDown(() => root.delete(recursive: true));
+        final chat = Directory(p.join(root.path, '.mtn', 'chat'));
+        await chat.create(recursive: true);
+        final result = await MtnMinecraftContentInstallationManifestFileSystem()
+            .inspectLayout(installationRoot: root.absolute);
+        expect(result.kind, MtnMinecraftContentInstallationManifestFileSystemLayoutKind.absent);
+        expect(await chat.exists(), isTrue);
+        expect(await Directory(p.join(root.path, '.mtn', 'content')).exists(), isFalse);
+      });
+
+      test('modern ancestor and manifest links are rejected without following', () async {
+        final root = await _root();
+        final outside = await _root();
+        addTearDown(() => root.delete(recursive: true));
+        addTearDown(() => outside.delete(recursive: true));
+        final link = Link(p.join(root.path, '.mtn'));
+        try {
+          await link.create(outside.path);
+        } on FileSystemException {
+          return; // Windows host may forbid symlink creation.
+        }
+        await expectLater(
+          MtnMinecraftContentInstallationManifestFileSystem().inspectLayout(installationRoot: root.absolute),
+          throwsStateError,
+        );
+        expect(await outside.list().toList(), isEmpty);
+      });
+
+      test('case-ambiguous modern namespace is refused under Windows policy', () async {
+        final root = await _root();
+        addTearDown(() => root.delete(recursive: true));
+        final first = Directory(p.join(root.path, '.mtn'));
+        await first.create();
+        final second = Directory(p.join(root.path, '.MTN'));
+        try {
+          await second.create();
+        } on FileSystemException {
+          return; // Native case-insensitive filesystem cannot create variants.
+        }
+        if (await first.resolveSymbolicLinks() == await second.resolveSymbolicLinks()) {
+          return; // Same physical directory: no ambiguity exists on disk.
+        }
+        const windows = MtnMinecraftContentMaterializationFileSystemPolicy(
+          platform: MtnMinecraftContentMaterializationFileSystemPlatform.windows,
+          caseSensitive: false,
+        );
+        await expectLater(
+          MtnMinecraftContentInstallationManifestFileSystem(policy: windows)
+              .inspectLayout(installationRoot: root.absolute),
+          throwsStateError,
+        );
+      });
+
+      test('modern non-directory ancestors and non-file targets are rejected', () async {
+        final root = await _root();
+        addTearDown(() => root.delete(recursive: true));
+        final mtn = File(p.join(root.path, '.mtn'));
+        await mtn.writeAsString('occupied');
+        final inspector = MtnMinecraftContentInstallationManifestFileSystem();
+        await expectLater(inspector.inspectLayout(installationRoot: root.absolute), throwsStateError);
+        await mtn.delete();
+
+        final target = Directory(p.join(root.path, '.mtn', 'content', 'installation.json'));
+        await target.create(recursive: true);
+        await expectLater(inspector.inspectLayout(installationRoot: root.absolute), throwsStateError);
+        expect(await target.exists(), isTrue);
+      });
+    });
+
   });
 }
 
