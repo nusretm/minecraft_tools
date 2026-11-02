@@ -1,3 +1,11 @@
+## 2026-11-02 — PRIVATE-1C architecture baseline (no implementation yet)
+
+- Content Service PRIVATE-1A/1B were squash merged as PR #90 into main at aaa8b904bc7589d7e9faf5940f0dab9b157db16e; user confirmed local main and origin/main synchronized with clean working tree, both feature branches removed.
+- New branch feature/content-private-layout-execution contains only the design plan docs/continuity/PLANNED_2026-11-02_CONTENT_PRIVATE_LAYOUT_EXECUTION.md. No executable migration code or filesystem mutations yet.
+- Architectural risks: _MaterializationRootGate is an in-process gate, not demonstrated cross-process; current manifest publication tracks rollback/commit in live Dart objects and cannot alone recover a killed process.
+- Plan: durable Content Service .mtn/migration journal, copy-first staged SHA-verified disabled files, verified stage manifest, journal-aware cutover and recovery, modern-path read/publish/activation routing, and strictly verified cleanup. Never touch .mtn/chat.
+- PRIVATE-1C0 is the next explicit approval gate for journal contract and read-only detection only. No real moves/writes until separate approved checkpoints and Windows fault-injection coverage. Launcher Draft PR #64 and #65 and local pubspec.lock remain untouched.
+
 ## 2026-11-02 — PRIVATE-1B Windows verified and closed; PRIVATE-1C is next approval gate
 
 - User pulled Content Service branch at `b5cb3e9`, reran `dart analyze`: **No issues found**; combined focused private-layout and manifest tests: **48/48 passed**. Prior activation/materialization preflight regression tests: **14/14 passed** before the await fix (not repeated in this final run).
