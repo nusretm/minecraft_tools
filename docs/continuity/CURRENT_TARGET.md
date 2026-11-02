@@ -1,3 +1,11 @@
+## 2026-11-02 — PRIVATE-1A dual-layout manifest inspector in source; Windows validation pending
+
+- In minecraft_tools PR #90 branch feature/content-private-layout-migration, read-only `MtnMinecraftContentInstallationManifestFileSystem.inspectLayout` checks both legacy .mtn-content/installation.json and modern .mtn/content/installation.json under the existing coordinated read lease. Returns immutable kind/manifest/file/byte-length/SHA metadata or fails closed on both locations, linked/ambiguous occupants, and invalid manifest JSON.
+- Reused the materialization filesystem path inspection for both layouts; no duplicated standalone filesystem traversal authority. Added 10 focused tests covering old/new/missing/both/corrupt, .mtn/chat coexistence, link and case/path violations.
+- Existing production manifest read/write/activation remains legacy-only, so NO data migration or directory creation is triggered; PRIVATE-1B preflight/planner and PRIVATE-1C journaled migration remain future explicit approval gates.
+- User Launcher PRIVATE-0 validation: flutter analyzer clean, 19 focused tests pass, diff check clean. This new minecraft_tools source has NOT been validated with Dart on Windows; preserve launcher local pubspec.lock and do not update its library pin.
+- Plan: docs/continuity/PLANNED_2026-11-02_CONTENT_PRIVATE_LAYOUT_MIGRATION.md. PR #90 Draft; no merges/cleanup.
+
 ## 2026-11-02 — PRIVATE-1 Content Service migration architecture (plan-only checkpoint)
 
 - Launcher PRIVATE-0 user Windows validation: flutter analyze clean, 19 tests passed, git diff --check clean; only user-local pubspec.lock modified. Launcher Draft PR #65 remains open and depends on Draft PR #64.

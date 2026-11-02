@@ -4,7 +4,7 @@ Date: 2026-11-02
 Repository: nusretm/minecraft_tools
 Branch: feature/content-private-layout-migration
 Related launcher: nusretm/mtn_launcher_app PR #65, stacked on Draft PR #64
-Status: architecture and migration contract only; runtime migration/code NOT implemented yet.
+Status: PRIVATE-1A read-only dual-layout manifest inspection implemented in source; Windows analysis/tests pending. Physical migration/write switch NOT implemented.
 
 ## Goal and boundary
 
@@ -38,6 +38,14 @@ Legacy Content Service:
 6. Publication: stage or move the managed disabled files on the same package filesystem, checksum each destination, publish the transformed manifest to `.mtn/content/installation.json` using coordinated/recoverable manifest operations, verify it, then finalize the journal. Preserve the only known good old manifest and disabled artifact bytes until committed and recoverable. Cleanup empty legacy directories only after verified commit; unknown files keep their directory and must not be deleted.
 7. Recovery: crash/cancellation between each stage must either restore the original working installation or resume forward from a verified journal. No automatic rollback once a verified new manifest becomes the authoritative state unless reverse file moves can be fully validated. Repeated migration should be idempotent. No cross-process OS atomicity claims without proof.
 8. After upgrade, new installations/publishes target .mtn/content and new disable operations target .mtn/disabled. Reject unauthorized materialization into .mtn/content, .mtn/chat, or arbitrary .mtn descendants. The private Chat cache is never traversed by Content Service cleanup.
+
+## PRIVATE-1A implementation checkpoint (2026-11-02, Windows verification pending)
+
+- Added public `MtnMinecraftContentInstallationManifestFileSystem.inspectLayout(installationRoot: ...)` returning immutable `MtnMinecraftContentInstallationManifestFileSystemLayoutInspection` with kind absent/legacy/modern, optional decoded manifest, discovered physical manifest File, byte length, and SHA256. Read-only, no directory creation, move, write, or cleanup.
+- Inspects both `.mtn-content/installation.json` and `.mtn/content/installation.json` under the existing materialization shared root coordinator, validates requested root remains stable, and reuses the same case-policy-aware physical-child inspection as the existing manifest filesystem. Refuses duplicate live manifests and malformed JSON without falling back.
+- A single generic ancestor resolver now backs legacy and modern physical-path inspection; rejects inaccessible/ambiguous directory segments, link/file ancestors, and nonregular manifest targets. Reserved `.mtn/chat` can exist without being treated as a manifest or altered.
+- The existing production `read()`, `publish()`, commit, rollback and activation paths deliberately still use `.mtn-content` / `.mtn-disabled` until PRIVATE-1B/1C are separately approved and safely implemented. Thus this is NOT a migration or a declaration that new paths are ready for production writes.
+- Added 10 test scenarios in `content_installation_manifest_file_system_test.dart`: missing, legacy, modern, both conflict, malformed modern, chat-only namespace, linked parent, ambiguous Windows-case paths, linked target and blocked non-directory segments/targets. No assistant-local Dart SDK available; Windows tests/analyzer are required.
 
 ## Narrow implementation checkpoints (approval gates)
 
