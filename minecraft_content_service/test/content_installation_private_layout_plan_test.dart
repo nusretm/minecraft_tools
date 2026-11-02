@@ -104,6 +104,51 @@ void main() {
       expect(await Directory(p.join(root.path, '.mtn')).exists(), isFalse);
     });
 
+    test('multiple disabled files retain independent ownership and digests', () async {
+      final manifest = File(p.join(root.path, '.mtn-content', 'installation.json'));
+      await manifest.parent.create(recursive: true);
+      await manifest.writeAsString(_manifestWithPaths(
+        const <String>[
+          '.mtn-disabled/mods/first.jar',
+          '.mtn-disabled/resourcepacks/second.jar',
+        ],
+      ).toJson());
+      await managedFile('.mtn-disabled/mods/first.jar', 'first bytes');
+      await managedFile('.mtn-disabled/resourcepacks/second.jar', 'second bytes');
+
+      final plan = await store.planPrivateLayoutMigration(installationRoot: root.absolute);
+      expect(plan.moves, hasLength(2));
+      expect(plan.moves.map((move) => move.destinationRelativePath),
+          <String>['.mtn/disabled/mods/first.jar', '.mtn/disabled/resourcepacks/second.jar']);
+      expect(plan.moves.map((move) => move.sourceSha256), <String>[
+        sha256.convert(utf8.encode('first bytes')).toString(),
+        sha256.convert(utf8.encode('second bytes')).toString(),
+      ]);
+      expect(plan.resultingManifest!.installationState.artifacts.map((artifact) =>
+          artifact.version.content.key), <String>['first', 'second']);
+      expect(await manifest.exists(), isTrue);
+      expect(await Directory(p.join(root.path, '.mtn')).exists(), isFalse);
+    });
+
+    test('case-colliding managed files are rejected under Windows path policy', () async {
+      final manifest = File(p.join(root.path, '.mtn-content', 'installation.json'));
+      await manifest.parent.create(recursive: true);
+      await manifest.writeAsString(_manifestWithPaths(
+        const <String>[
+          '.mtn-disabled/mods/Alpha.jar',
+          '.mtn-disabled/mods/alpha.jar',
+        ],
+      ).toJson());
+      const windows = MtnMinecraftContentMaterializationFileSystemPolicy(
+        platform: MtnMinecraftContentMaterializationFileSystemPlatform.windows,
+        caseSensitive: false,
+      );
+      final windowsStore = MtnMinecraftContentInstallationManifestFileSystem(policy: windows);
+      await expectLater(windowsStore.planPrivateLayoutMigration(installationRoot: root.absolute),
+          throwsStateError);
+      expect(await manifest.exists(), isTrue);
+    });
+
     test('preserves existing .mtn/chat while planning an inactive move', () async {
       await legacyManifest('.mtn-disabled/mods/sample.jar');
       await managedFile('.mtn-disabled/mods/sample.jar', 'immutable');
@@ -287,5 +332,31 @@ MtnMinecraftContentInstallationManifest _manifest(
     MtnMinecraftContentInstallationState(artifacts: <MtnMinecraftContentInstallationArtifact>[
       MtnMinecraftContentInstallationArtifact(version: version, file: file, relativePath: relativePath),
     ]),
+  );
+}
+
+MtnMinecraftContentInstallationManifest _manifestWithPaths(
+  List<String> paths,
+) {
+  final artifacts = <MtnMinecraftContentInstallationArtifact>[];
+  for (var index = 0; index < paths.length; index++) {
+    final id = index == 0 ? 'first' : 'second';
+    final content = MtnMinecraftContentMod(key: id, name: id);
+    final file = MtnMinecraftContentFile(
+      fileName: '$id.jar', primary: true, available: true,
+      downloadUrl: 'https://cdn.example/$id.jar',
+    );
+    final version = MtnMinecraftContentVersion(
+      key: '$id:v1', content: content, name: id, version: 'v1',
+      releaseType: MtnMinecraftContentVersionReleaseType.release,
+      modLoaders: <MtnMinecraftModLoaderType>[MtnMinecraftModLoaderType.fabric],
+      files: <MtnMinecraftContentFile>[file],
+    );
+    artifacts.add(MtnMinecraftContentInstallationArtifact(
+      version: version, file: file, relativePath: paths[index],
+    ));
+  }
+  return MtnMinecraftContentInstallationManifest.fromInstallationState(
+    MtnMinecraftContentInstallationState(artifacts: artifacts),
   );
 }
