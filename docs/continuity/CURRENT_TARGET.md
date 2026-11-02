@@ -1,3 +1,10 @@
+## 2026-11-02 — PRIVATE-1 Content Service migration architecture (plan-only checkpoint)
+
+- Launcher PRIVATE-0 user Windows validation: flutter analyze clean, 19 tests passed, git diff --check clean; only user-local pubspec.lock modified. Launcher Draft PR #65 remains open and depends on Draft PR #64.
+- New Content Service requirement: migrate manifest directory `.mtn-content` -> `.mtn/content`, inactive managed artifacts `.mtn-disabled` -> `.mtn/disabled`, without affecting Launcher-owned `.mtn/chat` durable history.
+- Confirmed ownership: MtnMinecraftContentInstallationManifestFileSystem, MtnMinecraftContentInstallationActivationFileSystem, MtnMinecraftContentMaterializationFileSystem. The manifest stores inactive artifact relativePath; move requires coordinated manifest rewrite/recovery.
+- New branch feature/content-private-layout-migration contains ONLY design docs, no production code or data movement. PRIVATE-1A read-only layout policy and dual-manifest inspection is the proposed next bounded implementation checkpoint after explicit approval.
+- Full plan: docs/continuity/PLANNED_2026-11-02_CONTENT_PRIVATE_LAYOUT_MIGRATION.md. Preserve unrelated Hypixel PR #89, no merge/cleanup or Launcher dependency change.
 # Minecraft Tools — Current Target
 
 ## 2026-10-25 — Hypixel storage concurrency (Stage 2 implementation / Windows validation pending)
