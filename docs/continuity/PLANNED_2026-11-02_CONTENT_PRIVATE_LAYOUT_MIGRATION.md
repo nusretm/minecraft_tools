@@ -4,7 +4,7 @@ Date: 2026-11-02
 Repository: nusretm/minecraft_tools
 Branch: feature/content-private-layout-migration
 Related launcher: nusretm/mtn_launcher_app PR #65, stacked on Draft PR #64
-Status: PRIVATE-1A read-only dual-layout inspection verified on Windows; PRIVATE-1B planner defined below, implementation requires explicit approval. Physical migration/write switch NOT implemented.
+Status: PRIVATE-1A verified on Windows; PRIVATE-1B read-only migration planner implemented in source with 21 focused tests, Windows validation pending. Physical migration/write switch NOT implemented.
 
 ## Goal and boundary
 
@@ -47,9 +47,9 @@ Legacy Content Service:
 - The existing production `read()`, `publish()`, commit, rollback and activation paths deliberately still use `.mtn-content` / `.mtn-disabled` until PRIVATE-1B/1C are separately approved and safely implemented. Thus this is NOT a migration or a declaration that new paths are ready for production writes.
 - Added 10 test scenarios in `content_installation_manifest_file_system_test.dart`: missing, legacy, modern, both conflict, malformed modern, chat-only namespace, linked parent, ambiguous Windows-case paths, linked target and blocked non-directory segments/targets. User Windows evidence: `dart analyze`: no issues, manifest test suite 27 passed, activation/preflight regression 14 passed, `git diff --check origin/main...HEAD` clean, tracked working tree clean.
 
-## PRIVATE-1B — proposed read-only migration preflight and plan
+## PRIVATE-1B — read-only migration preflight and plan (source implemented, Windows validation pending)
 
-**Gate:** production implementation has not been authorized; this section is a design for review. Preserve PRIVATE-1A's current legacy-only `read()`/`publish()` and activation behavior.
+**Gate:** user approved PRIVATE-1B implementation. Only the read-only planner is implemented; PRIVATE-1C execution is NOT authorized. PRIVATE-1A's production legacy-only `read()`/`publish()` and activation behavior remain unchanged.
 
 - API: `MtnMinecraftContentInstallationManifestFileSystem.planPrivateLayoutMigration(installationRoot: ...)` (name to be finalized while implementing) produces an immutable plan value with validated resolved package root, original manifest SHA256/byte count, expected target manifest data, and an ordered list of disabled-file source → destination transformations. No directory creation, moves, writes, cache changes or manifest publication.
 - Precondition: inspect under Content Service's existing coordinated shared root lease; only a valid `legacy` layout with no modern manifest can produce a nonempty plan. `absent` yields a no-op classification; modern installations are already-current but any unsupported/mixed files still require explicit safety policy. Both locations occupied and invalid paths fail closed.
@@ -64,7 +64,16 @@ Legacy Content Service:
 - `dart test test/content_installation_manifest_file_system_test.dart`: 27 passed.
 - `dart test test/content_installation_activation_file_system_test.dart test/content_materialization_file_system_preflight_test.dart`: 14 passed.
 - `git diff --check origin/main...HEAD`: clean, `git status -sb`: feature branch up to date with origin and no local modifications.
-- PRIVATE-1B remains design-only pending explicit user approval. No merge/cleanup of Draft PR #90 and no Launcher package pin update.
+- PRIVATE-1B implementation now exists in source but has not been validated on Windows. No merge/cleanup of Draft PR #90 and no Launcher package pin update.
+### PRIVATE-1B implementation checkpoint (2026-11-02 — Windows verification pending)
+
+- Public `MtnMinecraftContentInstallationManifestFileSystem.planPrivateLayoutMigration(installationRoot: ...)` returns an immutable `MtnMinecraftContentInstallationManifestFileSystemMigrationPlan`: absent/alreadyModern/ready status, verified resolved root, source manifest length/SHA256, resulting manifest/SHA256 and an unmodifiable list of source/destination moves with source length/SHA256.
+- Read-only operation holds the existing Content Service coordinated shared root lease throughout physical path validation, legacy manifest inspection, and managed disabled file checks. `_inspectLayoutWithinCoordinator` is reused rather than acquiring a nested lease; the existing public `inspectLayout` delegates to the same internal inspection.
+- Accept only explicit managed `mods/<file>`, `resourcepacks/<file>`, `shaderpacks/<file>` or `.mtn-disabled/<kind>/<file>` paths; rewrite disabled paths only to `.mtn/disabled/<kind>/<file>`. Existing version/file ownership and enabled paths are unchanged. Reuse materialization path collision/Windows validation and physical `_inspectArtifact`, plus existing `MtnMinecraftContentFileIntegrity` for optional declared checksums.
+- Independently capture SHA256 of the disabled source bytes, even if upstream metadata has no hash. Require regular sources, missing destinations, unchanged file size/mtime across hashing, and unchanged manifest SHA256/length before returning.
+- Fail closed on both modern/legacy manifests, unexpected old manifest sibling/backup files, unmanaged or nested files in `.mtn-disabled`, missing/linked sources, unclaimed new content/disabled directories (including empty targets), invalid legacy paths or conflicting case aliases. `.mtn/chat` and its files are not accessed or modified.
+- The resulting plan is a snapshot only. PRIVATE-1C must acquire an exclusive root lock, verify all fingerprints and target occupancy again, and implement a journal/rollback before any mutation. PRIVATE-1C is not approved here.
+- Added `minecraft_content_service/test/content_installation_private_layout_plan_test.dart` with 21 focused test cases, including absent and modern classification, single/multiple inactive files and independent checksums, declared size/SHA mismatches, unknown files and recovery remnants, occupied targets, symlink safety, Windows case collisions and nonmutation. These are new, **not yet run on the user's Windows machine**.
 ## Narrow implementation checkpoints (approval gates)
 
 - PRIVATE-1A: central layout policy and **read-only** legacy/new manifest location inspection; no migration or writes. Regression tests for missing/legacy/new/both/link/case conflicts and reserved paths.

@@ -1,3 +1,11 @@
+## 2026-11-02 — PRIVATE-1B read-only migration planner implemented (Windows verification pending)
+
+- User approved PRIVATE-1B after PRIVATE-1A passed Windows `dart analyze`, 27 manifest tests and 14 activation/preflight tests, with a clean git diff and branch status.
+- Added `MtnMinecraftContentInstallationManifestFileSystem.planPrivateLayoutMigration` and its separate private-layout-plan part, returning immutable absent/alreadyModern/ready classification, original manifest SHA/length, proposed rewritten manifest SHA, and verified disabled-content move records (path/length/SHA). Uses existing shared root lease, layout inspection and materialization path/file-integrity checks.
+- Fail-closed checks include occupied `.mtn/content`/`.mtn/disabled`, symlinks, unknown `.mtn-content` recovery files, untracked `.mtn-disabled` content, missing/corrupt files, invalid paths and Windows case collisions. `.mtn/chat` remains untouched. All production read/publish/activation still target legacy directories; **no migration operation exists yet**.
+- 21 new focused tests added in `minecraft_content_service/test/content_installation_private_layout_plan_test.dart`; Windows analyzer/tests are pending. Next is PRIVATE-1C only after user validation and explicit approval, with exclusive revalidation and journaled recoverable execution.
+- Draft PR #90 stays open and no merge/cleanup or Launcher dependency update was performed. Details: docs/continuity/PLANNED_2026-11-02_CONTENT_PRIVATE_LAYOUT_MIGRATION.md.
+
 ## 2026-11-02 — PRIVATE-1A Windows verified; PRIVATE-1B migration planner awaiting approval
 
 - User pulled `feature/content-private-layout-migration` and ran `dart pub get`; `dart analyze`: no issues; manifest filesystem tests: 27/27; activation + materialization preflight tests: 14/14; `git diff --check origin/main...HEAD`: clean; `git status -sb`: clean and tracking origin.
