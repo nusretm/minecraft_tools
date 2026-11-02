@@ -125,33 +125,46 @@ class MtnMinecraftContentInstallationManifestFileSystem {
     final release = await _acquireMaterializationRootFor(root, policy, exclusive: false);
     try {
       await _assertRootStable(installationRoot, root);
-      final legacy = await _inspectLocation(root);
-      final modern = await _inspectLocationSegments(
-        root, const <String>[privateDirectoryName, privateContentDirectoryName],
-      );
-      if (legacy.exists && modern.exists) {
-        throw StateError('Legacy and modern installation manifests both exist; migration requires explicit conflict recovery.');
-      }
-      final location = modern.exists ? modern : legacy;
-      if (!location.exists) {
-        return const MtnMinecraftContentInstallationManifestFileSystemLayoutInspection(
-          kind: MtnMinecraftContentInstallationManifestFileSystemLayoutKind.absent,
-        );
-      }
-      final bytes = await location.target.readAsBytes();
-      return MtnMinecraftContentInstallationManifestFileSystemLayoutInspection(
-        kind: modern.exists
-            ? MtnMinecraftContentInstallationManifestFileSystemLayoutKind.modern
-            : MtnMinecraftContentInstallationManifestFileSystemLayoutKind.legacy,
-        manifest: MtnMinecraftContentInstallationManifest.decode(bytes),
-        manifestFile: location.target,
-        length: bytes.length,
-        sha256: sha256.convert(bytes).toString(),
-      );
+      return _inspectLayoutWithinCoordinator(root);
     } finally {
       release();
     }
   }
+
+  Future<MtnMinecraftContentInstallationManifestFileSystemLayoutInspection> _inspectLayoutWithinCoordinator(
+    Directory root,
+  ) async {
+    final legacy = await _inspectLocation(root);
+    final modern = await _inspectLocationSegments(
+      root, const <String>[privateDirectoryName, privateContentDirectoryName],
+    );
+    if (legacy.exists && modern.exists) {
+      throw StateError('Legacy and modern installation manifests both exist; migration requires explicit conflict recovery.');
+    }
+    final location = modern.exists ? modern : legacy;
+    if (!location.exists) {
+      return const MtnMinecraftContentInstallationManifestFileSystemLayoutInspection(
+        kind: MtnMinecraftContentInstallationManifestFileSystemLayoutKind.absent,
+      );
+    }
+    final bytes = await location.target.readAsBytes();
+    return MtnMinecraftContentInstallationManifestFileSystemLayoutInspection(
+      kind: modern.exists
+          ? MtnMinecraftContentInstallationManifestFileSystemLayoutKind.modern
+          : MtnMinecraftContentInstallationManifestFileSystemLayoutKind.legacy,
+      manifest: MtnMinecraftContentInstallationManifest.decode(bytes),
+      manifestFile: location.target,
+      length: bytes.length,
+      sha256: sha256.convert(bytes).toString(),
+    );
+  }
+
+  /// Build an immutable migration preflight, without altering either layout.
+  /// The resulting snapshot must be revalidated under an exclusive lease
+  /// before PRIVATE-1C may execute any migration.
+  Future<MtnMinecraftContentInstallationManifestFileSystemMigrationPlan> planPrivateLayoutMigration({
+    required Directory installationRoot,
+  }) => _buildPrivateLayoutMigrationPlan(installationRoot);
 
   Future<_ManifestReadSnapshot> _readSnapshotWithinCoordinator({
     required Directory installationRoot,
