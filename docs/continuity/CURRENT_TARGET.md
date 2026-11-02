@@ -1,3 +1,11 @@
+## 2026-11-02 — Simplified private-layout migration Windows analyzer and tests PASS
+
+- User updated `feature/content-private-layout-execution` through `e2d0ebe` on Windows. `cd minecraft_content_service; dart analyze`: **No issues found**.
+- Focused command over `content_installation_private_layout_plan_test.dart`, `content_installation_manifest_file_system_test.dart`, `content_installation_activation_file_system_test.dart`, `content_materialization_file_system_coordination_test.dart`, and `content_writer_os_lock_test.dart`: **83/83 passed** (`00:03 +83: All tests passed!`).
+- Launcher integration on its Draft PR #65 also passed `flutter analyze` and 10/10 focused tests after `flutter pub get` resolved Content Service at `e2d0ebe`.
+- These are focused tests, not a full-suite or real package smoke claim. **Next:** try a copy of an existing Windows Game Package with disabled content and a package already on the modern layout; confirm original data, Minecraft launch and .mtn/chat preservation. No changes to game data in these CI-like commands.
+- PR #91 remains Draft, no merge/cleanup until explicit user approval. Existing branch docs below retain the progression history; this section supersedes their earlier 'Windows pending' statements.
+
 ## 2026-11-02 — Simplified private layout migration source (Windows verification pending)
 
 - User requested to stop investing in journal/crash-recovery machinery and finish the two-folder change. On Draft PR #91 branch, removed journal codec/recovery inspector and focused tests; retained useful read-only migration planner and validated OS cooperative writer lock.
