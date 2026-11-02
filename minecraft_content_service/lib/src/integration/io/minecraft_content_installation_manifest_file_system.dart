@@ -243,10 +243,7 @@ class MtnMinecraftContentInstallationManifestFileSystem {
     bool published = false;
     try {
       await _assertRootStable(installationRoot, root);
-      if ((await _inspectLocation(root)).directory != null ||
-          await _privateLayoutDirectory(root.path, '.mtn-disabled') != null) {
-        throw StateError('Migrate legacy content before publishing a modern manifest.');
-      }
+      await _assertModernContentWriteReady(root, policy);
       var location = await _inspectModernLocation(root);
       if (location.exists) {
         final oldBytes = await location.target.readAsBytes();
