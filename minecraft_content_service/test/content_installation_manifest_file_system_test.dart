@@ -51,7 +51,7 @@ void main() {
     test('replacing manifest rollback restores exact original raw bytes', () async {
       final root = await _root();
       addTearDown(() => root.delete(recursive: true));
-      final manifestFile = await _manifestFile(root);
+      final manifestFile = await _modernManifestFile(root);
       final oldManifest = _manifest('a:v1');
       final previousBytes = const JsonEncoder.withIndent('    ').convert(oldManifest.toMap());
       await manifestFile.writeAsString(previousBytes);
@@ -71,7 +71,7 @@ void main() {
     test('replacement commit keeps new manifest and removes its backup', () async {
       final root = await _root();
       addTearDown(() => root.delete(recursive: true));
-      final oldFile = await _manifestFile(root);
+      final oldFile = await _modernManifestFile(root);
       await oldFile.writeAsString(_manifest('a:v1').toJson());
       final store = MtnMinecraftContentInstallationManifestFileSystem();
       final publication = await store.publish(installationRoot: root.absolute, manifest: _manifest('a:v2'));
@@ -85,7 +85,7 @@ void main() {
     test('corrupt existing manifest is never interpreted as absent or overwritten', () async {
       final root = await _root();
       addTearDown(() => root.delete(recursive: true));
-      final oldFile = await _manifestFile(root);
+      final oldFile = await _modernManifestFile(root);
       await oldFile.writeAsString('{invalid-json');
       final store = MtnMinecraftContentInstallationManifestFileSystem();
 
@@ -111,6 +111,7 @@ void main() {
       addTearDown(() => root.delete(recursive: true));
       addTearDown(() => outside.delete(recursive: true));
       final link = Link(p.join(root.path, '.mtn', 'content'));
+      await Directory(p.join(root.path, '.mtn')).create();
       try {
         await link.create(outside.path);
       } on FileSystemException {
@@ -125,7 +126,7 @@ void main() {
     test('changed published manifest blocks commit and rollback without losing the backup', () async {
       final root = await _root();
       addTearDown(() => root.delete(recursive: true));
-      final oldFile = await _manifestFile(root);
+      final oldFile = await _modernManifestFile(root);
       final original = _manifest('a:v1').toJson();
       await oldFile.writeAsString(original);
       final store = MtnMinecraftContentInstallationManifestFileSystem();
@@ -144,7 +145,7 @@ void main() {
     test('changed raw backup is never restored or silently cleaned', () async {
       final root = await _root();
       addTearDown(() => root.delete(recursive: true));
-      final oldFile = await _manifestFile(root);
+      final oldFile = await _modernManifestFile(root);
       final original = _manifest('a:v1').toJson();
       await oldFile.writeAsString(original);
       final store = MtnMinecraftContentInstallationManifestFileSystem();
@@ -454,6 +455,12 @@ void main() {
 }
 
 Future<Directory> _root() => Directory.systemTemp.createTemp('mtn-manifest-fs-');
+
+Future<File> _modernManifestFile(Directory root) async {
+  final dir = Directory(p.join(root.path, '.mtn', 'content'));
+  await dir.create(recursive: true);
+  return File(p.join(dir.path, 'installation.json'));
+}
 
 Future<File> _manifestFile(Directory root) async {
   final dir = Directory(p.join(root.path, '.mtn-content'));
