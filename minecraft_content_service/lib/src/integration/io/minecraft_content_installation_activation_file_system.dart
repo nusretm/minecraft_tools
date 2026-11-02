@@ -10,7 +10,7 @@ class MtnMinecraftContentInstallationActivationFileSystem {
     _manifest = MtnMinecraftContentInstallationManifestFileSystem(policy: this.policy);
   }
 
-  static const String inactiveDirectoryName = '.mtn-disabled';
+  static const String inactiveDirectoryName = '.mtn/disabled';
 
   final MtnMinecraftContentMaterializationFileSystemPolicy policy;
   late final MtnMinecraftContentMaterializationFileSystem _inspector;
@@ -30,6 +30,10 @@ class MtnMinecraftContentInstallationActivationFileSystem {
         <(File, File, MtnMinecraftContentInstallationArtifact)>[];
     MtnMinecraftContentInstallationManifestFileSystemPublication? publication;
     try {
+      if ((await _manifest._inspectLocation(root)).directory != null ||
+          await _manifest._privateLayoutDirectory(root.path, '.mtn-disabled') != null) {
+        throw StateError('Migrate legacy content before activation.');
+      }
       final _ManifestReadSnapshot snapshot = await _manifest._readSnapshotWithinCoordinator(
         installationRoot: installationRoot, lease: lease,
       );

@@ -159,3 +159,16 @@ Future<_MaterializationCoordinatedRootLease> _acquireMaterializationCoordinatedR
     release,
   );
 }
+
+Future<void> _assertModernContentWriteReady(
+  Directory root,
+  MtnMinecraftContentMaterializationFileSystemPolicy policy,
+) async {
+  final inspector = MtnMinecraftContentMaterializationFileSystem(policy: policy);
+  for (final name in const <String>['.mtn-content', '.mtn-disabled']) {
+    final entry = await inspector._resolveChild(root.path, name);
+    if (entry.inaccessible || entry.matches.isNotEmpty) {
+      throw StateError('Migrate legacy Content Service folders before managed writes.');
+    }
+  }
+}

@@ -74,9 +74,6 @@ enum MtnMinecraftContentInstallationManifestFileSystemLayoutKind {
 }
 
 /// Immutable read-only inspection of an existing manifest location.
-///
-/// The ordinary read/publish contract remains legacy-only until coordinated
-/// migration can update both the manifest and inactive managed artifact paths.
 final class MtnMinecraftContentInstallationManifestFileSystemLayoutInspection {
   const MtnMinecraftContentInstallationManifestFileSystemLayoutInspection({
     required this.kind,
@@ -100,7 +97,8 @@ class MtnMinecraftContentInstallationManifestFileSystem {
     _inspector = MtnMinecraftContentMaterializationFileSystem(policy: this.policy);
   }
 
-  static const String manifestDirectoryName = '.mtn-content';
+  static const String manifestDirectoryName = '.mtn/content';
+  static const String legacyManifestDirectoryName = '.mtn-content';
   static const String privateDirectoryName = '.mtn';
   static const String privateContentDirectoryName = 'content';
   static const String manifestFileName = 'installation.json';
@@ -159,18 +157,15 @@ class MtnMinecraftContentInstallationManifestFileSystem {
     );
   }
 
-  /// Inspect journal/recovery state without creating, moving or deleting files.
-  /// Normal writers are not yet journal-gated (PRIVATE-1C2).
-  Future<MtnMinecraftContentInstallationManifestFileSystemRecoveryInspection> inspectPrivateLayoutRecovery({
-    required Directory installationRoot,
-  }) => _detectPrivateLayoutRecovery(installationRoot);
-
-  /// Build an immutable migration preflight, without altering either layout.
-  /// The resulting snapshot must be revalidated under an exclusive lease
-  /// before PRIVATE-1C may execute any migration.
+  /// Inspect the original and proposed layout without changing the disk.
   Future<MtnMinecraftContentInstallationManifestFileSystemMigrationPlan> planPrivateLayoutMigration({
     required Directory installationRoot,
   }) => _buildPrivateLayoutMigrationPlan(installationRoot);
+
+  /// Move the old folders under .mtn. Caller must ensure the game is stopped.
+  Future<MtnMinecraftContentInstallationManifestFileSystemMigrationPlan> migratePrivateLayout({
+    required Directory installationRoot,
+  }) => _migratePrivateLayout(installationRoot);
 
   Future<_ManifestReadSnapshot> _readSnapshotWithinCoordinator({
     required Directory installationRoot,
@@ -186,7 +181,10 @@ class MtnMinecraftContentInstallationManifestFileSystem {
     final release = lease == null ? await _acquireMaterializationRootFor(root, policy, exclusive: false) : () {};
     try {
       await _assertRootStable(installationRoot, root);
-      final location = await _inspectLocation(root);
+      final legacy = await _inspectLocation(root);
+      final modern = await _inspectModernLocation(root);
+      if (legacy.exists && modern.exists) throw StateError('Both legacy and modern manifests exist.');
+      final location = modern.exists ? modern : legacy;
       if (!location.exists) return const _ManifestReadSnapshot(manifest: null, length: null, sha256: null);
       final bytes = await location.target.readAsBytes();
       return _ManifestReadSnapshot(
@@ -245,7 +243,11 @@ class MtnMinecraftContentInstallationManifestFileSystem {
     bool published = false;
     try {
       await _assertRootStable(installationRoot, root);
-      var location = await _inspectLocation(root);
+      if ((await _inspectLocation(root)).directory != null ||
+          await _privateLayoutDirectory(root.path, '.mtn-disabled') != null) {
+        throw StateError('Migrate legacy content before publishing a modern manifest.');
+      }
+      var location = await _inspectModernLocation(root);
       if (location.exists) {
         final oldBytes = await location.target.readAsBytes();
         MtnMinecraftContentInstallationManifest.decode(oldBytes);
@@ -259,9 +261,9 @@ class MtnMinecraftContentInstallationManifestFileSystem {
 
       if (location.directory == null) {
         final newDirectory = Directory(p.join(root.path, manifestDirectoryName));
-        await newDirectory.create();
+        await newDirectory.create(recursive: true);
         createdDirectory = true;
-        location = await _inspectLocation(root);
+        location = await _inspectModernLocation(root);
         if (location.directory == null || location.exists) {
           throw StateError('Manifest directory changed during creation.');
         }
@@ -276,7 +278,7 @@ class MtnMinecraftContentInstallationManifestFileSystem {
       }
 
       await _assertRootStable(installationRoot, root);
-      final freshLocation = await _inspectLocation(root);
+      final freshLocation = await _inspectModernLocation(root);
       if (freshLocation.exists != (previousTargetPath != null) ||
           _identity(freshLocation.target.path) != _identity(location.target.path)) {
         throw StateError('Manifest target changed before publication.');
@@ -493,7 +495,10 @@ class MtnMinecraftContentInstallationManifestFileSystem {
   }
 
   Future<_ManifestFileLocation> _inspectLocation(Directory root) =>
-      _inspectLocationSegments(root, const <String>[manifestDirectoryName]);
+      _inspectLocationSegments(root, const <String>[legacyManifestDirectoryName]);
+
+  Future<_ManifestFileLocation> _inspectModernLocation(Directory root) =>
+      _inspectLocationSegments(root, const <String>[privateDirectoryName, privateContentDirectoryName]);
 
   /// Resolve every ancestor separately using the materialization inspector's
   /// platform-sensitive case policy. Never resolve links or guess a path
@@ -541,7 +546,7 @@ class MtnMinecraftContentInstallationManifestFileSystem {
 
   Future<void> _validateRootAndParent(MtnMinecraftContentInstallationManifestFileSystemPublication publication) async {
     await _assertRootStable(publication.installationRoot, publication.resolvedInstallationRoot);
-    final location = await _inspectLocation(publication.resolvedInstallationRoot);
+    final location = await _inspectModernLocation(publication.resolvedInstallationRoot);
     if (location.directory == null || _identity(location.target.path) != _identity(publication.target.path)) {
       throw StateError('Manifest directory or physical path changed before finalization.');
     }
@@ -569,7 +574,7 @@ class MtnMinecraftContentInstallationManifestFileSystem {
 
   Future<void> _deleteManifestDirectoryIfEmpty(Directory root) async {
     try {
-      final location = await _inspectLocation(Directory(await root.resolveSymbolicLinks()));
+      final location = await _inspectModernLocation(Directory(await root.resolveSymbolicLinks()));
       final directory = location.directory;
       if (directory != null && await directory.list(followLinks: false).isEmpty) {
         await directory.delete();

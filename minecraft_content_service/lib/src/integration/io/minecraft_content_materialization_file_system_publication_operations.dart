@@ -74,6 +74,7 @@ extension MtnMinecraftContentMaterializationFileSystemPublicationOperations on M
 
     try {
       await _assertInstallationRootStable(preflight);
+      await _assertModernContentWriteReady(preflight.resolvedInstallationRoot, policy);
       await _assertTargetSnapshot(preflight, target, expectedState);
 
       final parent = await _ensureTargetParent(

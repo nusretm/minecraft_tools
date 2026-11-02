@@ -48,10 +48,12 @@ final class MtnMinecraftContentInstallationManifestFileSystemMigrationPlan {
 /// there is no second root coordinator or independent security scanner.
 extension _PrivateLayoutMigrationPlanner on MtnMinecraftContentInstallationManifestFileSystem {
   Future<MtnMinecraftContentInstallationManifestFileSystemMigrationPlan> _buildPrivateLayoutMigrationPlan(
-    Directory installationRoot,
-  ) async {
+    Directory installationRoot, {
+    _MaterializationCoordinatedRootLease? lease,
+  }) async {
     final root = await _resolveRoot(installationRoot);
-    final release = await _acquireMaterializationRootFor(root, policy, exclusive: false);
+    if (lease != null) lease.assertOwns(root, policy);
+    final release = lease == null ? await _acquireMaterializationRootFor(root, policy, exclusive: false) : () {};
     try {
       await _assertRootStable(installationRoot, root);
       final layout = await _inspectLayoutWithinCoordinator(root);

@@ -23,8 +23,7 @@ part 'minecraft_content_materialization_file_system_transaction.dart';
 part 'minecraft_content_materialization_file_system_transaction_operations.dart';
 part 'minecraft_content_installation_manifest_file_system.dart';
 part 'minecraft_content_installation_private_layout_plan.dart';
-part 'minecraft_content_installation_private_layout_journal.dart';
-part 'minecraft_content_installation_private_layout_recovery_inspection.dart';
+part 'minecraft_content_installation_private_layout_migration.dart';
 part 'minecraft_content_installation_activation_file_system.dart';
 part 'minecraft_content_materialization_file_system_coordination.dart';
 
@@ -153,7 +152,11 @@ class MtnMinecraftContentMaterializationFileSystem {
     List<MtnMinecraftContentMaterializationFileSystemPreflightIssue> issues,
   ) {
     for (final artifact in state.artifacts) {
-      if (_pathIdentity(artifact.relativePath).split('/').first == '.mtn-content') {
+      final segments = _pathIdentity(artifact.relativePath).split('/');
+      final inRestrictedPrivatePath = segments.first == '.mtn' &&
+          (segments.length < 4 || segments[1] != 'disabled' ||
+           !const <String>['mods', 'resourcepacks', 'shaderpacks'].contains(segments[2]));
+      if (segments.first == '.mtn-content' || inRestrictedPrivatePath) {
         issues.add(
           MtnMinecraftContentMaterializationFileSystemPreflightIssueInvalidTargetPath(
             scope: scope,
