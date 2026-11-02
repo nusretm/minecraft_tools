@@ -1,3 +1,10 @@
+## 2026-11-02 — PRIVATE-1B: 62 Windows tests passed, analyzer awaiting one-line fix recheck
+
+- User pulled commit `7ba1c49`: `dart analyze` emitted one `unawaited_return_in_try_block` warning at `minecraft_content_installation_manifest_file_system.dart:128`. The PRIVATE-1B focused suite passed 21/21; manifest tests 27/27; activation/preflight tests 14/14; 62 passing total. Git diff check and status clean.
+- Fixed warning via `return await _inspectLayoutWithinCoordinator(root)` under the existing try/finally root lease, preventing early lease release. Commit `46460f0`. Windows analyzer rerun remains pending.
+- Actual filesystem migration is not implemented; production read/publish and activation remain legacy-only, `.mtn/chat` untouched. PRIVATE-1C requires explicit user approval after revalidation. Draft PR #90 stays open, no merge/cleanup.
+- Plan/evidence: docs/continuity/PLANNED_2026-11-02_CONTENT_PRIVATE_LAYOUT_MIGRATION.md.
+
 ## 2026-11-02 — PRIVATE-1B read-only migration planner implemented (Windows verification pending)
 
 - User approved PRIVATE-1B after PRIVATE-1A passed Windows `dart analyze`, 27 manifest tests and 14 activation/preflight tests, with a clean git diff and branch status.

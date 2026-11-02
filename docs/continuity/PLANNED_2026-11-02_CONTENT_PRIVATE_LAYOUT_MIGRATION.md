@@ -4,7 +4,7 @@ Date: 2026-11-02
 Repository: nusretm/minecraft_tools
 Branch: feature/content-private-layout-migration
 Related launcher: nusretm/mtn_launcher_app PR #65, stacked on Draft PR #64
-Status: PRIVATE-1A verified on Windows; PRIVATE-1B read-only migration planner implemented in source with 21 focused tests, Windows validation pending. Physical migration/write switch NOT implemented.
+Status: PRIVATE-1A Windows verified; PRIVATE-1B 21 planner tests + 27 manifest tests + 14 activation/preflight tests passed on Windows. One analyzer await warning fixed in source; clean analyzer rerun pending. No migration/write switch implemented.
 
 ## Goal and boundary
 
@@ -73,7 +73,7 @@ Legacy Content Service:
 - Independently capture SHA256 of the disabled source bytes, even if upstream metadata has no hash. Require regular sources, missing destinations, unchanged file size/mtime across hashing, and unchanged manifest SHA256/length before returning.
 - Fail closed on both modern/legacy manifests, unexpected old manifest sibling/backup files, unmanaged or nested files in `.mtn-disabled`, missing/linked sources, unclaimed new content/disabled directories (including empty targets), invalid legacy paths or conflicting case aliases. `.mtn/chat` and its files are not accessed or modified.
 - The resulting plan is a snapshot only. PRIVATE-1C must acquire an exclusive root lock, verify all fingerprints and target occupancy again, and implement a journal/rollback before any mutation. PRIVATE-1C is not approved here.
-- Added `minecraft_content_service/test/content_installation_private_layout_plan_test.dart` with 21 focused test cases, including absent and modern classification, single/multiple inactive files and independent checksums, declared size/SHA mismatches, unknown files and recovery remnants, occupied targets, symlink safety, Windows case collisions and nonmutation. These are new, **not yet run on the user's Windows machine**.
+- Added `minecraft_content_service/test/content_installation_private_layout_plan_test.dart` with 21 focused test cases, including absent and modern classification, single/multiple inactive files and independent checksums, declared size/SHA mismatches, unknown files and recovery remnants, occupied targets, symlink safety, Windows case collisions and nonmutation. These are new, **executed on Windows: all 21 passed**.
 ## Narrow implementation checkpoints (approval gates)
 
 - PRIVATE-1A: central layout policy and **read-only** legacy/new manifest location inspection; no migration or writes. Regression tests for missing/legacy/new/both/link/case conflicts and reserved paths.
@@ -93,3 +93,10 @@ Legacy Content Service:
 ## Workflow
 
 Follow AGENTS.md and docs/WORKING_RULES.md: architecture first, narrow approved checkpoints, pure Dart no auto-format, validate with `cd D:\development\cross-platform\minecraft_tools`; `cd minecraft_content_service`; `dart pub get`; `dart analyze`; focused `dart test`; review git diff --check. Preserve user-local generated changes. Do not merge or modify Launcher dependency until user explicitly authorizes each stage.
+
+### PRIVATE-1B Windows verification and await correction (2026-11-02)
+
+- User pulled branch at `7ba1c49`. `dart test test/content_installation_private_layout_plan_test.dart`: **21 passed**; manifest filesystem tests: **27 passed**; activation/materialization preflight regression: **14 passed**. Total 62 passing tests, no failures.
+- `git diff --check origin/main...HEAD` clean; `git status -sb` clean, tracking origin. `dart analyze` reported only one `unawaited_return_in_try_block` warning in `minecraft_content_installation_manifest_file_system.dart:128`.
+- Root cause: `return _inspectLayoutWithinCoordinator(root)` inside a try/finally was missing `await`, so the shared root lease could release before asynchronous inspection completed. Replaced with `return await _inspectLayoutWithinCoordinator(root)` in commit `46460f0`; source/test logic otherwise unchanged.
+- **Follow-up gate:** Windows `dart analyze` clean and focused verification of the one-line correction remain pending. No migration/manifest write attempted. PRIVATE-1C remains unapproved; do not merge/cleanup.
