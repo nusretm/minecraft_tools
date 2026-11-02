@@ -4,7 +4,7 @@ Date: 2026-11-02
 Repository: nusretm/minecraft_tools
 Branch: feature/content-private-layout-migration
 Related launcher: nusretm/mtn_launcher_app PR #65, stacked on Draft PR #64
-Status: PRIVATE-1A read-only dual-layout manifest inspection implemented in source; Windows analysis/tests pending. Physical migration/write switch NOT implemented.
+Status: PRIVATE-1A read-only dual-layout inspection verified on Windows; PRIVATE-1B planner defined below, implementation requires explicit approval. Physical migration/write switch NOT implemented.
 
 ## Goal and boundary
 
@@ -39,14 +39,32 @@ Legacy Content Service:
 7. Recovery: crash/cancellation between each stage must either restore the original working installation or resume forward from a verified journal. No automatic rollback once a verified new manifest becomes the authoritative state unless reverse file moves can be fully validated. Repeated migration should be idempotent. No cross-process OS atomicity claims without proof.
 8. After upgrade, new installations/publishes target .mtn/content and new disable operations target .mtn/disabled. Reject unauthorized materialization into .mtn/content, .mtn/chat, or arbitrary .mtn descendants. The private Chat cache is never traversed by Content Service cleanup.
 
-## PRIVATE-1A implementation checkpoint (2026-11-02, Windows verification pending)
+## PRIVATE-1A implementation checkpoint (2026-11-02, Windows verified)
 
 - Added public `MtnMinecraftContentInstallationManifestFileSystem.inspectLayout(installationRoot: ...)` returning immutable `MtnMinecraftContentInstallationManifestFileSystemLayoutInspection` with kind absent/legacy/modern, optional decoded manifest, discovered physical manifest File, byte length, and SHA256. Read-only, no directory creation, move, write, or cleanup.
 - Inspects both `.mtn-content/installation.json` and `.mtn/content/installation.json` under the existing materialization shared root coordinator, validates requested root remains stable, and reuses the same case-policy-aware physical-child inspection as the existing manifest filesystem. Refuses duplicate live manifests and malformed JSON without falling back.
 - A single generic ancestor resolver now backs legacy and modern physical-path inspection; rejects inaccessible/ambiguous directory segments, link/file ancestors, and nonregular manifest targets. Reserved `.mtn/chat` can exist without being treated as a manifest or altered.
 - The existing production `read()`, `publish()`, commit, rollback and activation paths deliberately still use `.mtn-content` / `.mtn-disabled` until PRIVATE-1B/1C are separately approved and safely implemented. Thus this is NOT a migration or a declaration that new paths are ready for production writes.
-- Added 10 test scenarios in `content_installation_manifest_file_system_test.dart`: missing, legacy, modern, both conflict, malformed modern, chat-only namespace, linked parent, ambiguous Windows-case paths, linked target and blocked non-directory segments/targets. No assistant-local Dart SDK available; Windows tests/analyzer are required.
+- Added 10 test scenarios in `content_installation_manifest_file_system_test.dart`: missing, legacy, modern, both conflict, malformed modern, chat-only namespace, linked parent, ambiguous Windows-case paths, linked target and blocked non-directory segments/targets. User Windows evidence: `dart analyze`: no issues, manifest test suite 27 passed, activation/preflight regression 14 passed, `git diff --check origin/main...HEAD` clean, tracked working tree clean.
 
+## PRIVATE-1B — proposed read-only migration preflight and plan
+
+**Gate:** production implementation has not been authorized; this section is a design for review. Preserve PRIVATE-1A's current legacy-only `read()`/`publish()` and activation behavior.
+
+- API: `MtnMinecraftContentInstallationManifestFileSystem.planPrivateLayoutMigration(installationRoot: ...)` (name to be finalized while implementing) produces an immutable plan value with validated resolved package root, original manifest SHA256/byte count, expected target manifest data, and an ordered list of disabled-file source → destination transformations. No directory creation, moves, writes, cache changes or manifest publication.
+- Precondition: inspect under Content Service's existing coordinated shared root lease; only a valid `legacy` layout with no modern manifest can produce a nonempty plan. `absent` yields a no-op classification; modern installations are already-current but any unsupported/mixed files still require explicit safety policy. Both locations occupied and invalid paths fail closed.
+- Per artifact: accept only enabled `mods/<file>`, `resourcepacks/<file>` and `shaderpacks/<file>` or disabled `.mtn-disabled/<kind>/<file>` entries. Reject unknown relative paths, traversal, duplicate/case-colliding targets, unexpected .mtn roots and unsupported depths. Enabled paths are unchanged. Disabled paths rewrite to `.mtn/disabled/<kind>/<file>` in the derived manifest. Keep original version/file ownership and stored metadata.
+- Validate each managed disabled source using the already-existing materialization `_inspectArtifact` and file-integrity routines. Reject links, inaccessible parents, nonregular files, missing sources, destination occupancy or case aliases, and untracked files inside legacy private directories that cannot be safely accounted for. Do not touch `.mtn/chat`. If upstream artifact checksum is unavailable, compute and record a physical SHA256 for later revalidation rather than asserting unverifiable integrity.
+- The plan is a **snapshot, not an execution permit**. It carries source identities/digests and expected manifest SHA; PRIVATE-1C must acquire an exclusive root lease and repeat all relevant source/destination/manifest checks immediately before mutating anything, including no-running-game precondition enforced by the Launcher.
+- Test matrix: no-op missing/current layouts, legacy manifest with zero/one/multiple disabled artifacts, exact rewrite and byte identity, missing/modified source, digest mismatch, symlink/junctions, occupied or case-alias targets, malicious manifest paths, duplicate target paths, unknown legacy occupants and concurrent manifest publication. Explicitly assert no filesystem mutation for success OR failure.
+
+### PRIVATE-1A Windows acceptance (user evidence)
+
+- `dart pub get` completed; `dart analyze` reported no issues.
+- `dart test test/content_installation_manifest_file_system_test.dart`: 27 passed.
+- `dart test test/content_installation_activation_file_system_test.dart test/content_materialization_file_system_preflight_test.dart`: 14 passed.
+- `git diff --check origin/main...HEAD`: clean, `git status -sb`: feature branch up to date with origin and no local modifications.
+- PRIVATE-1B remains design-only pending explicit user approval. No merge/cleanup of Draft PR #90 and no Launcher package pin update.
 ## Narrow implementation checkpoints (approval gates)
 
 - PRIVATE-1A: central layout policy and **read-only** legacy/new manifest location inspection; no migration or writes. Regression tests for missing/legacy/new/both/link/case conflicts and reserved paths.
