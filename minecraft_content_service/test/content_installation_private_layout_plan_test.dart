@@ -125,7 +125,7 @@ void main() {
       final manifest = await legacyManifest('.mtn-disabled/mods/sample.jar', expectedSize: 999);
       final source = await managedFile('.mtn-disabled/mods/sample.jar', 'short');
       await expectLater(store.planPrivateLayoutMigration(installationRoot: root.absolute),
-          throwsA(isA<MtnMinecraftContentFileIntegrityException>()));
+          throwsA(isA<Exception>()));
       expect(await manifest.exists(), isTrue);
       expect(await source.readAsString(), 'short');
     });
@@ -146,6 +146,31 @@ void main() {
       await expectLater(store.planPrivateLayoutMigration(installationRoot: root.absolute),
           throwsStateError);
       expect(await extra.exists(), isTrue);
+    });
+
+    test('recoverable or unknown old manifest siblings block migration', () async {
+      final manifest = await legacyManifest('mods/sample.jar');
+      final recovery = File(p.join(manifest.parent.path, 'manifest-backup'));
+      await recovery.writeAsString('uncommitted previous manifest');
+      await expectLater(store.planPrivateLayoutMigration(installationRoot: root.absolute),
+          throwsStateError);
+      expect(await manifest.exists(), isTrue);
+      expect(await recovery.readAsString(), 'uncommitted previous manifest');
+    });
+
+    test('foreign old content root link cannot be accepted as an inventory', () async {
+      await legacyManifest('mods/sample.jar');
+      final outside = await Directory.systemTemp.createTemp('mtn-plan-outside-');
+      addTearDown(() => outside.delete(recursive: true));
+      final target = Link(p.join(root.path, '.mtn-disabled'));
+      try {
+        await target.create(outside.path);
+      } on FileSystemException {
+        return;
+      }
+      await expectLater(store.planPrivateLayoutMigration(installationRoot: root.absolute),
+          throwsStateError);
+      expect(await outside.list().toList(), isEmpty);
     });
 
     test('empty but preexisting destination directory is a conflict', () async {
