@@ -1,3 +1,10 @@
+## 2026-11-02 — PRIVATE-1A Windows verified; PRIVATE-1B migration planner awaiting approval
+
+- User pulled `feature/content-private-layout-migration` and ran `dart pub get`; `dart analyze`: no issues; manifest filesystem tests: 27/27; activation + materialization preflight tests: 14/14; `git diff --check origin/main...HEAD`: clean; `git status -sb`: clean and tracking origin.
+- Therefore read-only `inspectLayout` is verified without any migration. Existing production read/publish/activation still use legacy paths and no files have been moved.
+- Proposed PRIVATE-1B: immutable, **read-only** migration plan and preflight under shared Content Service root lease. Validate legacy manifest and all managed disabled source bytes, destination nonoccupancy, case-sensitive/insensitive path safety, transformed relativePath and expected manifest digest. Snapshot never grants permission to mutate; PRIVATE-1C must exclusively revalidate immediately before migration. No implementation without explicit approval.
+- Updated docs/continuity/PLANNED_2026-11-02_CONTENT_PRIVATE_LAYOUT_MIGRATION.md; GitHub Draft PR #90 stays open. Launcher PR #65 and #64 remain Draft, dependencies not changed. No merge/cleanup.
+
 ## 2026-11-02 — PRIVATE-1A dual-layout manifest inspector in source; Windows validation pending
 
 - In minecraft_tools PR #90 branch feature/content-private-layout-migration, read-only `MtnMinecraftContentInstallationManifestFileSystem.inspectLayout` checks both legacy .mtn-content/installation.json and modern .mtn/content/installation.json under the existing coordinated read lease. Returns immutable kind/manifest/file/byte-length/SHA metadata or fails closed on both locations, linked/ambiguous occupants, and invalid manifest JSON.
