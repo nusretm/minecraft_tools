@@ -57,14 +57,14 @@ extension _PrivateLayoutMigrationPlanner on MtnMinecraftContentInstallationManif
       final layout = await _inspectLayoutWithinCoordinator(root);
       final legacyLocation = await _inspectLocation(root);
       final legacyDisabled = await _privateLayoutDirectory(root.path, '.mtn-disabled');
-      final private = await _privateLayoutDirectory(root.path, privateDirectoryName);
+      final private = await _privateLayoutDirectory(root.path, MtnMinecraftContentInstallationManifestFileSystem.privateDirectoryName);
 
       if (layout.kind == MtnMinecraftContentInstallationManifestFileSystemLayoutKind.absent) {
         if (legacyDisabled != null || legacyLocation.directory != null) {
           throw StateError('Private layout contains legacy data without a manifest.');
         }
         if (private != null) {
-          final content = await _privateLayoutDirectory(private.path, privateContentDirectoryName);
+          final content = await _privateLayoutDirectory(private.path, MtnMinecraftContentInstallationManifestFileSystem.privateContentDirectoryName);
           final disabled = await _privateLayoutDirectory(private.path, 'disabled');
           if (content != null || disabled != null) {
             throw StateError('Private layout contains unclaimed Content Service directories.');
@@ -106,7 +106,7 @@ extension _PrivateLayoutMigrationPlanner on MtnMinecraftContentInstallationManif
       // Until PRIVATE-1C provides a journal, even an empty target folder
       // cannot be assumed to belong to this migration.
       if (private != null) {
-        if (await _privateLayoutDirectory(private.path, privateContentDirectoryName) != null ||
+        if (await _privateLayoutDirectory(private.path, MtnMinecraftContentInstallationManifestFileSystem.privateContentDirectoryName) != null ||
             await _privateLayoutDirectory(private.path, 'disabled') != null) {
           throw StateError('Migration destination is already occupied.');
         }
@@ -238,7 +238,7 @@ extension _PrivateLayoutMigrationPlanner on MtnMinecraftContentInstallationManif
     }
     final entries = await directory.list(followLinks: false).toList();
     if (entries.length != 1 ||
-        p.basename(entries.single.path) != manifestFileName ||
+        p.basename(entries.single.path) != MtnMinecraftContentInstallationManifestFileSystem.manifestFileName ||
         await FileSystemEntity.type(entries.single.path, followLinks: false) != FileSystemEntityType.file) {
       throw StateError('Legacy manifest directory contains unowned or recoverable files.');
     }
