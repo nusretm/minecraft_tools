@@ -4,7 +4,7 @@ Date: 2026-11-02
 Repository: nusretm/minecraft_tools
 Branch: feature/content-private-layout-migration
 Related launcher: nusretm/mtn_launcher_app PR #65, stacked on Draft PR #64
-Status: PRIVATE-1A Windows verified; PRIVATE-1B 21 planner tests + 27 manifest tests + 14 activation/preflight tests passed on Windows. One analyzer await warning fixed in source; clean analyzer rerun pending. No migration/write switch implemented.
+Status: PRIVATE-1A and PRIVATE-1B Windows verified. PRIVATE-1B: 21 plan tests + 27 manifest tests + 14 activation/preflight regressions passed; post-fix analyzer clean and 48/48 focused tests passed. PRIVATE-1C awaits explicit approval; no migration/write switch implemented.
 
 ## Goal and boundary
 
@@ -100,3 +100,10 @@ Follow AGENTS.md and docs/WORKING_RULES.md: architecture first, narrow approved 
 - `git diff --check origin/main...HEAD` clean; `git status -sb` clean, tracking origin. `dart analyze` reported only one `unawaited_return_in_try_block` warning in `minecraft_content_installation_manifest_file_system.dart:128`.
 - Root cause: `return _inspectLayoutWithinCoordinator(root)` inside a try/finally was missing `await`, so the shared root lease could release before asynchronous inspection completed. Replaced with `return await _inspectLayoutWithinCoordinator(root)` in commit `46460f0`; source/test logic otherwise unchanged.
 - **Follow-up gate:** Windows `dart analyze` clean and focused verification of the one-line correction remain pending. No migration/manifest write attempted. PRIVATE-1C remains unapproved; do not merge/cleanup.
+
+### PRIVATE-1B final Windows acceptance (2026-11-02)
+
+- At updated branch HEAD `b5cb3e9`, user reran `dart analyze` after the shared-coordinator `return await` correction: **No issues found**.
+- Focused repeat of `test/content_installation_private_layout_plan_test.dart` and `test/content_installation_manifest_file_system_test.dart`: **48 tests passed** (21 plan + 27 manifest). Previously, 14 activation/materialization preflight regressions also passed at the earlier implementation HEAD; those 14 tests were not rerun in this final follow-up.
+- `git diff --check origin/main...HEAD`: clean. `git status -sb`: clean worktree tracking `origin/feature/content-private-layout-migration`.
+- **PRIVATE-1B is accepted/complete.** The plan remains read-only; no filesystem migration, Content Service new-path writes, Launcher dependency update, merge or cleanup occurred. PRIVATE-1C journaled execution requires a separate explicit implementation approval.

@@ -1,3 +1,11 @@
+## 2026-11-02 — PRIVATE-1B Windows verified and closed; PRIVATE-1C is next approval gate
+
+- User pulled Content Service branch at `b5cb3e9`, reran `dart analyze`: **No issues found**; combined focused private-layout and manifest tests: **48/48 passed**. Prior activation/materialization preflight regression tests: **14/14 passed** before the await fix (not repeated in this final run).
+- `git diff --check origin/main...HEAD`: clean; tracked branch working tree clean. Corrective `return await _inspectLayoutWithinCoordinator(root)` now validated.
+- PRIVATE-1A and PRIVATE-1B accepted. Existing production manifest read/publish and inactive-content activation remain on legacy `.mtn-content`/`.mtn-disabled`; read-only migration planner makes no changes to files or `.mtn/chat`.
+- PRIVATE-1C next: explicitly approved journaled migration with exclusive lease, verified source digests, collision checks and rollback/recovery. No code to execute migration until user approves; PR #90 stays Draft and no merge/cleanup or Launcher dependency changes.
+- Continuity plan: docs/continuity/PLANNED_2026-11-02_CONTENT_PRIVATE_LAYOUT_MIGRATION.md.
+
 ## 2026-11-02 — PRIVATE-1B: 62 Windows tests passed, analyzer awaiting one-line fix recheck
 
 - User pulled commit `7ba1c49`: `dart analyze` emitted one `unawaited_return_in_try_block` warning at `minecraft_content_installation_manifest_file_system.dart:128`. The PRIVATE-1B focused suite passed 21/21; manifest tests 27/27; activation/preflight tests 14/14; 62 passing total. Git diff check and status clean.
