@@ -1,3 +1,10 @@
+## 2026-11-02 — PRIVATE-1C0 Windows accepted (79 tests); PRIVATE-1C1 awaiting approval
+
+- User verified `feature/content-private-layout-execution` at head `7eb675d`: `dart analyze` no issues; 17 journal/recovery tests, 48 planner/manifest tests and 14 activation/preflight regressions passed (79/79 total). `git diff --check origin/main...HEAD` and git working tree clean.
+- PRIVATE-1C0 is complete: versioned journal codec and read-only `inspectPrivateLayoutRecovery()` classify absent/legacy/modern/recoveryRequired/blocked, journal first with fail-closed conflict handling. No journal writing, data copying, automatic recovery, migration cutover, cleanup, or changed manifest read/publish/activation paths.
+- PRIVATE-1C1 entry gate: implement and verify cooperative OS-backed cross-process ownership for every relevant Content Service writer, including safe lock location and Windows contention/failure behavior. Only after this gate may journaled staging on disposable folders be added. Launcher separately checks game sessions.
+- Draft PR #91 remains open and unmerged; Launcher Draft PR #64/#65 unchanged, preserve user pubspec.lock. Plan: docs/continuity/PLANNED_2026-11-02_CONTENT_PRIVATE_LAYOUT_EXECUTION.md.
+
 ## 2026-11-02 — PRIVATE-1C0 journal codec and read-only recovery inspection implemented (Windows pending)
 
 - User explicitly approved PRIVATE-1C0 implementation. In `feature/content-private-layout-execution` Draft PR #91, added versioned immutable migration journal model/codec with schema/phase, source and target manifest fingerprints, safe artifact move metadata and payload SHA256 checksum. No production migration writes exist.

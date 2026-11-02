@@ -4,7 +4,7 @@ Date: 2026-11-02
 Repository: nusretm/minecraft_tools
 Branch: feature/content-private-layout-execution
 Base: main at aaa8b904bc7589d7e9faf5940f0dab9b157db16e (PRIVATE-1A/1B merged as PR #90)
-Status: PRIVATE-1C0 journal codec and READ-ONLY recovery inspection implemented in source (Windows analyze/tests PENDING). Migration copying, lock acquisition, cutover, cleanup and modern production read/write routing NOT implemented.
+Status: PRIVATE-1C0 journal codec and READ-ONLY recovery inspection Windows verified: dart analyze clean, 17+48+14=79 tests passed, diff/status clean. PRIVATE-1C1 is the next separate approval gate; migration copying, cross-process lock, cutover, cleanup and modern production read/write routing NOT implemented.
 Related: Launcher Draft PR #64 Logs/Chat and Draft PR #65 .mtn path contract remain untouched.
 
 ## Target layout and invariants
@@ -81,7 +81,7 @@ Cleanup is a separate retryable step: remove only verified journal-listed old ar
 
 ## Implementation slices and explicit gates
 
-PRIVATE-1C0 (implemented, Windows verification pending):
+PRIVATE-1C0 (verified complete):
   Durable journal model/codec, read-only journal/phase detection, safe path and unexpected-state classification, and proof/decision for cross-process ownership. No file copies, directory creation, manifest writes or moves.
 
 PRIVATE-1C1:
@@ -104,8 +104,18 @@ PRIVATE-2 in Launcher repository, separate gate:
 - **Important boundary:** `recoveryRequired` means an inspected, checksum-valid journal exists; it DOES NOT prove physical manifest/file integrity or guarantee automatic recovery. PRIVATE-1C2 must revalidate all physical states and journal phase transitions under exclusive ownership. A journal SHA256 checksum detects accidental alteration, not malicious forgery.
 - The normal manifest `read()`, `publish()`, activation and materialization callers are NOT yet journal-gated or changed to modern locations. Therefore no production writer should be permitted to migrate until PRIVATE-1C2 integrates this detection. This is a read-only diagnostic interface, not migration execution.
 - Cross-process locking strategy decision: require a COOPERATIVE OS-backed lock (e.g. Dart RandomAccessFile.lock or a verified native equivalent) shared by **all** Content Service writers, in addition to the existing in-process root gate. Lock file location, symlink-safe creation, Windows/macOS/Linux semantics, timeout/error handling and separate-process contention need validation before PRIVATE-1C1 writes anything. Launcher game-process gate is independently required. This document does NOT claim an OS lock has been implemented or tested.
-- Added `test/content_installation_private_layout_recovery_test.dart` with 17 focused cases covering journal roundtrip/integrity/version, invalid relative paths, prepared/copy state, no-op/chat-only state, modern/legacy, dual manifests with and without journal, invalid root/checksum, orphan paths, unknown occupants and symlink refusal. Tests build throwaway fixture folders; production inspection stays read-only. These tests have NOT been run on Windows yet.
+- Added `test/content_installation_private_layout_recovery_test.dart` with 17 focused cases covering journal roundtrip/integrity/version, invalid relative paths, prepared/copy state, no-op/chat-only state, modern/legacy, dual manifests with and without journal, invalid root/checksum, orphan paths, unknown occupants and symlink refusal. Tests build throwaway fixture folders; production inspection stays read-only. User Windows run: 17 recovery tests passed; 48 manifest/plan tests and 14 activation/materialization preflight regressions also passed; analyzer had no issues.
 - **Approval checkpoint:** PRIVATE-1C0 tests/analyzer and diff check must pass before preparing PRIVATE-1C1. PRIVATE-1C1 remains separately gated; no merge/cleanup or Launcher dependency change.
+## PRIVATE-1C0 Windows acceptance and PRIVATE-1C1 entry conditions (2026-11-02)
+
+- User fetched branch head `7eb675d`, ran `dart analyze`: **No issues found**.
+- `test/content_installation_private_layout_recovery_test.dart`: **17 passed**.
+- Combined `test/content_installation_private_layout_plan_test.dart` + `test/content_installation_manifest_file_system_test.dart`: **48 passed**.
+- Combined activation and materialization preflight test files: **14 passed**, for **79 focused tests total**.
+- `git diff --check origin/main...HEAD` and tracked working tree clean. **PRIVATE-1C0 is verified and closed**. The above verification was performed by the user on Windows, not remotely by assistant.
+- C1 entry sequence: FIRST validate an OS-backed, cooperative interprocess writer lock that all Content Service write paths will share with migration. Verify Windows single-process and separate-process contention and failures on disposable roots, symlink and case-collision resistance, no lock inversion with the in-memory root lease. This lock must not be assumed to stop running Minecraft games; Launcher checks this separately.
+- Only AFTER lock validation may PRIVATE-1C1 acquire ownership, persist a recoverable journal before copying, write staged files, and verify their SHA256 while leaving all legacy source/manifest bytes intact. No cutover or cleanup in PRIVATE-1C1. Existing production operations must be journal-gated before enabling mutation against real installations.
+- PRIVATE-1C1 is not yet authorized; PR #91 stays Draft. No merges, no Launcher dependency change, and no game data mutation performed.
 ## Verification discipline
 
 Follow AGENTS.md and docs/WORKING_RULES.md; no dart format for pure Dart unless requested. Each implementation slice requires dart analyze, focused dart test, manifest/materialization/activation regression, git diff --check, and Windows test evidence. Real Game Package data must not be mutated until disposable-fixture and process-kill recovery checks pass.
