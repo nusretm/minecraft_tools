@@ -1,3 +1,7 @@
+## 2026-11-03 — CONTENT-REPAIR Windows validated; squash merge approved
+
+User ran `dart pub get`, `dart analyze` (**No issues found**), and four focused test files (reconciliation, preflight, materialization, RemVibe installation): **60/60 passed**. Linked Launcher feature passed `flutter analyze`, **2/2 installer tests**, Windows Release build, and live launch on the second PC after repairing the missing JAR. User explicitly approved squash merge + cleanup for Content Service PR #92 and Launcher PR #68. Do not change user-local `pubspec.lock` or existing stashes. Launcher provisional dependency SHA must be re-pinned to the resulting Content Service squash SHA before merging Launcher.
+
 ## 2026-11-03 — Missing managed content repair (Draft)
 
 A second Windows client reproduces a missing JAR listed in `.mtn/content/installation.json`:
