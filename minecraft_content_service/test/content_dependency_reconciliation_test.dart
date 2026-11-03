@@ -76,6 +76,47 @@ void main() {
       expect(desiredRoot.direct, isTrue);
     });
 
+    test('explicit missing-file repair reinstalls the same managed version only', () {
+      final installed = _version('a:v1', _content('a'));
+      final desiredVersion = _version('a:v1', _content('a'));
+      final current = MtnMinecraftContentDependencyInstalledState(
+        versions: <MtnMinecraftContentVersion>[installed],
+      );
+      final desired = _desired(<MtnMinecraftContentDependencyInstallPlan>[
+        _plan(desiredVersion, <MtnMinecraftContentVersion>[desiredVersion]),
+      ]);
+      final service = MtnMinecraftContentService();
+
+      final normal = service.reconcileDependencyState(current, desired);
+      expect(normal.retains, hasLength(1));
+      expect(normal.replacements, isEmpty);
+
+      final repair = service.reconcileDependencyState(
+        current, desired, repairVersionKeys: <String>{'a:v1'},
+      );
+      expect(repair.retains, isEmpty);
+      expect(repair.replacements, hasLength(1));
+      expect(repair.replacements.single.isRepair, isTrue);
+      expect(repair.replacements.single.current, same(installed));
+      expect(repair.replacements.single.desired.version, same(desiredVersion));
+      expect(repair.changesRequired, isTrue);
+
+      expect(
+        () => service.reconcileDependencyState(
+          current, desired, repairVersionKeys: <String>{'not-installed'},
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => MtnMinecraftContentDependencyReconciliationReplacement(
+          current: installed,
+          desired: repair.replacements.single.desired,
+          isRepair: false,
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('installs every desired version when current state is empty', () {
       final root = _version('a:v1', _content('a'));
       final dependency = _version('b:v1', _content('b'));

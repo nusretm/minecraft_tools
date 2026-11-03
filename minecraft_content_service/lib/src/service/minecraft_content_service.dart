@@ -236,9 +236,12 @@ class MtnMinecraftContentService {
 
   MtnMinecraftContentDependencyReconciliationPlan reconcileDependencyState(
     MtnMinecraftContentDependencyInstalledState current,
-    MtnMinecraftContentDependencyDesiredState desired,
-  ) {
-    return const MtnMinecraftContentDependencyReconciler().reconcile(current, desired);
+    MtnMinecraftContentDependencyDesiredState desired, {
+    Set<String> repairVersionKeys = const <String>{},
+  }) {
+    return const MtnMinecraftContentDependencyReconciler().reconcile(
+      current, desired, repairVersionKeys: repairVersionKeys,
+    );
   }
 
   MtnMinecraftContentFileSelectionPlan selectReconciliationFiles(
