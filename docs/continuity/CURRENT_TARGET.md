@@ -1,3 +1,12 @@
+## 2026-11-03 — Missing managed content repair (Draft)
+
+A second Windows client reproduces a missing JAR listed in `.mtn/content/installation.json`:
+`mods/aaron-mod-3.0.1+26.1.2.jar`. Initial preflight rejects it as retained-missing.
+Feature branch `feature/content-missing-managed-repair` adds read-only missing-managed detection and explicit
+same-version repair through the existing RemVibe and coordinated installation
+pipeline; no manifest deletion or SSL bypass. Tests and real Windows validation
+pending; see `docs/continuity/PLANNED_2026-11-03_CONTENT_MISSING_MANAGED_REPAIR.md`. Do not merge before review.
+
 ## 2026-11-02 — Simplified private-layout migration Windows analyzer and tests PASS
 
 - User updated `feature/content-private-layout-execution` through `e2d0ebe` on Windows. `cd minecraft_content_service; dart analyze`: **No issues found**.

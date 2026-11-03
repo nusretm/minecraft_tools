@@ -19,13 +19,16 @@ class MtnMinecraftContentDependencyReconciliationReplacement {
   MtnMinecraftContentDependencyReconciliationReplacement({
     required this.current,
     required this.desired,
+    this.isRepair = false,
   }) {
     if (current.content.key != desired.version.content.key) throw ArgumentError.value(desired, 'desired', 'Replacement versions must belong to the same logical content.');
-    if (current.key == desired.version.key) throw ArgumentError.value(desired, 'desired', 'Replacement versions must have different version keys.');
+    if ((current.key == desired.version.key) != isRepair) throw ArgumentError.value(desired, 'desired', 'Only an explicit repair may reinstall the same version key.');
   }
 
   final MtnMinecraftContentVersion current;
   final MtnMinecraftContentDependencyDesiredVersion desired;
+  /// Reinstalls a missing managed artifact without changing its version identity.
+  final bool isRepair;
 }
 
 class MtnMinecraftContentDependencyReconciliationPlan {

@@ -33,6 +33,33 @@ class MtnMinecraftContentMaterializationFileSystem {
 
   final MtnMinecraftContentMaterializationFileSystemPolicy policy;
 
+  /// Find genuinely missing manifest-owned files without mutating the package.
+  /// Link, inaccessible, ambiguous, and invalid paths are never auto-repaired.
+  Future<Set<String>> missingManagedVersionKeys({
+    required Directory installationRoot,
+    required MtnMinecraftContentInstallationState installation,
+  }) async {
+    if (!p.isAbsolute(installationRoot.path) || !await installationRoot.exists()) {
+      throw ArgumentError.value(installationRoot.path, 'installationRoot', 'Installation root must be an existing absolute directory.');
+    }
+    final root = Directory(await installationRoot.resolveSymbolicLinks());
+    final issues = <MtnMinecraftContentMaterializationFileSystemPreflightIssue>[];
+    _validateStatePaths(installation, MtnMinecraftContentMaterializationFileSystemStateScope.current, issues);
+    final missing = <String>{};
+    for (final artifact in installation.artifacts) {
+      final state = await _inspectArtifact(
+        root, artifact, MtnMinecraftContentMaterializationFileSystemStateScope.current, issues,
+      );
+      if (state.entityType == MtnMinecraftContentMaterializationFileSystemEntityType.missing) {
+        missing.add(artifact.version.key);
+      }
+    }
+    if (issues.isNotEmpty) {
+      throw StateError('Managed content paths are unsafe; refusing automatic repair.');
+    }
+    return Set<String>.unmodifiable(missing);
+  }
+
   Future<MtnMinecraftContentMaterializationFileSystemPreflight> preflight({
     required MtnMinecraftContentMaterializationPlan plan,
     required Directory installationRoot,

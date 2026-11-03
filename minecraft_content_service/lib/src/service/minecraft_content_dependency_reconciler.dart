@@ -7,8 +7,9 @@ class MtnMinecraftContentDependencyReconciler {
 
   MtnMinecraftContentDependencyReconciliationPlan reconcile(
     MtnMinecraftContentDependencyInstalledState current,
-    MtnMinecraftContentDependencyDesiredState desired,
-  ) {
+    MtnMinecraftContentDependencyDesiredState desired, {
+    Set<String> repairVersionKeys = const <String>{},
+  }) {
     if (!desired.installable) throw StateError('Dependency desired state must be installable before reconciliation.');
 
     final currentByContentKey = <String, MtnMinecraftContentVersion>{};
@@ -30,6 +31,14 @@ class MtnMinecraftContentDependencyReconciler {
       }
     }
 
+    // Reject stale/unowned repair requests rather than silently skipping them.
+    final desiredKeys = desired.versions.map((entry) => entry.version.key).toSet();
+    for (final key in repairVersionKeys) {
+      if (!currentByVersionKey.containsKey(key) || !desiredKeys.contains(key)) {
+        throw ArgumentError.value(key, 'repairVersionKeys', 'Repair requires an installed, still-desired exact version.');
+      }
+    }
+
     final installs = <MtnMinecraftContentDependencyDesiredVersion>[];
     final retains = <MtnMinecraftContentDependencyDesiredVersion>[];
     final replacements = <MtnMinecraftContentDependencyReconciliationReplacement>[];
@@ -41,7 +50,8 @@ class MtnMinecraftContentDependencyReconciler {
         continue;
       }
 
-      if (currentVersion.key == desiredVersion.version.key) {
+      if (currentVersion.key == desiredVersion.version.key &&
+          !repairVersionKeys.contains(currentVersion.key)) {
         retains.add(desiredVersion);
         continue;
       }
@@ -50,6 +60,7 @@ class MtnMinecraftContentDependencyReconciler {
         MtnMinecraftContentDependencyReconciliationReplacement(
           current: currentVersion,
           desired: desiredVersion,
+          isRepair: currentVersion.key == desiredVersion.version.key,
         ),
       );
     }

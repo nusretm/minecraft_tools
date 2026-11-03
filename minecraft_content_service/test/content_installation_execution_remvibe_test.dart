@@ -91,6 +91,89 @@ void main() {
       expect((await fixture.manifests.read(installationRoot: fixture.root))!.installationState.artifacts.single.version.key, 'a:v1');
     });
 
+    test('repairs only a missing manifest-owned JAR without changing retained content', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final repairedBytes = <int>[4, 3, 2, 1];
+      final retainedBytes = <int>[9, 8, 7];
+      var requests = 0;
+      final server = await _server((request) async {
+        requests++;
+        request.response.add(repairedBytes);
+        await request.response.close();
+      });
+      addTearDown(() => server.close(force: true));
+      final a = _version('a:v1', 'a', 'a.jar',
+        'http://127.0.0.1:${server.port}/repair', bytes: repairedBytes);
+      final b = _version('b:v1', 'b', 'b.jar',
+        'https://unused.example/b.jar', bytes: retainedBytes);
+      final state = _state(<MtnMinecraftContentInstallationArtifact>[
+        _artifact(a, 'mods/a.jar'), _artifact(b, 'mods/b.jar'),
+      ]);
+      await fixture.existing(state, <String, List<int>>{'mods/b.jar': retainedBytes});
+
+      final missing = await MtnMinecraftContentMaterializationFileSystem()
+          .missingManagedVersionKeys(installationRoot: fixture.root, installation: state);
+      expect(missing, <String>{'a:v1'});
+      final plan = await _plan(
+        state, <MtnMinecraftContentVersion>[a, b],
+        <String, String>{'a:v1': 'mods/a.jar'},
+        repairVersionKeys: missing,
+      );
+      expect(plan.download.items, hasLength(1));
+      expect(plan.replacements.single.replacement.isRepair, isTrue);
+      expect(plan.retains.single.artifact.version.key, 'b:v1');
+
+      await fixture.execution(plan).execute().timeout(const Duration(seconds: 10));
+      expect(requests, 1);
+      expect(await fixture.read('mods/a.jar'), repairedBytes);
+      expect(await fixture.read('mods/b.jar'), retainedBytes);
+      final manifest = await fixture.manifests.read(installationRoot: fixture.root);
+      expect(manifest!.installationState.artifacts.map((a) => a.version.key),
+          containsAll(<String>['a:v1', 'b:v1']));
+      expect(await MtnMinecraftContentMaterializationFileSystem()
+          .missingManagedVersionKeys(installationRoot: fixture.root,
+            installation: manifest.installationState), isEmpty);
+    });
+
+    test('failed missing-file repair leaves existing manifest and healthy JAR unchanged', () async {
+      final fixture = await _fixture();
+      addTearDown(fixture.dispose);
+      final correct = <int>[1, 2, 3, 4];
+      final healthy = <int>[5, 6];
+      final server = await _server((request) async {
+        request.response.add(<int>[0, 0, 0, 0]);
+        await request.response.close();
+      });
+      addTearDown(() => server.close(force: true));
+      final a = _version('a:v1', 'a', 'a.jar',
+        'http://127.0.0.1:${server.port}/invalid', bytes: correct);
+      final b = _version('b:v1', 'b', 'b.jar',
+        'https://unused.example/b.jar', bytes: healthy);
+      final state = _state(<MtnMinecraftContentInstallationArtifact>[
+        _artifact(a, 'mods/a.jar'), _artifact(b, 'mods/b.jar'),
+      ]);
+      await fixture.existing(state, <String, List<int>>{'mods/b.jar': healthy});
+      final missing = await MtnMinecraftContentMaterializationFileSystem()
+          .missingManagedVersionKeys(installationRoot: fixture.root, installation: state);
+      final plan = await _plan(
+        state, <MtnMinecraftContentVersion>[a, b],
+        <String, String>{'a:v1': 'mods/a.jar'},
+        repairVersionKeys: missing,
+      );
+      await expectLater(
+        fixture.execution(plan, maxErrorCount: 2).execute().timeout(const Duration(seconds: 10)),
+        throwsA(isA<MtnMinecraftContentInstallationExecutionRemVibeException>()
+          .having((e) => e.failure, 'failure',
+            MtnMinecraftContentInstallationExecutionRemVibeFailure.download)),
+      );
+      expect(await File(p.join(fixture.root.path, 'mods', 'a.jar')).exists(), isFalse);
+      expect(await fixture.read('mods/b.jar'), healthy);
+      final persisted = await fixture.manifests.read(installationRoot: fixture.root);
+      expect(persisted!.installationState.artifacts.map((a) => a.version.key),
+          containsAll(<String>['a:v1', 'b:v1']));
+    });
+
     test('empty materialization plan publishes empty manifest without a download job', () async {
       final fixture = await _fixture();
       addTearDown(fixture.dispose);
@@ -653,8 +736,9 @@ MtnMinecraftContentVersion _version(String key, String contentKey, String fileNa
 Future<MtnMinecraftContentMaterializationPlan> _plan(
   MtnMinecraftContentInstallationState installation,
   List<MtnMinecraftContentVersion> desiredVersions,
-  Map<String, String> paths,
-) async {
+  Map<String, String> paths, {
+  Set<String> repairVersionKeys = const <String>{},
+}) async {
   final service = MtnMinecraftContentService();
   final desired = desiredVersions.isEmpty
       ? service.composeDependencyInstallPlans(const <MtnMinecraftContentDependencyInstallPlan>[])
@@ -672,7 +756,9 @@ Future<MtnMinecraftContentMaterializationPlan> _plan(
             conflicts: const <MtnMinecraftContentDependencyInstallConflict>[],
           ),
         ]);
-  final reconciliation = service.reconcileDependencyState(installation.dependencyInstalledState, desired);
+  final reconciliation = service.reconcileDependencyState(
+    installation.dependencyInstalledState, desired, repairVersionKeys: repairVersionKeys,
+  );
   final selection = service.selectReconciliationFiles(reconciliation);
   final downloads = await service.planSelectedFileDownloads(selection);
   final targets = downloads.items.map((item) => MtnMinecraftContentMaterializationTarget(
