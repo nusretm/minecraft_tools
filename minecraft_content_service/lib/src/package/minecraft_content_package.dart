@@ -513,7 +513,9 @@ class MtnMinecraftContentPackage {
         String? requester;
         for (final plan in result.plans) {
           for (final edge in plan.installEdges) {
-            if (edge.target?.key != version.key) continue;
+            if (edge.target?.key != version.key) {
+              continue;
+            }
             requester ??= edge.source.content.name;
             issues.add(MtnMinecraftContentDependencyIssue(
               type: MtnMinecraftContentDependencyIssueType.selectedVersionConflict,
