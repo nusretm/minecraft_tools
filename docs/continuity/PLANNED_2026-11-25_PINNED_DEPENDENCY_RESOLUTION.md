@@ -42,7 +42,7 @@ package-lock tests are regression gates.
 
 Commands:
 ```powershell
-cd D:\development\cross-platform\minecraft_tools\minecraft_content_service
+cd D:\Projects\Minecraft\minecraft_tools\minecraft_content_service
 dart pub get
 dart analyze
 dart test test/content_dependency_pinned_version_test.dart test/content_dependency_desired_state_test.dart test/content_dependency_install_policy_test.dart test/content_package_dependency_lock_rebuild_test.dart

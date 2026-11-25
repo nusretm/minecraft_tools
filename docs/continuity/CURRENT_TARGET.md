@@ -164,7 +164,7 @@ pending; see `docs/continuity/PLANNED_2026-11-03_CONTENT_MISSING_MANAGED_REPAIR.
   queue recovery after a synchronous transform exception. All tests
   are offline and use unique disposable temp directories.
 - **No tests or analyzer run by assistant.** User Windows checks required:
-  `cd D:\development\cross-platform\minecraft_tools`;
+  `cd D:\Projects\Minecraft\minecraft_tools`;
   `git pull --ff-only origin feature/hypixel-storage-concurrency-repro`;
   `cd hypixel_api`; `dart pub get`; `dart analyze`;
   `dart test test/hypixel_storage_concurrency_test.dart -r expanded`;
@@ -585,7 +585,7 @@ Last updated: 2026-10-14
 ## Repository
 
 - Repository: `nusretm/minecraft_tools`
-- Local path: `D:\\development\\cross-platform\\minecraft_tools`
+- Local path: `D:\\Projects\\Minecraft\\minecraft_tools`
 - Current package: `minecraft_content_service/`
 - `minecraft_info_provider/` and `hypixel_api/` are sibling packages and were not modified by the current content-service checkpoint.
 - `docs/WORKING_RULES.md` is authoritative.
