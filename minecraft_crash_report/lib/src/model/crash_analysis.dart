@@ -13,6 +13,7 @@ enum MtnMinecraftCrashType {
 }
 
 enum MtnMinecraftCrashConfidence { low, medium, high }
+enum MtnMinecraftCrashMemoryKind { heap, metaspace, native, unknown }
 enum MtnMinecraftCrashSource { crashReport, gameLog, nativeLog, exitCode }
 
 enum MtnMinecraftCrashRecommendationType {
@@ -55,6 +56,7 @@ final class MtnMinecraftCrashFinding {
     required this.type,
     required this.confidence,
     required Iterable<MtnMinecraftCrashEvidence> evidence,
+    this.memoryKind,
     Iterable<MtnMinecraftCrashModFinding> suspectedMods = const [],
     Iterable<MtnMinecraftCrashModFinding> relatedMods = const [],
     Iterable<MtnMinecraftCrashRecommendation> recommendations = const [],
@@ -64,6 +66,7 @@ final class MtnMinecraftCrashFinding {
        recommendations = List<MtnMinecraftCrashRecommendation>.unmodifiable(recommendations);
 
   final MtnMinecraftCrashType type;
+  final MtnMinecraftCrashMemoryKind? memoryKind;
   final MtnMinecraftCrashConfidence confidence;
   final List<MtnMinecraftCrashEvidence> evidence;
   final List<MtnMinecraftCrashModFinding> suspectedMods;

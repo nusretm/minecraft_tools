@@ -31,7 +31,11 @@ Unknown input yields low-confidence unknown, not a guessed mod. Explicit Mixin
 owner is evidence of failure ownership, not proof of sole root cause. Related
 mixin namespace matching requires a known runtime mod ID (report or
 installedMods); confidence is medium. Linkage signatures do not blame mods from
-stack presence alone. A nonzero exit code alone does not prove native crash.
+stack presence alone. Optional caller-verified `classOwners` maps exact Java
+classes to known installed mod IDs; linkage can then identify a possible caller
+and related target with medium confidence. Memory findings distinguish heap,
+metaspace, native memory and unknown when explicit text is available. A nonzero
+exit code alone does not prove native crash.
 Initial parser is Fabric-oriented; arbitrary Java/loader formats are best effort,
 not a universal stacktrace grammar. No automated modification or version changes.
 

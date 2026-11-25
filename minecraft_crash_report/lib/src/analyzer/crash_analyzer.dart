@@ -21,9 +21,10 @@ final class MtnMinecraftCrashAnalyzer {
     String? nativeLog,
     int? exitCode,
     Iterable<MtnMinecraftCrashMod> installedMods = const [],
+    Map<String, String> classOwners = const {},
   }) {
     final MtnMinecraftCrashRuleContext context = MtnMinecraftCrashRuleContext(report: report, gameLog: gameLog,
-      nativeLog: nativeLog, installedMods: installedMods, exitCode: exitCode);
+      nativeLog: nativeLog, installedMods: installedMods, classOwners: classOwners, exitCode: exitCode);
     final List<MtnMinecraftCrashFinding> findings = [
       for (final MtnMinecraftCrashRuleAbs rule in _rules) ...rule.evaluate(context),
     ];

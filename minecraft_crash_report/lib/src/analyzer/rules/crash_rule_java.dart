@@ -27,9 +27,49 @@ final class MtnMinecraftCrashRuleJava extends MtnMinecraftCrashRuleAbs {
                 signature.pattern.hasMatch(context.diagnosticText(line)) &&
                 context.diagnosticText(line).startsWith('class file version'));
         if (!exception && !explicitDiagnostic) continue;
+        final List<MtnMinecraftCrashEvidence> evidence = context.diagnosticBlock(line);
+        final List<MtnMinecraftCrashModFinding> suspected = [];
+        final List<MtnMinecraftCrashModFinding> related = [];
+        final String diagnostic = context.diagnosticText(line);
+        final bool initializationFailure = diagnostic.contains('Could not initialize class');
+        if (signature.type == MtnMinecraftCrashType.noSuchMethod || signature.type == MtnMinecraftCrashType.noClassDefFound) {
+          // The first call site is useful only with a caller-supplied exact class owner.
+          final MtnMinecraftCrashEvidence? frame = context.firstStackFrame(line);
+          final String? symbol = frame == null ? null : RegExp(r'^\s*at\s+([^\s(]+)\(').firstMatch(frame.text)?.group(1);
+          final int methodSeparator = symbol?.lastIndexOf('.') ?? -1;
+          String? callerId;
+          if (frame != null && symbol != null && methodSeparator > 0) {
+            final String owner = symbol.substring(0, methodSeparator);
+            callerId = context.ownerForClass(owner.substring(owner.lastIndexOf('/') + 1));
+            if (callerId != null) {
+              evidence.add(frame);
+              suspected.add(context.attribution(callerId, MtnMinecraftCrashConfidence.medium, [line, frame]));
+            }
+          }
+          final String? targetClass = signature.type == MtnMinecraftCrashType.noSuchMethod
+              ? RegExp(r'([A-Za-z_$][\w.$/]+)\.[A-Za-z_$][\w$<>]*\(').firstMatch(diagnostic)?.group(1)
+              : RegExp(r'(?:NoClassDefFoundError|ClassNotFoundException):\s*(?:Could not initialize class\s+)?([A-Za-z_$][\w.$/]+)').firstMatch(diagnostic)?.group(1);
+          final String? targetId = targetClass == null ? null : context.ownerForClass(targetClass);
+          if (targetId != null && targetId != callerId) {
+            related.add(context.attribution(targetId, MtnMinecraftCrashConfidence.medium, [line]));
+          }
+        }
+        MtnMinecraftCrashMemoryKind? memoryKind;
+        if (signature.type == MtnMinecraftCrashType.outOfMemory) {
+          final String text = evidence.map((item) => item.text).join(' ').toLowerCase();
+          memoryKind = text.contains('java heap space') || text.contains('gc overhead limit exceeded')
+              ? MtnMinecraftCrashMemoryKind.heap
+              : text.contains('metaspace') || text.contains('compressed class space')
+                  ? MtnMinecraftCrashMemoryKind.metaspace
+                  : text.contains('native thread') || text.contains('native memory') || text.contains('direct buffer memory') ||
+                        text.contains('insufficient memory for the java runtime environment')
+                      ? MtnMinecraftCrashMemoryKind.native
+                      : MtnMinecraftCrashMemoryKind.unknown;
+        }
         yield MtnMinecraftCrashFinding(type: signature.type, confidence: MtnMinecraftCrashConfidence.high,
-          evidence: context.diagnosticBlock(line),
-          recommendations: [MtnMinecraftCrashRecommendation(signature.recommendation)]);
+          evidence: evidence, suspectedMods: suspected, relatedMods: related, memoryKind: memoryKind,
+          recommendations: [MtnMinecraftCrashRecommendation(initializationFailure
+              ? MtnMinecraftCrashRecommendationType.checkModCompatibility : signature.recommendation)]);
         break;
       }
     }

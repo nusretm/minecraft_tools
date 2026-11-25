@@ -10,8 +10,10 @@ final class MtnMinecraftCrashRuleContext {
     required String? gameLog,
     required String? nativeLog,
     required Iterable<MtnMinecraftCrashMod> installedMods,
+    required Map<String, String> classOwners,
     required this.exitCode,
-  }) : mods = Map<String, MtnMinecraftCrashMod>.unmodifiable({
+  }) : classOwners = Map<String, String>.unmodifiable(classOwners.map((name, id) => MapEntry(name.replaceAll('/', '.'), id))),
+       mods = Map<String, MtnMinecraftCrashMod>.unmodifiable({
          for (final MtnMinecraftCrashMod mod in installedMods) mod.id: mod,
          for (final MtnMinecraftCrashMod mod in report?.mods ?? const <MtnMinecraftCrashMod>[]) mod.id: mod,
        }),
@@ -21,6 +23,7 @@ final class MtnMinecraftCrashRuleContext {
          if (nativeLog != null) MtnMinecraftCrashSource.nativeLog: List<String>.unmodifiable(const LineSplitter().convert(nativeLog)),
        });
 
+  final Map<String, String> classOwners;
   final Map<String, MtnMinecraftCrashMod> mods;
   final Map<MtnMinecraftCrashSource, List<String>> sources;
   final int? exitCode;
@@ -61,6 +64,24 @@ final class MtnMinecraftCrashRuleContext {
       }
     }
     return result;
+  }
+
+  String? ownerForClass(String name) {
+    final String? id = classOwners[name.replaceAll('/', '.')];
+    return id != null && mods.containsKey(id) ? id : null;
+  }
+
+  MtnMinecraftCrashEvidence? firstStackFrame(MtnMinecraftCrashEvidence anchor) {
+    final List<String> lines = sources[anchor.source]!;
+    for (int i = anchor.lineNumber!; i < lines.length && i <= anchor.lineNumber! + 12; i++) {
+      final String text = lines[i].trim();
+      if (text.startsWith('Caused by:') || text.startsWith('Suppressed:') ||
+          text.startsWith('-- ') || text.startsWith('---- ') || text.startsWith('[')) break;
+      if (text.startsWith('at ')) {
+        return MtnMinecraftCrashEvidence(source: anchor.source, lineNumber: i + 1, text: lines[i]);
+      }
+    }
+    return null;
   }
 
   MtnMinecraftCrashModFinding attribution(String id, MtnMinecraftCrashConfidence confidence, Iterable<MtnMinecraftCrashEvidence> evidence) =>

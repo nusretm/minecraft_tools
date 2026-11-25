@@ -138,6 +138,37 @@ Mod 'Example' (example) 1.0 requires a library.
     expect(finding.evidence.single.source, MtnMinecraftCrashSource.exitCode);
   });
 
+  test('linkage attribution requires verified class owners and separates caller and target', () {
+    final finding = analyzer.analyze(gameLog: '''
+java.lang.NoSuchMethodError: 'void library.Api.call()'
+    at knot//example.Caller.run(Caller.java:17)
+''', installedMods: const [
+      MtnMinecraftCrashMod(id: 'example'),
+      MtnMinecraftCrashMod(id: 'library'),
+    ], classOwners: const {
+      'example.Caller': 'example',
+      'library.Api': 'library',
+    }).primaryFinding!;
+    expect(finding.suspectedMods.single.mod.id, 'example');
+    expect(finding.relatedMods.single.mod.id, 'library');
+    expect(finding.suspectedMods.single.confidence, MtnMinecraftCrashConfidence.medium);
+    expect(finding.evidence.last.lineNumber, 2);
+    expect(finding.recommendations.single.type, MtnMinecraftCrashRecommendationType.checkModCompatibility);
+  });
+
+  test('memory diagnostics distinguish heap, metaspace and native memory', () {
+    final cases = <String, MtnMinecraftCrashMemoryKind>{
+      'Java heap space': MtnMinecraftCrashMemoryKind.heap,
+      'Metaspace': MtnMinecraftCrashMemoryKind.metaspace,
+      'unable to create native thread': MtnMinecraftCrashMemoryKind.native,
+      '': MtnMinecraftCrashMemoryKind.unknown,
+    };
+    for (final entry in cases.entries) {
+      final finding = analyzer.analyze(gameLog: 'java.lang.OutOfMemoryError: ' + entry.key).primaryFinding!;
+      expect(finding.memoryKind, entry.value);
+    }
+  });
+
   test('empty or truncated report is accepted without fabricated fields', () {
     final report = parser.parse('Caused by:\n');
     expect(report.exceptions, isEmpty);
