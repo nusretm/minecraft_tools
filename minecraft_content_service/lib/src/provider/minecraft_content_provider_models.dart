@@ -68,13 +68,18 @@ class MtnMinecraftContentVersionSelectionRequest {
     List<String>? gameVersions,
     List<MtnMinecraftModLoaderType>? modLoaders,
     List<MtnMinecraftContentVersionReleaseType>? releaseTypes,
+    Map<String, String>? preferredVersionIdsByContent,
   }) : gameVersions = List<String>.unmodifiable(gameVersions ?? <String>[]),
        modLoaders = List<MtnMinecraftModLoaderType>.unmodifiable(modLoaders ?? <MtnMinecraftModLoaderType>[]),
-       releaseTypes = List<MtnMinecraftContentVersionReleaseType>.unmodifiable(releaseTypes ?? <MtnMinecraftContentVersionReleaseType>[]);
+       releaseTypes = List<MtnMinecraftContentVersionReleaseType>.unmodifiable(releaseTypes ?? <MtnMinecraftContentVersionReleaseType>[]),
+       preferredVersionIdsByContent = Map<String, String>.unmodifiable(preferredVersionIdsByContent ?? const <String, String>{});
 
   final List<String> gameVersions;
   final List<MtnMinecraftModLoaderType> modLoaders;
   final List<MtnMinecraftContentVersionReleaseType> releaseTypes;
+  /// Keyed by provider:projectId; exact provider version IDs from the package.
+  /// A project-only dependency may reuse one when it fits this request.
+  final Map<String, String> preferredVersionIdsByContent;
 }
 
 class MtnMinecraftContentVersionListRequest {

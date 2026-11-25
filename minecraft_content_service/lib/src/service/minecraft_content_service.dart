@@ -96,6 +96,36 @@ class MtnMinecraftContentService {
     final content = identity.content;
     if (providerName == null || content == null) return identity;
 
+    // A project-only requirement does not authorize changing an exact package
+    // selection. Prefer the selected release when it fits the environment.
+    // Never override an exact version, file, or version constraint.
+    if ((dependency.providerVersionId?.isEmpty ?? true) &&
+        dependency.version == null &&
+        (dependency.versionConstraint?.isEmpty ?? true) &&
+        (dependency.fileName?.isEmpty ?? true)) {
+      final projectId = _providerContentId(providerName, content);
+      final selectedId = projectId == null ? null :
+          request.preferredVersionIdsByContent['$providerName:$projectId'];
+      if (selectedId != null && selectedId.isNotEmpty) {
+        final preferred = await getVersion(providerName, selectedId);
+        _requireDependencyContentIdentity(dependency, providerName, preferred.content);
+        if (_providerContentId(providerName, preferred.content) != projectId) {
+          throw FormatException('Preferred dependency version belongs to another project: $providerName:$projectId.');
+        }
+        if ((request.gameVersions.isEmpty ||
+                preferred.gameVersions.any(request.gameVersions.contains)) &&
+            (request.modLoaders.isEmpty ||
+                preferred.content.type != MtnMinecraftContentType.mod ||
+                preferred.modLoaders.any(request.modLoaders.contains)) &&
+            (request.releaseTypes.isEmpty ||
+                request.releaseTypes.contains(preferred.releaseType))) {
+          return MtnMinecraftContentDependencyResolution(
+            dependency: dependency, version: preferred,
+          );
+        }
+      }
+    }
+
     const pageSize = 50;
     var page = await getVersions(
       providerName,

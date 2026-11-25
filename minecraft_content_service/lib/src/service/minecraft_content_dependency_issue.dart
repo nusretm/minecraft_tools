@@ -3,7 +3,7 @@ import 'minecraft_content_dependency_graph.dart';
 import 'minecraft_content_dependency_install_plan.dart';
 
 /// An explanation of a failed dependency plan, not the Item's metadata/hydration state.
-enum MtnMinecraftContentDependencyIssueType { unresolvedRequired, incompatible, multipleVersions }
+enum MtnMinecraftContentDependencyIssueType { unresolvedRequired, incompatible, multipleVersions, selectedVersionConflict }
 
 final class MtnMinecraftContentDependencyIssue {
   const MtnMinecraftContentDependencyIssue({
@@ -20,6 +20,8 @@ final class MtnMinecraftContentDependencyIssue {
     this.versionConstraint,
     this.fileName,
     this.conflictingVersionKey,
+    this.selectedVersionId,
+    this.resolvedVersionName,
   });
 
   factory MtnMinecraftContentDependencyIssue.fromMap(Map<String, dynamic> map) {
@@ -30,7 +32,8 @@ final class MtnMinecraftContentDependencyIssue {
       throw const FormatException('Invalid dependency issue identity.');
     }
     for (final key in const <String>['sourceVersionKey', 'sourceContentKey', 'dependencyProvider',
-      'dependencyProjectId', 'dependencyContentKey', 'dependencyName', 'dependencyVersionId', 'versionConstraint', 'fileName', 'conflictingVersionKey']) {
+      'dependencyProjectId', 'dependencyContentKey', 'dependencyName', 'dependencyVersionId', 'versionConstraint', 'fileName', 'conflictingVersionKey',
+      'selectedVersionId', 'resolvedVersionName']) {
       if (map[key] != null && map[key] is! String) throw FormatException('Invalid dependency issue field $key.');
     }
     return MtnMinecraftContentDependencyIssue(
@@ -47,6 +50,8 @@ final class MtnMinecraftContentDependencyIssue {
       versionConstraint: map['versionConstraint'] as String?,
       fileName: map['fileName'] as String?,
       conflictingVersionKey: map['conflictingVersionKey'] as String?,
+      selectedVersionId: map['selectedVersionId'] as String?,
+      resolvedVersionName: map['resolvedVersionName'] as String?,
     );
   }
 
@@ -65,6 +70,9 @@ final class MtnMinecraftContentDependencyIssue {
   final String? versionConstraint;
   final String? fileName;
   final String? conflictingVersionKey;
+  /// Exact saved provider version and resolved release shown in conflict details.
+  final String? selectedVersionId;
+  final String? resolvedVersionName;
 
   Map<String, dynamic> toMap() => <String, dynamic>{
     'type': type.name,
@@ -80,6 +88,8 @@ final class MtnMinecraftContentDependencyIssue {
     if (versionConstraint != null) 'versionConstraint': versionConstraint,
     if (fileName != null) 'fileName': fileName,
     if (conflictingVersionKey != null) 'conflictingVersionKey': conflictingVersionKey,
+    if (selectedVersionId != null) 'selectedVersionId': selectedVersionId,
+    if (resolvedVersionName != null) 'resolvedVersionName': resolvedVersionName,
   };
 
   /// Match a direct dependency declaration without assuming provider-specific wire formats.
@@ -185,4 +195,28 @@ final class MtnMinecraftContentDependencyReport {
   Map<String, dynamic> toMap() => <String, dynamic>{
     'issues': <Map<String, dynamic>>[for (final issue in issues) issue.toMap()],
   };
+}
+
+/// An exact package version cannot satisfy the currently resolved dependency.
+/// The report is available before materialization so a launcher can persist it.
+final class MtnMinecraftContentSelectedVersionConflict implements Exception {
+  const MtnMinecraftContentSelectedVersionConflict({
+    required this.report,
+    required this.contentName,
+    required this.selectedVersionName,
+    required this.resolvedVersionName,
+    this.requestingContentName,
+  });
+
+  final MtnMinecraftContentDependencyReport report;
+  final String contentName;
+  final String selectedVersionName;
+  final String resolvedVersionName;
+  final String? requestingContentName;
+
+  @override
+  String toString() =>
+      '${requestingContentName ?? 'A package dependency'} requires \'$contentName\' '
+      'version $resolvedVersionName, but the game package has $selectedVersionName selected. '
+      'Review the content dependency details before changing versions.';
 }

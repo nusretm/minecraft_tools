@@ -1,3 +1,12 @@
+## 2026-11-25 — Pinned project dependency resolution (Draft)
+
+REI requires Architectury API by Modrinth **project ID** without exact version.
+The existing resolver must keep an already-compatible selected package version
+instead of selecting another release and throwing a raw StateError. Feature:
+`feature/content-dependency-pinned-version-resolution`. A typed mismatch
+diagnostic is added for genuine conflicts. Details and Windows verification
+in `docs/continuity/PLANNED_2026-11-25_PINNED_DEPENDENCY_RESOLUTION.md`. Work remains Draft; do not merge before Windows checks.
+
 ## 2026-11-03 — CONTENT-REPAIR Windows validated; squash merge approved
 
 User ran `dart pub get`, `dart analyze` (**No issues found**), and four focused test files (reconciliation, preflight, materialization, RemVibe installation): **60/60 passed**. Linked Launcher feature passed `flutter analyze`, **2/2 installer tests**, Windows Release build, and live launch on the second PC after repairing the missing JAR. User explicitly approved squash merge + cleanup for Content Service PR #92 and Launcher PR #68. Do not change user-local `pubspec.lock` or existing stashes. Launcher provisional dependency SHA must be re-pinned to the resulting Content Service squash SHA before merging Launcher.
