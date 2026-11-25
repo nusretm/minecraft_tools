@@ -15,10 +15,16 @@ final class MtnMinecraftCrashRuleEnvironment extends MtnMinecraftCrashRuleAbs {
     final Map<String, MtnMinecraftCrashModFinding> suspected = {};
     final Map<String, MtnMinecraftCrashModFinding> related = {};
     MtnMinecraftCrashEvidence? native;
+    final Set<MtnMinecraftCrashSource> incompatibleSources = {
+      for (final line in context.diagnosticLines)
+        if (_dependency.hasMatch(line.text)) line.source,
+    };
     for (final MtnMinecraftCrashEvidence line in context.diagnosticLines) {
       if (line.text.trimLeft().startsWith('at ')) continue;
       final RegExpMatch? requirement = _requirement.firstMatch(line.text);
-      if (_dependency.hasMatch(line.text) || requirement != null) {
+      final bool failedRequirement = requirement != null && (incompatibleSources.contains(line.source) ||
+          RegExp(r'\b(?:which is missing|not installed|but .* (?:present|installed)|wrong version)\b', caseSensitive: false).hasMatch(line.text));
+      if (_dependency.hasMatch(line.text) || failedRequirement) {
         dependency.add(line);
         if (requirement != null) {
           final String id = requirement.group(1)!;
@@ -29,7 +35,10 @@ final class MtnMinecraftCrashRuleEnvironment extends MtnMinecraftCrashRuleAbs {
           }
         }
       }
-      if (_native.hasMatch(line.text)) native ??= line;
+      final String diagnostic = context.diagnosticText(line).replaceFirst(RegExp(r'^#\s*'), '');
+      if (_native.hasMatch(diagnostic) && RegExp(r'^(?:A fatal error has been detected|EXCEPTION_ACCESS_VIOLATION|SIGSEGV|SIGBUS|SIGILL)', caseSensitive: false).hasMatch(diagnostic)) {
+        native ??= line;
+      }
     }
     if (dependency.isNotEmpty) {
       yield MtnMinecraftCrashFinding(type: MtnMinecraftCrashType.dependencyIncompatible,

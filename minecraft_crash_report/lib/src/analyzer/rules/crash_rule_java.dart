@@ -20,7 +20,13 @@ final class MtnMinecraftCrashRuleJava extends MtnMinecraftCrashRuleAbs {
   Iterable<MtnMinecraftCrashFinding> evaluate(MtnMinecraftCrashRuleContext context) sync* {
     for (final signature in _signatures) {
       for (final MtnMinecraftCrashEvidence line in context.diagnosticLines) {
-        if (line.text.trimLeft().startsWith('at ') || !signature.pattern.hasMatch(line.text)) continue;
+        final bool exception = context.hasException(line, signature.pattern);
+        final bool explicitDiagnostic = (signature.type == MtnMinecraftCrashType.outOfMemory &&
+            line.text.contains('There is insufficient memory for the Java Runtime Environment')) ||
+            (signature.type == MtnMinecraftCrashType.javaVersionMismatch &&
+                signature.pattern.hasMatch(context.diagnosticText(line)) &&
+                context.diagnosticText(line).startsWith('class file version'));
+        if (!exception && !explicitDiagnostic) continue;
         yield MtnMinecraftCrashFinding(type: signature.type, confidence: MtnMinecraftCrashConfidence.high,
           evidence: context.diagnosticBlock(line),
           recommendations: [MtnMinecraftCrashRecommendation(signature.recommendation)]);

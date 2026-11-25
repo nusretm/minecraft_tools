@@ -20,7 +20,7 @@ final class MtnMinecraftCrashReportParser {
     String? title;
     int start = 0;
     final List<String> sectionLines = [];
-    bool inFabricMods = false;
+    int? fabricIndent;
     void finish() {
       final String? current = title;
       if (current != null) {
@@ -35,7 +35,7 @@ final class MtnMinecraftCrashReportParser {
         finish();
         title = heading.group(1)!;
         start = i + 1;
-        inFabricMods = false;
+        fabricIndent = null;
         continue;
       }
       if (title != null) sectionLines.add(line);
@@ -44,15 +44,15 @@ final class MtnMinecraftCrashReportParser {
         if (line.startsWith('Description:')) description ??= line.substring(12).trim();
       }
       if (title == 'System Details') {
-        if (line.trim() == 'Fabric Mods:') {
-          inFabricMods = true;
+        final String trimmed = line.trimLeft();
+        if (trimmed.isEmpty) continue;
+        final int indent = line.substring(0, line.length - trimmed.length).replaceAll('\t', '    ').length;
+        if (trimmed.trimRight() == 'Fabric Mods:') {
+          fabricIndent = indent;
           continue;
         }
-        // System detail rows have a single indent; nested mod rows do not.
-        final String trimmed = line.trimLeft();
-        if (line.startsWith('\t\t') || line.startsWith('        ')) continue;
-        if (trimmed.isEmpty) continue;
-        if (inFabricMods) inFabricMods = false;
+        if (fabricIndent != null && indent > fabricIndent) continue;
+        fabricIndent = null;
         final RegExpMatch? field = _detail.firstMatch(line);
         if (field != null) details[field.group(1)!.trim()] = field.group(2)!.trim();
       }

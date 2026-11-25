@@ -36,6 +36,16 @@ final class MtnMinecraftCrashRuleContext {
     }
   }
 
+  /// Strip Minecraft's ordinary log prefix, but not arbitrary message text.
+  String diagnosticText(MtnMinecraftCrashEvidence evidence) => evidence.text.trimLeft()
+      .replaceFirst(RegExp(r'^\[[^\]]+\]\s+\[[^\]]+\]:\s*'), '');
+
+  bool hasException(MtnMinecraftCrashEvidence evidence, RegExp signature) {
+    final String text = diagnosticText(evidence);
+    final RegExpMatch? header = RegExp(r'^(?:(?:Caused by:|Suppressed:)\s*|Exception in thread "[^"]+"\s+)?((?:[A-Za-z_$][\w$]*\.)*[A-Za-z_$][\w$]*)(?::|\s*$)').firstMatch(text);
+    return header != null && signature.hasMatch(header.group(1)!);
+  }
+
   /// Bounded continuation of one diagnostic, never crossing another cause or section.
   List<MtnMinecraftCrashEvidence> diagnosticBlock(MtnMinecraftCrashEvidence anchor) {
     final List<String> lines = sources[anchor.source]!;
