@@ -7,6 +7,7 @@ import '../model/minecraft_content_models.dart';
 import '../provider/minecraft_content_provider_models.dart';
 import '../service/minecraft_content_dependency_desired_state.dart';
 import '../service/minecraft_content_dependency_install_plan.dart';
+import '../service/minecraft_content_dependency_issue.dart';
 import '../service/minecraft_content_http_service.dart';
 import '../service/minecraft_content_service.dart';
 import 'minecraft_content_package_builder.dart';
@@ -508,7 +509,49 @@ class MtnMinecraftContentPackage {
       final selected = current.selectedVersionId ?? currentLocks[key]?.versionId;
       final resolvedId = version.providers.firstWhere((metadata) => metadata.provider == identity.$1).id!;
       if (selected != null && selected != resolvedId) {
-        throw StateError('Dependency ${current.key} conflicts with the selected exact provider version $selected.');
+        final issues = <MtnMinecraftContentDependencyIssue>[];
+        String? requester;
+        for (final plan in result.plans) {
+          for (final edge in plan.installEdges) {
+            if (edge.target?.key != version.key) continue;
+            requester ??= edge.source.content.name;
+            issues.add(MtnMinecraftContentDependencyIssue(
+              type: MtnMinecraftContentDependencyIssueType.selectedVersionConflict,
+              rootVersionKey: plan.root.key,
+              rootContentKey: plan.root.content.key,
+              sourceVersionKey: edge.source.key,
+              sourceContentKey: edge.source.content.key,
+              dependencyProvider: edge.dependency.provider,
+              dependencyProjectId: edge.dependency.providerContentId,
+              dependencyContentKey: current.key,
+              dependencyName: current.title,
+              dependencyVersionId: edge.dependency.providerVersionId,
+              versionConstraint: edge.dependency.versionConstraint,
+              conflictingVersionKey: version.key,
+              selectedVersionId: selected,
+              resolvedVersionName: version.version,
+            ));
+          }
+        }
+        if (issues.isEmpty) {
+          issues.add(MtnMinecraftContentDependencyIssue(
+            type: MtnMinecraftContentDependencyIssueType.selectedVersionConflict,
+            rootVersionKey: version.key,
+            rootContentKey: current.key,
+            dependencyContentKey: current.key,
+            dependencyName: current.title,
+            conflictingVersionKey: version.key,
+            selectedVersionId: selected,
+            resolvedVersionName: version.version,
+          ));
+        }
+        throw MtnMinecraftContentSelectedVersionConflict(
+          report: MtnMinecraftContentDependencyReport(issues),
+          contentName: current.title,
+          selectedVersionName: current.version?.version ?? selected,
+          resolvedVersionName: version.version,
+          requestingContentName: requester,
+        );
       }
     }
     return result;
