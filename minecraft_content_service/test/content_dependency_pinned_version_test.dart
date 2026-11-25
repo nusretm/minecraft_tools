@@ -187,7 +187,9 @@ MtnMinecraftContentPackageItem _item(MtnMinecraftContent content,
       type: MtnMinecraftContentType.mod, title: content.name,
       direct: direct, source: MtnMinecraftContentPackageSource.local,
       selectedVersionId: versionId,
-      permissions: MtnMinecraftContentItemPermission.values,
+      permissions: direct
+          ? MtnMinecraftContentItemPermission.values
+          : const <MtnMinecraftContentItemPermission>[],
     );
 
 MtnMinecraftContentPackage _package(List<MtnMinecraftContentPackageItem> items) =>

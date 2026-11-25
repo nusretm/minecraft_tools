@@ -462,6 +462,12 @@ class MtnMinecraftContentPackage {
       for (final entry in _lock?.versions ?? const <MtnMinecraftContentPackageLockedVersion>[]) entry.itemKey: entry,
     };
 
+    final preferredVersions = <String, String>{
+      for (final item in items)
+        if ((item.selectedVersionId ?? currentLocks[item.key]?.versionId) != null)
+          item.key: item.selectedVersionId ?? currentLocks[item.key]!.versionId,
+    };
+
     for (final root in directItems) {
       await root.hydrate(service, lock: currentLocks[root.key]);
       final version = root.version;
@@ -483,6 +489,7 @@ class MtnMinecraftContentPackage {
         MtnMinecraftContentVersionSelectionRequest(
           gameVersions: <String>[minecraftVersion],
           modLoaders: <MtnMinecraftModLoaderType>[modLoader],
+          preferredVersionIdsByContent: preferredVersions,
         ),
       );
       plans.add(service.planDependencyInstall(
