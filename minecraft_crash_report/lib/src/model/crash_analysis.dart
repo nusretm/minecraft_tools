@@ -3,7 +3,7 @@ import 'crash_report.dart';
 enum MtnMinecraftCrashType {
   mixinInjection,
   mixinApply,
-  noSuchMethod,
+  noSuchMethodError,
   noClassDefFound,
   dependencyIncompatible,
   javaVersionMismatch,

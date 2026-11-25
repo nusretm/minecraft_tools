@@ -100,7 +100,7 @@ void main() {
 
   test('log-only linkage, Java, memory and native categories', () {
     final cases = <String, MtnMinecraftCrashType>{
-      'java.lang.NoSuchMethodError: com.example.Api.call()V': MtnMinecraftCrashType.noSuchMethod,
+      'java.lang.NoSuchMethodError: com.example.Api.call()V': MtnMinecraftCrashType.noSuchMethodError,
       'Caused by: java.lang.NoClassDefFoundError: com/example/Missing': MtnMinecraftCrashType.noClassDefFound,
       'java.lang.UnsupportedClassVersionError: class file version 69.0': MtnMinecraftCrashType.javaVersionMismatch,
       '[12:00:00] [Render thread/ERROR]: java.lang.OutOfMemoryError: Java heap space': MtnMinecraftCrashType.outOfMemory,
@@ -164,7 +164,7 @@ java.lang.NoSuchMethodError: 'void library.Api.call()'
       '': MtnMinecraftCrashMemoryKind.unknown,
     };
     for (final entry in cases.entries) {
-      final finding = analyzer.analyze(gameLog: 'java.lang.OutOfMemoryError: ' + entry.key).primaryFinding!;
+      final finding = analyzer.analyze(gameLog: 'java.lang.OutOfMemoryError: ${entry.key}').primaryFinding!;
       expect(finding.memoryKind, entry.value);
     }
   });

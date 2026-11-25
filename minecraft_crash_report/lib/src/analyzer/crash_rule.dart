@@ -58,7 +58,9 @@ final class MtnMinecraftCrashRuleContext {
       final String trimmed = lines[i].trim();
       if (trimmed.startsWith('Caused by:') || trimmed.startsWith('Suppressed:') ||
           trimmed.startsWith('at ') || trimmed.startsWith('-- ') || trimmed.startsWith('---- ') ||
-          trimmed == 'Fabric Mods:' || RegExp(r'^\[\d{2}:\d{2}:\d{2}').hasMatch(trimmed)) break;
+          trimmed == 'Fabric Mods:' || RegExp(r'^\[\d{2}:\d{2}:\d{2}').hasMatch(trimmed)) {
+        break;
+      }
       if (trimmed.isNotEmpty) {
         result.add(MtnMinecraftCrashEvidence(source: anchor.source, lineNumber: i + 1, text: lines[i]));
       }
@@ -76,7 +78,9 @@ final class MtnMinecraftCrashRuleContext {
     for (int i = anchor.lineNumber!; i < lines.length && i <= anchor.lineNumber! + 12; i++) {
       final String text = lines[i].trim();
       if (text.startsWith('Caused by:') || text.startsWith('Suppressed:') ||
-          text.startsWith('-- ') || text.startsWith('---- ') || text.startsWith('[')) break;
+          text.startsWith('-- ') || text.startsWith('---- ') || text.startsWith('[')) {
+        break;
+      }
       if (text.startsWith('at ')) {
         return MtnMinecraftCrashEvidence(source: anchor.source, lineNumber: i + 1, text: lines[i]);
       }

@@ -10,7 +10,7 @@ final class MtnMinecraftCrashRuleJava extends MtnMinecraftCrashRuleAbs {
       type: MtnMinecraftCrashType.javaVersionMismatch, recommendation: MtnMinecraftCrashRecommendationType.checkJavaVersion),
     (pattern: RegExp(r'\bOutOfMemoryError\b|There is insufficient memory for the Java Runtime Environment', caseSensitive: false),
       type: MtnMinecraftCrashType.outOfMemory, recommendation: MtnMinecraftCrashRecommendationType.checkMemory),
-    (pattern: RegExp(r'\bNoSuchMethodError\b'), type: MtnMinecraftCrashType.noSuchMethod,
+    (pattern: RegExp(r'\bNoSuchMethodError\b'), type: MtnMinecraftCrashType.noSuchMethodError,
       recommendation: MtnMinecraftCrashRecommendationType.checkModCompatibility),
     (pattern: RegExp(r'\b(?:NoClassDefFoundError|ClassNotFoundException)\b'), type: MtnMinecraftCrashType.noClassDefFound,
       recommendation: MtnMinecraftCrashRecommendationType.checkRequiredDependencies),
@@ -32,7 +32,7 @@ final class MtnMinecraftCrashRuleJava extends MtnMinecraftCrashRuleAbs {
         final List<MtnMinecraftCrashModFinding> related = [];
         final String diagnostic = context.diagnosticText(line);
         final bool initializationFailure = diagnostic.contains('Could not initialize class');
-        if (signature.type == MtnMinecraftCrashType.noSuchMethod || signature.type == MtnMinecraftCrashType.noClassDefFound) {
+        if (signature.type == MtnMinecraftCrashType.noSuchMethodError || signature.type == MtnMinecraftCrashType.noClassDefFound) {
           // The first call site is useful only with a caller-supplied exact class owner.
           final MtnMinecraftCrashEvidence? frame = context.firstStackFrame(line);
           final String? symbol = frame == null ? null : RegExp(r'^\s*at\s+([^\s(]+)\(').firstMatch(frame.text)?.group(1);
@@ -46,7 +46,7 @@ final class MtnMinecraftCrashRuleJava extends MtnMinecraftCrashRuleAbs {
               suspected.add(context.attribution(callerId, MtnMinecraftCrashConfidence.medium, [line, frame]));
             }
           }
-          final String? targetClass = signature.type == MtnMinecraftCrashType.noSuchMethod
+          final String? targetClass = signature.type == MtnMinecraftCrashType.noSuchMethodError
               ? RegExp(r'([A-Za-z_$][\w.$/]+)\.[A-Za-z_$][\w$<>]*\(').firstMatch(diagnostic)?.group(1)
               : RegExp(r'(?:NoClassDefFoundError|ClassNotFoundException):\s*(?:Could not initialize class\s+)?([A-Za-z_$][\w.$/]+)').firstMatch(diagnostic)?.group(1);
           final String? targetId = targetClass == null ? null : context.ownerForClass(targetClass);

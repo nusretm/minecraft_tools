@@ -27,7 +27,7 @@ final class MtnMinecraftCrashRuleMixin extends MtnMinecraftCrashRuleAbs {
         }
       }
       final MtnMinecraftCrashType type = injection ? MtnMinecraftCrashType.mixinInjection : MtnMinecraftCrashType.mixinApply;
-      final String key = type.name + ':' + owners.keys.join(',');
+      final String key = '${type.name}:${owners.keys.join(',')}';
       if (!emitted.add(key)) continue;
       final List<MtnMinecraftCrashModFinding> suspected = [];
       final List<MtnMinecraftCrashModFinding> related = [];
@@ -49,7 +49,9 @@ final class MtnMinecraftCrashRuleMixin extends MtnMinecraftCrashRuleAbs {
           final List<String> segments = symbol.toLowerCase().split(RegExp(r'[./]'));
           for (final String id in context.mods.keys) {
             if (const ['minecraft', 'java', 'fabricloader'].contains(id) || owners.containsKey(id) ||
-                !segments.contains(id.toLowerCase()) || !relatedIds.add(id)) continue;
+                !segments.contains(id.toLowerCase()) || !relatedIds.add(id)) {
+              continue;
+            }
             related.add(context.attribution(id, MtnMinecraftCrashConfidence.medium, [line]));
           }
         }
