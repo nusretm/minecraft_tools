@@ -91,6 +91,47 @@ void main() {
     expect(provider.versionListCalls, 1);
   });
 
+  test('genuine exact-version conflict identifies requesting mod and selected release', () async {
+    final architectury = _content('lhGA9TYQ', 'Architectury API');
+    final rei = _content('rei', 'Roughly Enough Items');
+    final pinned = _version(architectury, 'arch-pinned', '20.1.18+fabric');
+    final required = _version(architectury, 'arch-required', '20.2.19+fabric');
+    final root = _version(rei, 'rei-exact', '26.1.819+fabric', dependencies: [
+      MtnMinecraftContentDependency(
+        type: MtnMinecraftContentDependencyType.required,
+        provider: 'modrinth', providerContentId: 'lhGA9TYQ',
+        providerVersionId: 'arch-required',
+      ),
+    ]);
+    final service = MtnMinecraftContentService(providers: [
+      _Provider([architectury, rei], [root, pinned, required],
+        listed: {'lhGA9TYQ': [required]}),
+    ]);
+    final package = _package([
+      _item(rei, 'rei-exact', direct: true),
+      _item(architectury, 'arch-pinned', direct: false),
+    ]);
+    try {
+      await package.resolveDependencies(service);
+      fail('Expected a real exact-version mismatch.');
+    } on MtnMinecraftContentSelectedVersionConflict catch (e) {
+      expect(e.toString(), contains('Roughly Enough Items'));
+      expect(e.toString(), contains('Architectury API'));
+      expect(e.toString(), contains('20.2.19+fabric'));
+      final issue = e.report.issues.single;
+      expect(issue.type, MtnMinecraftContentDependencyIssueType.selectedVersionConflict);
+      expect(issue.rootContentKey, 'modrinth:rei');
+      expect(issue.sourceContentKey, 'modrinth:rei');
+      expect(issue.dependencyContentKey, 'modrinth:lhGA9TYQ');
+      expect(issue.selectedVersionId, 'arch-pinned');
+      expect(issue.resolvedVersionName, '20.2.19+fabric');
+      expect(MtnMinecraftContentDependencyReport.fromMap(e.report.toMap()).issues.single.selectedVersionId,
+        'arch-pinned');
+    }
+    expect(package.getItem('modrinth:lhGA9TYQ')!.selectedVersionId, 'arch-pinned');
+    expect(package.lock, isNull);
+  });
+
   test('wrong-project preferred version is rejected, not installed', () async {
     final architectury = _content('lhGA9TYQ', 'Architectury API');
     final other = _content('other', 'Unrelated mod');
